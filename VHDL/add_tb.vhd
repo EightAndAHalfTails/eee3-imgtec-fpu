@@ -1,6 +1,6 @@
 ------------------------------------------------------------------
 --Testbench for integer adder
---to be converted to test fp adder
+--to be modified to test fp adder
 --reads adder_datapak.txt for input data
 
 --vhdl test entity: add
@@ -56,6 +56,7 @@ BEGIN
 		VARIABLE buf	: LINE;
 		VARIABLE x, y          : INTEGER;
 		VARIABLE n             : INTEGER;
+		VARIABLE incorrect_result : INTEGER;
 	
 	BEGIN
 		reset <= '1';
@@ -63,6 +64,7 @@ BEGIN
 		reset <= '0';
 		
 		n := 1;
+		incorrect_result := 0;
 		
 		WHILE NOT endfile(f) LOOP
 			WAIT UNTIL clk'EVENT and clk = '1';
@@ -78,13 +80,22 @@ BEGIN
 				B<=i2v(y);
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
-				ASSERT result = (i2v(x+y))
+				IF result /= (i2v(x+y)) THEN
+					incorrect_result := incorrect_result+1;
 					REPORT INTEGER'IMAGE(x) & "+" & INTEGER'IMAGE(y) & "is " & INTEGER'IMAGE(v2i(result)) &
 						". Correct answer should be " & INTEGER'IMAGE(x+y) SEVERITY warning;
+				END IF;
+				
 			END IF;	
 			
 			n := n+1;
 		END LOOP;
+	
+	IF incorrect_result = 0 THEN
+		REPORT "***************** TEST PASSED *****************";
+	ELSE
+		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
+	END IF;
 	
 	REPORT "Test finished normally." SEVERITY failure;
 	END PROCESS main;
