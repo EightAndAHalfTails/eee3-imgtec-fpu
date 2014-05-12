@@ -38,6 +38,7 @@ BEGIN
 				prenormresult_o<=(others=>'0');
 		ELSE 
 				IF	operation_i ='0' THEN
+
 					prenormresult_o<=slv(Resize(usg(opA_i),24)+Resize(usg(opB_i),24));
 				ELSE 
 					prenormresult_o<=slv(Resize(usg(opA_i),24)-Resize(usg(opB_i),24));
