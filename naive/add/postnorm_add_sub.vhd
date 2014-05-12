@@ -9,21 +9,13 @@ USE work.all;
 ENTITY postnorm_add_sub IS 
 	PORT(
 		clk,reset		:	IN 		std_logic;
-<<<<<<< HEAD:fpu adder/postnorm_add_sub.vhd
 		r_sign_i		:	IN		std_logic;
 		operation_i		:	IN		std_logic;
 		r_exponent_i		:	IN		std_logic_vector(8 downto 0);
-		r_man_i			:	IN		std_logic_vector(23 downto 0);
-		sticky_b		:	IN		std_logic;
+		r_man_i			:	IN		std_logic_vector(27 downto 0);
 		result_o		:	OUT 		std_logic_vector(31 downto 0)
 		);
-=======
-		r_exponent_i		:	IN		std_logic_vector(8 downto 0);
-		r_man_i			:	IN		std_logic_vector(23 downto 0);
-		sticky_b		:	IN		std_logic;
-		result_o		:	OUT 		std_logic_vector(31 downto 0);		
-		)
->>>>>>> 8662823138f707f7e5cb9525268b099ba3603ede:naive/add/postnorm_add_sub.vhd
+
 
 END ENTITY postnorm_add_sub;
 

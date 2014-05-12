@@ -12,11 +12,10 @@ ENTITY prenorm_addsub IS
 	( clk,reset,mode	: IN  std_logic;
 	  A_i			: IN  std_logic_vector(31 downto 0);
 	  B_i			: IN  std_logic_vector(31 downto 0);
-	  A_man_o,B_man_o	: OUT std_logic_vector(22 downto 0);
+	  A_man_o,B_man_o	: OUT std_logic_vector(26 downto 0);	--(hidden &mantissa &guard &round &sticky)(1+23+1+1+1=27)
 	  temp_exp_o		: OUT std_logic_vector(7 downto 0);
 	  sign_o		: OUT std_logic;
 	  eop_o			: OUT std_logic;
-	  sticky_b_o		: OUT std_logic
 	);
 END ENTITY prenorm_addsub;
 
@@ -26,25 +25,26 @@ ALIAS slv IS std_logic_vector;
 ALIAS usg IS unsigned;
 ALIAS sgn IS signed;
 
-SIGNAL A_si_s,B_si_s,temp_sign					:std_logic;
-SIGNAL A_e_s,B_e_s,temp_expo					:slv(7 downto 0);
-SIGNAL A_man_s,B_man_s,opA,opB					:slv(22 downto 0);
-SIGNAL expo_diff						:slv(8 downto 0);
-SIGNAL shift_unit						:usg(7 downto 0);
-SIGNAL addsub_opA_st_opB,addsub_expoA_st_expoB,addsub_expoA_eq_expoB			:std_logic;
-SIGNAL operation             					:std_logic;
---SIGNAL sticky_b							:std_logic;
-SIGNAL pre_shift_opA,pre_shift_opB				:slv(22 downto 0);
+SIGNAL A_si_s,B_si_s,temp_sign						:std_logic;
+SIGNAL A_e_s,B_e_s,temp_expo						:slv(7 downto 0);
+SIGNAL A_man_s,B_man_s,,						:slv(22 downto 0);
+SIGNAL expo_diff							:slv(8 downto 0);
+SIGNAL shift_unit							:usg(7 downto 0);
+SIGNAL addsub_opA_st_opB,addsub_expoA_st_expoB,addsub_expoA_eq_expoB	:std_logic;
+SIGNAL operation             						:std_logic;
+
+SIGNAL pre_shift_opA							:slv(26 downto 1);
+SIGNAL pre_shift_opB							:slv(26 downto 1);
+SIGNAL post_shift_opA								:slv(26 downto 0);
+SIGNAL post_shift_opB								:slv(26 downto 0);
+
 
 BEGIN
-A_man_o			<=	opA;
-B_man_o			<=	opB;
+A_man_o			<=	post_shift_opA;
+B_man_o			<=	post_shift_opB;
 temp_exp_o		<=	temp_expo;
 sign_o			<=	temp_sign;
 eop_o			<=	operation;
---sticky_b_o		<=	sticky_b;
-
-
 
 -----------------------------------------------------------------
 --unpacking
@@ -125,17 +125,13 @@ eop_o			<=	operation;
 -----------------------------------------------------------------	
 	swap:PROCESS(addsub_expoA_st_expoB,addsub_opA_st_opB,addsub_expoA_eq_expoB,A_man_s,B_man_s)
 	BEGIN
-		IF addsub_expoA_st_expoB='1' THEN					--if exponent of A is smaller than B
-			pre_shift_opA<=B_man_s;
-			pre_shift_opB<=A_man_s;
-				
-		ELSIF (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1'	THEN--if exponent of A is equal to B AND mantissa of A is smaller than B
-			pre_shift_opA<=B_man_s;
-			pre_shift_opB<=A_man_s;
-				
+		IF addsub_expoA_st_expoB='1' OR (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1' THEN					--if exponent of A is smaller than B
+			pre_shift_opA<='1'& B_man_s&"00";
+			pre_shift_opB<='1'& A_man_s&"00";
+			
 		ELSE
-			pre_shift_opA<=A_man_s;
-			pre_shift_opB<=B_man_s;
+			pre_shift_opA<='1'& A_man_s&"00";
+			pre_shift_opB<='1'& B_man_s&"00";
 		END IF;
 	END PROCESS swap;
 -----------------------------------------------------------------
@@ -147,24 +143,25 @@ eop_o			<=	operation;
 	shift:PROCESS
 	BEGIN
 	WAIT UNTIL clk'EVENT AND clk='1';
-		opA	<=	pre_shift_opA;					--directly connect A
-		FOR i IN 0 TO 22 LOOP
-			IF i+shift_unit<23	THEN 				
-				opB(i)<=pre_shift_opB(i+to_integer(shift_unit));		--right shift
-			ELSIF i+shift_unit=23 THEN
-				opB(i)<='1';					--shift the hidden bit
+		post_shift_opA	<=	pre_shift_opA&'0';					--directly connect A
+		FOR i IN 1 TO 26 LOOP
+			IF i+shift_unit<27	THEN 				
+				post_shift_opB(i)<=pre_shift_opB(i+to_integer(shift_unit));--right shift
 			ELSE
-				opB(i)<='0';					--zero padding
+				post_shift_opB(i)<='0';					--zero padding
 			END IF;
 		END LOOP;
-	END PROCESS shift;
 
 --**********************************sticky bit to be considered **********
 --		FOR i IN 0 TO 22 LOOP
 --		IF i<shift_unit	THEN 
---		sticky_b	<=	pre_shift_opB(i) or sticky_b;
+		post_shift_opB(0)	<=	'1';						--sticky bit
 --		END IF;--NOT COMPLETED
 --		END LOOP;
+		
+	END PROCESS shift;
+
+
 	
 
 END ARCHITECTURE rtl;

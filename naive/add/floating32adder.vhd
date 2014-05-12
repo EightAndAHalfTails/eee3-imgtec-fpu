@@ -17,13 +17,13 @@ END ENTITY floating32adder;
 
 ARCHITECTURE rtl of floating32adder IS 
 
-SIGNAL s_A_man,s_B_man		: std_logic_vector(22 downto 0);
+SIGNAL s_A_man,s_B_man		: std_logic_vector(26 downto 0);
 SIGNAL s_eop			: std_logic;
 SIGNAL s_prenorm_exponent	: std_logic_vector(7 downto 0);
 SIGNAL s_sign			: std_logic;
 SIGNAL s_sticky_bit		: std_logic;
 
-SIGNAL s_prenorm_man		: std_logic_vector(23 downto 0);
+SIGNAL s_prenorm_man		: std_logic_vector(27 downto 0);
 
 SIGNAL s_result_o		: std_logic_vector(31 downto 0);
 BEGIN
