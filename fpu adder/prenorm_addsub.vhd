@@ -31,9 +31,9 @@ SIGNAL A_e_s,B_e_s,temp_expo					:slv(7 downto 0);
 SIGNAL A_man_s,B_man_s,opA,opB					:slv(22 downto 0);
 SIGNAL expo_diff						:slv(8 downto 0);
 SIGNAL shift_unit						:usg(7 downto 0);
-SIGNAL addsub_opA_st_opB,addsub_expoA_st_expoB			:std_logic;
+SIGNAL addsub_opA_st_opB,addsub_expoA_st_expoB,addsub_expoA_eq_expoB			:std_logic;
 SIGNAL operation             					:std_logic;
-SIGNAL sticky_b							:std_logic;
+--SIGNAL sticky_b							:std_logic;
 SIGNAL pre_shift_opA,pre_shift_opB				:slv(22 downto 0);
 
 BEGIN
@@ -49,7 +49,7 @@ eop_o			<=	operation;
 -----------------------------------------------------------------
 --unpacking
 --This block is used to unpack the 32 numbers into corresponding 
---sections (sign&exponential&mantissa)
+--sections (sign&exponent&mantissa)
 -----------------------------------------------------------------
   
 	unpack:BLOCK
@@ -86,9 +86,9 @@ eop_o			<=	operation;
 	sign_logic:PROCESS
 	BEGIN
 	WAIT UNTIL clk'EVENT AND clk='1';
-		IF addsub_expoA_st_expoB  THEN					--if exponent of A is smaller than B
+		IF addsub_expoA_st_expoB='1'  THEN					--if exponent of A is smaller than B
 			temp_sign<=B_si_s;
-		ELSIF	addsub_expoA_eq_expoB AND addsub_opA_st_opB		--if exponent of A is equal to B AND mantissa of A is smaller than B
+		ELSIF	(addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1'		THEN--if exponent of A is equal to B AND mantissa of A is smaller than B
 			temp_sign<=B_si_s;
 		ELSE								--others
 			temp_sign<=A_si_s;					
@@ -102,7 +102,7 @@ eop_o			<=	operation;
 	expo_logic:PROCESS
 	BEGIN
 	WAIT UNTIL clk'EVENT AND clk='1';
-		IF addsub_expoA_st_expoB THEN					--if exponent of A is smaller than B
+		IF addsub_expoA_st_expoB='1' THEN					--if exponent of A is smaller than B
 			temp_expo	<=	B_e_s;
 		ELSE
 			temp_expo	<=	A_e_s;
@@ -123,13 +123,13 @@ eop_o			<=	operation;
 
 --swap the inputs when abs(A)<abs(B)
 -----------------------------------------------------------------	
-	swap:PROCESS(addsub_expoA_st_expoB,addsub_opA_st_opB,A_man_s,B_man_s)
+	swap:PROCESS(addsub_expoA_st_expoB,addsub_opA_st_opB,addsub_expoA_eq_expoB,A_man_s,B_man_s)
 	BEGIN
-		IF addsub_expoA_st_expoB THEN					--if exponent of A is smaller than B
+		IF addsub_expoA_st_expoB='1' THEN					--if exponent of A is smaller than B
 			pre_shift_opA<=B_man_s;
 			pre_shift_opB<=A_man_s;
 				
-		ELSIF addsub_expoA_eq_expoB AND addsub_opA_st_opB		--if exponent of A is equal to B AND mantissa of A is smaller than B
+		ELSIF (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1'	THEN--if exponent of A is equal to B AND mantissa of A is smaller than B
 			pre_shift_opA<=B_man_s;
 			pre_shift_opB<=A_man_s;
 				
@@ -150,13 +150,14 @@ eop_o			<=	operation;
 		opA	<=	pre_shift_opA;					--directly connect A
 		FOR i IN 0 TO 22 LOOP
 			IF i+shift_unit<23	THEN 				
-				opB(i)<=pre_shift_opB(i+shift_unit);		--right shift
+				opB(i)<=pre_shift_opB(i+to_integer(shift_unit));		--right shift
 			ELSIF i+shift_unit=23 THEN
 				opB(i)<='1';					--shift the hidden bit
 			ELSE
 				opB(i)<='0';					--zero padding
 			END IF;
 		END LOOP;
+	END PROCESS shift;
 
 --**********************************sticky bit to be considered **********
 --		FOR i IN 0 TO 22 LOOP
@@ -164,6 +165,9 @@ eop_o			<=	operation;
 --		sticky_b	<=	pre_shift_opB(i) or sticky_b;
 --		END IF;--NOT COMPLETED
 --		END LOOP;
-	END PROCESS swap;
+	
 
 END ARCHITECTURE rtl;
+
+
+
