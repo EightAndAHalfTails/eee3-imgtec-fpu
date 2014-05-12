@@ -1,2 +1,5 @@
 # gedit/emacs buffer files
 *~
+
+# modelsim buffer files
+*.bak
