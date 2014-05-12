@@ -75,15 +75,36 @@ begin
   -- the significand of the product is simply the product of
   -- the significands of the inputs. Remember that the
   -- significand is given by 1.{significand bits}. This
-  -- number can be constructed by interpreting the bits as
-  -- an integer, then dividing by 2^(significand width), and
-  -- adding 1.
+  -- number can be constructed by interpreting the bits,
+  -- appended to a '1', as an integer, then dividing by
+  -- 2^(significand width).
+  -- However, to avod using fixed-point libraries, I have
+  -- adopted to do the multiplication on integers, and divide
+  -- by 2^(2*significand width) to get the final result.
   -- If the product significand is greater than 2, it must
   -- be halved and the exponent incremented by 1.
   -----------------------------------------------------------
   compute_significand: process(a, b)
+    variable mult_result : std_logic_vector(47 downto 0);
   begin
-    -- magic
+    mult_result := std_logic_vector(unsigned('1' & a.significand) * unsigned('1' & b.significand)); -- & = concat operator
+    -- This integer would be 48 bits in hardware. We are
+    -- interpreting the 2 msb as the integer bits, and the
+    -- rest as fractional bits.
+    ---------------------------------------------------------
+    -- If the whole part is lower than 2, we can simply take
+    -- the fractional part as-is, truncated to 23 bits.
+    if mult_result(47) = '0' then -- top bit 1 <--> number > 2
+      product.significand <= mult_result(45 downto 23);
+      must_normalise <= '0';
+    else
+    ---------------------------------------------------------
+    -- If the whole part is greater than 2, then we need to
+    -- half the result. We can acheive this by simply taking
+    -- the slice one bit more significant.
+      product.significand <= mult_result(46 downto 24);
+      must_normalise <= '1';
+    end if;
   end process compute_significand;
   -----------------------------------------------------------
   
