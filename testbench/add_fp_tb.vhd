@@ -66,8 +66,8 @@ BEGIN
 		FILE f				: TEXT OPEN read_mode IS "adder_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
+		VARIABLE i1, i2     : INTEGER;
 		VARIABLE n          : INTEGER;		--line counter
-		--VARIABLE f1, f2, f3	: FLOAT32;
 		VARIABLE incorrect_result : INTEGER;
 	
 	BEGIN
@@ -87,12 +87,11 @@ BEGIN
 				REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
 				
 				-------------------------------------------------------------
-				-- note: read(LINE, FLOAT32) is not working at initial test
-				--       with just integers input, i don't know why, HELP
+				-- note: x and y from file must be in binary
 				-------------------------------------------------------------
 				read(buf, x);
 				read(buf, y);
-        
+				
 				A<=to_slv(x);
 				B<=to_slv(y);
 				

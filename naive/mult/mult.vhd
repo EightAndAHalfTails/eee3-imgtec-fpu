@@ -5,11 +5,9 @@ use work.all;
 
 entity mult is
   port(
-    clk, reset, start : in std_logic;
     a_in, b_in : in std_logic_vector(31 downto 0);
-    done : out std_logic;
     product_out : out std_logic_vector(31 downto 0)
-  );
+    );
 end entity mult;
 
 architecture arch of mult is
@@ -98,10 +96,10 @@ begin
       product.significand <= mult_result(45 downto 23);
       must_normalise <= '0';
     else
-    ---------------------------------------------------------
-    -- If the whole part is greater than 2, then we need to
-    -- half the result. We can acheive this by simply taking
-    -- the slice one bit more significant.
+      ---------------------------------------------------------
+      -- If the whole part is greater than 2, then we need to
+      -- half the result. We can achieve this by simply taking
+      -- the slice one bit more significant.
       product.significand <= mult_result(46 downto 24);
       must_normalise <= '1';
     end if;
