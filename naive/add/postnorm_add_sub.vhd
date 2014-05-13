@@ -42,13 +42,13 @@ SIGNAL prenorm_result_man_s		:std_logic_vector(22 downto 0);
 --floating point number
 -----------------------------------------------------------------
   
-unpack:BLOCK
+pack:BLOCK
 BEGIN
 	result_o(31)		<=r_sign_i;
 	result_o(30 downto 23)	<=postnorm_result_e_s;
 	result(22 downto 0)	<=postnorm_result_man_s;
 
-END BLOCK unpack;
+END BLOCK pack;
 
 -----------------------------------------------------------------
 --
@@ -57,11 +57,17 @@ END BLOCK unpack;
 -----------------------------------------------------------------
 
 
-zero_counter: PROCESS
+leading_zero_detector:PROCESS
+VARIABLE count		:integer range 0 to 
 BEGIN
 
+	FOR i IN r_man_i'RANGE LOOP
+		IF leading='' AND not THEN 	count:=count+1;
+		ELSE NEXT;
+	END LOOP;
 
-END;
+
+END PROCESS leading_zero_detector;
 
 rounder:PROCESS
 BEGIN

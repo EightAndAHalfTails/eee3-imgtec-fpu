@@ -46,5 +46,14 @@ BEGIN
 END PROCESS adder_proc;
 
 --to add more process (Leading Zero Anticipator)
+lza: PROCESS(opA_i,opB_i,operation)
+BEGIN
+	IF operation='1' THEN
+		
 
+
+	END IF; 
+
+
+END PROCESS lza;
 END ARCHITECTURE rtl;

@@ -21,8 +21,6 @@ SIGNAL s_A_man,s_B_man		: std_logic_vector(26 downto 0);
 SIGNAL s_eop			: std_logic;
 SIGNAL s_prenorm_exponent	: std_logic_vector(7 downto 0);
 SIGNAL s_sign			: std_logic;
-SIGNAL s_sticky_bit		: std_logic;
-
 SIGNAL s_prenorm_man		: std_logic_vector(27 downto 0);
 
 SIGNAL s_result_o		: std_logic_vector(31 downto 0);
@@ -61,8 +59,7 @@ PORT MAP
 	 r_sign_i	=>	s_sign,
 	 operation_i	=>	s_eop,
 	 r_exponent_i	=>	s_prenorm_exponent,	
-	 r_man_i	=>	s_prenorm_man,			
-	 sticky_b	=>	s_sticky_bit,
+	 r_man_i	=>	s_prenorm_man,		
 	 result_o	=>	s_result_o
 	);
 
