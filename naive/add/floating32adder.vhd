@@ -38,8 +38,7 @@ PORT MAP
 	 B_man_o	=>	s_B_man,
 	 temp_exp_o	=>	s_prenorm_exponent,
 	 sign_o		=>	s_sign,
-	 eop_o		=>	s_eop,
-	 sticky_b_o	=>	s_sticky_bit
+	 eop_o		=>	s_eop
 	);
 
 add_sub: ENTITY addsub

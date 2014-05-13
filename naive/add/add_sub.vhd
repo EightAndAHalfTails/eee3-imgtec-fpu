@@ -9,20 +9,19 @@ USE work.all;
 ENTITY addsub IS 
 	PORT(
 		clk,reset		:	IN 		std_logic;
+		operation_i		:	IN		std_logic;
 		opA_i			:	IN		std_logic_vector(26 downto 0);	
 		opB_i			:	IN		std_logic_vector(26 downto 0);
-		operation_i		:	IN		std_logic;
 		prenormresult_o		:	OUT		std_logic_vector(27 downto 0)
 		);
 
 END ENTITY addsub;
 
-ARCHITECTURE rtl OF addsub IS
+ARCHITECTURE arch OF addsub IS
 
 ALIAS slv IS std_logic_vector;
 ALIAS usg IS unsigned;
 ALIAS sgn IS signed;
-
 
 BEGIN
 ------------------------------------------------------------------
@@ -45,15 +44,5 @@ BEGIN
 		END IF;
 END PROCESS adder_proc;
 
---to add more process (Leading Zero Anticipator)
-lza: PROCESS(opA_i,opB_i,operation)
-BEGIN
-	IF operation='1' THEN
-		
 
-
-	END IF; 
-
-
-END PROCESS lza;
-END ARCHITECTURE rtl;
+END ARCHITECTURE arch;

@@ -163,7 +163,6 @@ eop_o			<=	operation;
 
 
 	
-
 END ARCHITECTURE rtl;
 
 
