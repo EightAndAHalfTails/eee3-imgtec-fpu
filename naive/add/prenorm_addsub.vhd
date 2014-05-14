@@ -12,7 +12,7 @@ ENTITY prenorm_addsub IS
 	( --clk,reset		: IN  std_logic;
 	  A_i				: IN  std_logic_vector(31 downto 0);
 	  B_i				: IN  std_logic_vector(31 downto 0);
-	  A_man_o,B_man_o	: OUT std_logic_vector(26 downto 0);	--(hidden &mantissa &guard &round &sticky)(1+23+1+1+1=27)
+	  A_man_o,B_man_o	: OUT std_logic_vector(25 downto 0);	--(hidden &mantissa &guard &round &sticky)(1+23+1+1+1=27)
 	  temp_exp_o		: OUT std_logic_vector(7 downto 0);
 	  sign_o			: OUT std_logic;
 	  eop_o				: OUT std_logic
@@ -36,10 +36,10 @@ SIGNAL A_man_s,B_man_s   												:slv(22 downto 0);
 SIGNAL expo_diff														:slv(8 downto 0);
 SIGNAL shift_unit														:integer range 0 to 255;
 
-SIGNAL pre_shift_opA													:slv(26 downto 1);
-SIGNAL pre_shift_opB													:slv(26 downto 1);
-SIGNAL post_shift_opA													:slv(26 downto 0);
-SIGNAL post_shift_opB													:slv(26 downto 0);
+SIGNAL pre_shift_opA													:slv(25 downto 1);
+SIGNAL pre_shift_opB													:slv(25 downto 1);
+SIGNAL post_shift_opA													:slv(25 downto 0);
+SIGNAL post_shift_opB													:slv(25 downto 0);
 
 
 BEGIN
@@ -82,7 +82,7 @@ BEGIN
 	addsub_expoA_eq_expoB<='1'	WHEN usg(A_e_s)=usg(B_e_s) ELSE '0';		--flag:	exponent of A= exponent of B
 	addsub_opA_st_opB<='1'		WHEN usg(A_man_s)<usg(B_man_s) ELSE '0';	--flag: mantissa of A< mantissa of B
 	--compute shift unit
-	shift_unit<=to_integer(usg(expo_diff(7 downto 0)));						--take exponent difference as number of shifts required
+	shift_unit<=to_integer(abs(sgn(expo_diff(8 downto 0))));						--take exponent difference as number of shifts required
 		
 --------------------------------------------------------------------------------------------
 --effective_op_proc
@@ -147,12 +147,12 @@ BEGIN
 	swap:PROCESS(addsub_expoA_st_expoB,addsub_opA_st_opB,addsub_expoA_eq_expoB,A_man_s,B_man_s)
 	BEGIN
 		IF addsub_expoA_st_expoB='1' OR (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1' THEN					--if exponent of A is smaller than B
-			pre_shift_opA<='1'& B_man_s&"00";
-			pre_shift_opB<='1'& A_man_s&"00";
+			pre_shift_opA<='1'& B_man_s&'0';
+			pre_shift_opB<='1'& A_man_s&'0';
 			
 		ELSE
-			pre_shift_opA<='1'& A_man_s&"00";
-			pre_shift_opB<='1'& B_man_s&"00";
+			pre_shift_opA<='1'& A_man_s&'0';
+			pre_shift_opB<='1'& B_man_s&'0';
 		END IF;
 	END PROCESS swap;
 	
@@ -169,7 +169,7 @@ BEGIN
 				sticky_b := '0';
 				post_shift_opA	<=	pre_shift_opA&'0';					--A+sticky bit
 		
-					FOR i IN 1 TO 26 LOOP
+					FOR i IN 1 TO 25 LOOP
 						
 						----------------------------------
 						--sticky bit
@@ -180,7 +180,7 @@ BEGIN
 						----------------------------------
 						--shift by shift_unit
 						----------------------------------
-						IF i+shift_unit<27	THEN 				
+						IF i+shift_unit<26	THEN 				
 							post_shift_opB(i)<=pre_shift_opB(i+shift_unit);	--right shift
 						ELSE
 							post_shift_opB(i)<='0';							--zero padding				

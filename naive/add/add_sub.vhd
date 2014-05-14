@@ -10,9 +10,9 @@ ENTITY addsub IS
 	PORT(
 		--clk,reset		:	IN 		std_logic;
 		operation_i		:	IN		std_logic;
-		opA_i			:	IN		std_logic_vector(26 downto 0);	
-		opB_i			:	IN		std_logic_vector(26 downto 0);
-		prenormresult_o		:	OUT		std_logic_vector(27 downto 0)
+		opA_i			:	IN		std_logic_vector(25 downto 0);	
+		opB_i			:	IN		std_logic_vector(25 downto 0);
+		prenormresult_o		:	OUT		std_logic_vector(26 downto 0)
 		);
 
 END ENTITY addsub;
@@ -37,9 +37,9 @@ BEGIN
 		--		prenormresult_o<=(others=>'0');
 		--ELSE 
 				IF	operation_i ='0' THEN
-					prenormresult_o<=slv(Resize(usg(opA_i),28)+Resize(usg(opB_i),28));
+					prenormresult_o<=slv(Resize(usg(opA_i),27)+Resize(usg(opB_i),27));
 				ELSE 
-					prenormresult_o<=slv(Resize(usg(opA_i),28)-Resize(usg(opB_i),28));
+					prenormresult_o<=slv(Resize(usg(opA_i),27)-Resize(usg(opB_i),27));
 				END IF;
 		--END IF;
 END PROCESS adder_proc;

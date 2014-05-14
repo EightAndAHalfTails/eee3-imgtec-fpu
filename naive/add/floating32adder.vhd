@@ -6,22 +6,22 @@ USE IEEE.std_logic_1164.ALL;
 USE IEEE.numeric_std.ALL;
 USE work.all;
 
-ENTITY floating32adder IS 
+ENTITY add IS 
 	PORT 
-	( --clk_i,reset_i,
+	( clk,reset  :IN std_logic;
 	  A_i			: IN  std_logic_vector(31 downto 0);
 	  B_i			: IN  std_logic_vector(31 downto 0);
 	  result_o		: OUT std_logic_vector(31 downto 0)
 	);
-END ENTITY floating32adder;
+END ENTITY add;
 
-ARCHITECTURE rtl of floating32adder IS 
+ARCHITECTURE rtl of add IS 
 
-SIGNAL s_A_man,s_B_man		: std_logic_vector(26 downto 0);
+SIGNAL s_A_man,s_B_man		: std_logic_vector(25 downto 0);
 SIGNAL s_eop			: std_logic;
 SIGNAL s_prenorm_exponent	: std_logic_vector(7 downto 0);
 SIGNAL s_sign			: std_logic;
-SIGNAL s_prenorm_man		: std_logic_vector(27 downto 0);
+SIGNAL s_prenorm_man		: std_logic_vector(26 downto 0);
 
 SIGNAL s_result_o		: std_logic_vector(31 downto 0);
 BEGIN
@@ -60,6 +60,9 @@ PORT MAP
 	 result_o	=>	s_result_o
 	);
 
-result_o	<=	s_result_o;
-
+--output:PROCESS
+--BEGIN
+--  WAIT UNTIL clk'EVENT AND clk='1';
+    result_o	<=	s_result_o;
+--END PROCESS output;
 END ARCHITECTURE rtl;
