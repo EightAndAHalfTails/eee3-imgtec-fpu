@@ -8,7 +8,7 @@ USE work.all;
 
 ENTITY postnorm_add_sub IS 
 	PORT(
-		clk,reset		:	IN 		std_logic;
+		--clk,reset		:	IN 		std_logic;
 		r_sign_i		:	IN		std_logic;
 		r_exponent_i		:	IN		std_logic_vector(7 downto 0);
 		r_man_i			:	IN		std_logic_vector(27 downto 0);
@@ -45,13 +45,12 @@ prenorm_result_man_s	<=	r_man_i;
 --This block is used to pack the separate sections up into a 32 bit 
 --floating point number
 -----------------------------------------------------------------
-pack:PROCESS
+pack:BLOCK
 BEGIN
-	WAIT UNTIL 
 	result_o(31)			<=r_sign_i;
 	result_o(30 downto 23)	<=finalised_result_e_s;
 	result_o(22 downto 0)	<=finalised_result_man_s;
-END PROCESS pack;
+END BLOCK pack;
 
 -----------------------------------------------------------------
 --leading zero detector
@@ -102,7 +101,7 @@ BEGIN
 			ELSE
 				postnorm_result_man_s(i)<='0';					--zero padding
 			END IF;
-		END LOOP
+		END LOOP;
 		
 	END IF;	 
 END PROCESS normaliser;

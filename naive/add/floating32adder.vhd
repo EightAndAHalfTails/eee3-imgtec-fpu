@@ -8,7 +8,7 @@ USE work.all;
 
 ENTITY floating32adder IS 
 	PORT 
-	( clk_i,reset_i,mode_i	: IN  std_logic;
+	( --clk_i,reset_i,
 	  A_i			: IN  std_logic_vector(31 downto 0);
 	  B_i			: IN  std_logic_vector(31 downto 0);
 	  result_o		: OUT std_logic_vector(31 downto 0)
@@ -29,9 +29,8 @@ BEGIN
 
 pre_addsub:ENTITY prenorm_addsub
 PORT MAP
-	(clk		=>	clk_i,
-	 reset		=>	reset_i,
-	 mode		=>	mode_i,
+	(--clk		=>	clk_i,
+	 --reset	=>	reset_i,
 	 A_i		=>	A_i,
 	 B_i		=>	B_i,
 	 A_man_o	=>	s_A_man,
@@ -43,8 +42,8 @@ PORT MAP
 
 add_sub: ENTITY addsub
 PORT MAP
-	(clk		=>	clk_i,
-	 reset		=>	reset_i,
+	(--clk		=>	clk_i,
+	 --reset	=>	reset_i,
 	 opA_i		=>	s_A_man,		
 	 opB_i		=>	s_B_man,
 	 operation_i	=>	s_eop,
@@ -53,8 +52,8 @@ PORT MAP
 
 post_addsub:ENTITY postnorm_add_sub
 PORT MAP
-	(clk		=>	clk_i,
-	 reset		=>	reset_i,
+	(--clk		=>	clk_i,
+	 --reset	=>	reset_i,
 	 r_sign_i	=>	s_sign,
 	 r_exponent_i	=>	s_prenorm_exponent,	
 	 r_man_i	=>	s_prenorm_man,		

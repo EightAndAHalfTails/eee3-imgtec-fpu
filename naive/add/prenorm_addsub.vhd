@@ -9,7 +9,7 @@ USE work.all;
 
 ENTITY prenorm_addsub IS 
 	PORT 
-	( clk,reset,mode	: IN  std_logic;
+	( --clk,reset		: IN  std_logic;
 	  A_i				: IN  std_logic_vector(31 downto 0);
 	  B_i				: IN  std_logic_vector(31 downto 0);
 	  A_man_o,B_man_o	: OUT std_logic_vector(26 downto 0);	--(hidden &mantissa &guard &round &sticky)(1+23+1+1+1=27)
@@ -76,29 +76,29 @@ BEGIN
 -----------------------------------------------------------------
 --internal signal connections
 -----------------------------------------------------------------
-	expo_diff<=slv(Resize(usg(A_e_s),9)-Resize(usg(B_e_s),9));			--exponent difference (plus one signed bit)
+	expo_diff<=slv(Resize(usg(A_e_s),9)-Resize(usg(B_e_s),9));				--exponent difference (plus one signed bit)
 	--control logic flags
 	addsub_expoA_st_expoB<='1'	WHEN usg(A_e_s)<usg(B_e_s) ELSE '0';		--flag: exponent of A< exponent of B
 	addsub_expoA_eq_expoB<='1'	WHEN usg(A_e_s)=usg(B_e_s) ELSE '0';		--flag:	exponent of A= exponent of B
-	addsub_opA_st_opB<='1'		WHEN usg(A_man_s)<usg(B_man_s) ELSE '0';		--flag: mantissa of A< mantissa of B
+	addsub_opA_st_opB<='1'		WHEN usg(A_man_s)<usg(B_man_s) ELSE '0';	--flag: mantissa of A< mantissa of B
 	--compute shift unit
-	shift_unit<=to_integer(usg(expo_diff(7 downto 0)));								--take exponent difference as number of shifts required
+	shift_unit<=to_integer(usg(expo_diff(7 downto 0)));						--take exponent difference as number of shifts required
 		
 --------------------------------------------------------------------------------------------
 --effective_op_proc
 --The process computes the effective operation from the initial operator and sign of inputs
 --(mode(add=0,sub=1)& sign of A & sign of B) => operation
---(000|011|101|110)=>addition(0)
---(001|010|100|111)=>subtraction(1)
+--same sign=>addition(0)
+--different sign=>subtraction(1)
 --------------------------------------------------------------------------------------------
-	effective_op_proc:PROCESS
+	effective_op_proc:PROCESS(A_si_s,B_si_s)
 	BEGIN
-	WAIT UNTIL clk'EVENT AND clk='1';
-		IF reset='1'	THEN
-			operation<='0';
-		ELSE
-			operation<=mode XOR A_si_s XOR B_si_s;				--effective operation mode
-		END IF;
+	--WAIT UNTIL clk'EVENT AND clk='1';
+		--IF reset='1'	THEN
+		--	operation<='0';
+		--ELSE
+			operation<=A_si_s XOR B_si_s;				--effective operation mode
+		--END IF;
 	END PROCESS effective_op_proc;
 	
 ------------------------------------------------------------------
@@ -107,35 +107,36 @@ BEGIN
 --abs(A)<abs(B)=>sign to be sign of B
 --abs(A)>=abs(B)=>sign to be sign of A	
 ------------------------------------------------------------------	
-	sign_logic:PROCESS
+	sign_logic:PROCESS(addsub_expoA_st_expoB,addsub_expoA_eq_expoB,addsub_opA_st_opB,B_si_s,A_si_s)
 	BEGIN
-	WAIT UNTIL clk'EVENT AND clk='1';
-		IF reset='1' THEN
-			temp_sign<='0';
-		ELSE
+	--WAIT UNTIL clk'EVENT AND clk='1';
+		--IF reset='1' THEN
+			--temp_sign<='0';
+		--ELSE
 				IF addsub_expoA_st_expoB='1' OR (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1' THEN			--if abs(A) is smaller than abs(B)
 					temp_sign<=B_si_s;
 				ELSE																							--abs(A)>=abs(B)
 					temp_sign<=A_si_s;					
 				END IF;
+		--END IF;
 	END PROCESS;
 
 -----------------------------------------------------------------
 --exponent logic
 --output exponent = MAX(exponent of A, exponent of B)
 -----------------------------------------------------------------	
-	expo_logic:PROCESS
+	expo_logic:PROCESS(addsub_expoA_st_expoB,B_e_s,A_e_s)
 	BEGIN
-	WAIT UNTIL clk'EVENT AND clk='1';
-		IF reset='1' THEN
-			temp_expo<=(OTHERS=>'0');		
-		ELSE
+	--WAIT UNTIL clk'EVENT AND clk='1';
+		--IF reset='1' THEN
+		--	temp_expo<=(OTHERS=>'0');		
+		--ELSE
 				IF addsub_expoA_st_expoB='1' THEN					--if exponent of A is smaller than B
 					temp_expo	<=	B_e_s;
 				ELSE
 					temp_expo	<=	A_e_s;
 				END IF;
-		END IF;
+		--END IF;
 	END PROCESS;
 	
 
@@ -158,14 +159,14 @@ BEGIN
 -------------------------------------------------------------------------------------------
 --shift process : shift operand B
 -------------------------------------------------------------------------------------------
-	shift:PROCESS
+	shift:PROCESS(pre_shift_opA,pre_shift_opB,shift_unit)
 	VARIABLE sticky_b			:std_logic;
 	BEGIN
-	WAIT UNTIL clk'EVENT AND clk='1';
-		IF reset='1' THEN
-			post_shift_opA<=(OTHERS=>'0');
-		ELSE
-				sticky_b := 0;
+	--WAIT UNTIL clk'EVENT AND clk='1';
+		--IF reset='1' THEN
+			--post_shift_opA<=(OTHERS=>'0');
+		--ELSE
+				sticky_b := '0';
 				post_shift_opA	<=	pre_shift_opA&'0';					--A+sticky bit
 		
 					FOR i IN 1 TO 26 LOOP
@@ -188,7 +189,7 @@ BEGIN
 					END LOOP;
 				
 				post_shift_opB(0)	<=	sticky_b;						--sticky bit
-		END IF;
+		--END IF;
 
 	END PROCESS shift;
 
