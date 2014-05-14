@@ -56,7 +56,6 @@ PORT MAP
 	(clk		=>	clk_i,
 	 reset		=>	reset_i,
 	 r_sign_i	=>	s_sign,
-	 operation_i	=>	s_eop,
 	 r_exponent_i	=>	s_prenorm_exponent,	
 	 r_man_i	=>	s_prenorm_man,		
 	 result_o	=>	s_result_o
