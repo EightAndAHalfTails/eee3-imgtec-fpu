@@ -10,6 +10,10 @@
 	#define GEN_NEG 0
 #endif
 
+//generate denormal numbers if 0
+#ifndef NO_DENORMALS
+	#define NO_DENORMALS 1
+#endif
 
 //generate numbers in binary ieee754 format
 #ifndef GEN_BIN

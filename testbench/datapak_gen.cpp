@@ -1,10 +1,11 @@
 //**********************************************************************************//
 // Generates random floating point numbers				   							//
 //														   							//
-// Options: -DNUMINPUTS, define number of random number per line (default=2)		//
-// 			-DNUMLINES, define number of lines in datapak (default=20)	   			//
-//			-DGEN_NEG, generate negative numbers (default=0)						//
-//			-DGEN_BIN, generate numbers in binary IEEE 754 format (default=1)		//
+// Options: -DNUMINPUTS=x, define number of random number per line (default=2)		//
+// 			-DNUMLINES=x, define number of lines in datapak (default=20)	   		//
+//			-DGEN_NEG=x, generate negative numbers (default=0)						//
+//			-DNO_DENORMALS=x, generate denormal numbers if 0 (default=1)			//
+//			-DGEN_BIN=x, generate numbers in binary IEEE 754 format (default=1)		//
 //																					//
 // To compile: g++ -o datapak_gen.exe datapak_gen.cpp datapak_config.h <options>	//
 //																					//
@@ -94,6 +95,10 @@ float generate_random_fp(){
 		s = 0;
 	
 	e = rand()%255;
+	if(NO_DENORMALS){
+		while(e == 0)
+			e = rand()%255;
+	}
 	
 	m = 0;
 	for (int j = 0; j < 23 ; j++){
