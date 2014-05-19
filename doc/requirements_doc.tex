@@ -1,0 +1,361 @@
+\documentclass[11pt]{report}
+%\usepackage[utf8]{inputenc}
+\usepackage[margin=0.75in]{geometry} 
+\usepackage{framed}
+\usepackage{float}
+\usepackage[font=small,skip=0pt]{caption}
+\linespread{1.5}
+
+\usepackage{courier}
+\usepackage{xfrac}
+\usepackage{fixltx2e}
+\usepackage{mathtools}
+\usepackage{tocloft}
+\usepackage[linktoc=all]{hyperref}
+\usepackage[none]{hyphenat}
+\usepackage{lipsum} % for filler text
+%\usepackage{enumitem} %for list
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[final]{pdfpages}
+\usepackage[font=small,skip=0pt]{caption}
+\linespread{1.2}
+
+\usepackage{ctable} % added by Jake
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead{} % clear all header fields
+\renewcommand{\headrulewidth}{0pt} % no line in header area
+\fancyfoot{} % clear all footer fields
+\fancyfoot[LE,RO]{\thepage} % page number in "outer" position of footer line
+\fancyfoot[RE,LO]{$ \vert $ Requirements Document $ \vert $ }
+
+\setlength\parindent{0pt}   %set indent to 0
+\title{{\LARGE \textbf{Requirements Document}}\\ \Large\textbf{for Imagination Technologies}}
+\author{
+%Group Members:
+%\\
+\\Pavitar Singh Devgon 
+\\
+Jake Humphrey
+\\
+Zifan Guo
+\\
+Weng Lio
+\\
+Raj Mukherji\\ 
+Nikolaos Dionelis
+\\
+%\vspace{2in}
+\\
+\\
+Department of Electrical and Electronic Engineering
+\\
+Imperial College London
+\\
+\\
+\\
+Project: FPU Design
+\\
+Supervisor from Imagination Technologies: Dr Theo Drane
+\\
+Supervisor from Imperial College: Dr George Constantinides
+\\
+}
+
+\begin{document}
+\pagenumbering{arabic}
+
+\maketitle
+\vspace*{\fill}
+\begin{center}
+\LARGE \textbf{Statement of originality}
+\end{center}
+
+\begin{framed} 
+
+\noindent
+{\large We confirm that this submission is our own work. In it, we give references and citations whenever we refer to or use the published, or unpublished, work of others. We are aware that this course is bound by penalties as set out in the College examination offenses policy.}\\
+\begin{center}
+
+\vspace*{0.1in}
+{\large Signed: Pavitar Singh Devgon, Jake Humphrey, Zifan Guo, Weng Lio, Raj Mukherji, Nikolaos Dionelis}
+
+\end{center}
+\end{framed}
+\vspace*{\fill}
+
+\begin{abstract}
+This Requirements Document outlines how the design group interprets the user specification and is agreed upon by both parties before embarking on the project, as an understanding of the end product. Upon the completion of the project, the Requirements Document will be referenced in the final evaluation to determine the success of the project. \\
+
+\noindent
+Within this document, we outline how the FPU will be designed, with regard to the mathematical operations that will be performed. We will also evaluate the FPU in term of verification and application constraints.\\
+
+
+
+\end{abstract}
+
+
+\renewcommand*{\thesection}{\arabic{section}.}
+\renewcommand{\thesubsection}{\thesection\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection\arabic{subsubsection}}
+\tableofcontents
+%\thispagestyle{empty}
+%\addcontentsline{toc}{chapter}{\numberline{}Contents}%
+%\addtocontents{toc}{~\hfill\textbf{Page}\par}
+
+
+\pagebreak
+\section{Revision Sheet}
+
+%\begin{figure}[H]
+%\centering
+%\includegraphics[scale=0.8]{rev.png}
+%\caption{The table shows the revision dates of the requirements document.}
+%\end{figure}
+
+\ctable[
+  %caption = ,
+  %label = tab:rev,
+  pos = H,
+  doinside=\hspace*{0pt},
+  width=\textwidth
+]{X X X X}{
+}{
+\FL
+Version & Primary Author(s) & Modifications & Date
+\ML
+1 & The Group & Initial Revision & 2014-05-09
+\LL
+}
+
+
+\section{Document Approval}
+
+%\begin{figure}[H]
+%\centering
+%\includegraphics[scale=0.8]{approval.png}
+%\caption{The table shows the approval dates of the requirements document.}
+%\end{figure}
+
+\ctable[
+  %caption = ,
+  %label = tab:app,
+  pos = H,
+  doinside=\hspace*{0pt},
+  width=\textwidth
+]{X X X X}{
+}{
+\FL
+Name & Title & Signature & Date
+\ML
+& & &
+\NN
+& & &
+\LL
+}
+
+\pagebreak
+
+\section{Introduction}
+Technology is evolving with tremendous speeds and the demand for high accuracy systems is apparent. Imagination’s PowerVR graphics technology division designs the graphics processing units for a wide range of applications. Notably, the PowerVR graphics processors constitute a major component of Apple's iPhone devices \cite{Apple14}, as well as of Samsung, Intel, Sony, Qualcomm, and others. As a result, efficiency in throughput, latency, area and power is critical when designing the FPU and an optimal compromise has to be found between these metrics. \\
+
+\noindent
+For the implementation of the FPU on mobile real-time graphics, no parameter can be sacrificed. For instance, in order for graphics to be photorealistic, light-tracing is used. Light-tracing requires many mathematical operations that are performed on the FPU.\\
+
+\subsection{Purpose}
+\noindent
+The aim of this project is to analyze, design and create an efficient FPU architectural structure that will meet the requirements that are presented in Section~\ref{sec:requirements} Raw computational power is typically measured in floating-point operations per second (Flops) and new chips will be benchmarked by analysing flop performance of the Floating Point Unit (FPU) \cite{designHandout}. The Group will develop efficient algorithms for specific floating-point operations. Equivalent C++ and VHDL code will be generated and will be optimized with respect to the synthesis tool performing sanity checking verification \cite{designHandout}. Moreover, the correctness of the FPU will be tested and verified, and an optimum FPU configuration will be proposed.\\
+
+\subsection{Points of Contact}
+\noindent
+During the kick off meeting, it was decided that the Group would be acting in the role of consultants to a user specification. In this role, the Group would act fairly autonomously and not be expected to contact Imagination too often. However, due to unfamiliarity with FPU design, the Group may need to consult Imagination about certain phases of the design and test process. The Group maintains that each side will respond to emails in a timely fashion (2 working days). The Group's main contact at Imagination will be Theo Drane, who can be contacted via email: Theo.Drane@imgtec.com.\\
+
+\noindent
+The supervisor at Imperial will be the first point of contact for smaller problems in understanding. The Group will keep regular contact with the supervisor, meeting at least once a fortnight, so that all members of the Group are kept up to date with work and are not falling behind. The Group's supervisor is Dr George Constantinides, who can be contacted via email: g.constantinides@imperial.ac.uk.\\
+
+
+\section{Background Information}
+\subsection{Number Format}\label{sec:numFormat}
+\noindent
+All input and output numbers will be represented in the \texttt{IEEE 754} floating point format. Each number will be composed of 32 bits; 1 bit for sign, 8 bits for exponent and 23 bits for mantissa. The bias will be set as 127. The significand is defined as the mantissa appended to a 1, i.e 1.m. Conversion to standard decimal value will then follow the formula: $(-1)^{s} \times (2^{e - 127}) \times (1.m)$.\\
+
+\noindent
+However, there are special cases where the value will not follow this rule. Table~\ref{tab:fpspec} presents these cases.
+
+\ctable[
+  caption = Special cases for the floating point number format,
+  label = tab:fpspec,
+  pos = hp,
+  doinside=\hspace*{0pt}
+]{l l l l}{
+}{
+\FL
+Special Value & Sign Bit ($s$) & Exponent bits ($e$) & Mantissa ($m$)
+\ML
++0 & 0 & 0000 0000 & All 0s
+\NN
+-0 & 1 & 0000 0000 & All 0s
+\NN
++$\infty$ & 0 & 1111 1111 & All 0s
+\NN
+-$\infty$ & 1 & 1111 1111 & All 0s
+\NN
+NaN & x & 1111 1111 & All 0s
+\LL
+}
+
+\noindent
+The maximum value that can be reached using this convention is given when $s = 0$, $e = 254$, $m$ = all 1s, i.e $2^{127}- 2^{104}$, or $3.402$  $\times 10^{38}$. In order to increase the range at lower numbers, the idea of a denormal will be utilized. With the use of denormals, the minimum value that can be represented will be as low as $2^{-149}$. If denormals were not used, then the minimum value that could be represented would be $s = 0$, $e = 1$, $m$ = all 0s: $(2 ^{- 126})$.\\
+
+\noindent
+When $e = 0$ and $m \neq 0$, the formula used to convert denormals to decimal value is now: $(-1)^{s} \times (2^{-126}) \times (0.m)$. 
+
+\subsection{Out of Range Exceptions}
+\noindent
+When the output of an operation is out of range, the special case values are used. In the event of a magnitude computation overflow, infinity is used to represent numbers that are too large and can not be represented with the given format even after rounding. When the result of an operation is non-zero below $2^{-149}$, its value will be determined by rounding to the nearest, tied to even (RTE), taking either zero or $2^{-149}$ with the corresponding sign.
+
+\subsection{Invalid Operation Exceptions}
+\begin{itemize}
+\item Square Root of a negative number
+\item $\frac{\pm0}{\pm0}$ or $\frac{\pm\infty}{\pm\infty}$
+\item $\infty - \infty$
+\item $\pm0 \times \pm\infty$
+\item Any operation on NaN
+\end{itemize}
+
+\noindent
+%Any invalid instructions will result in no operations, with a flag to indicate an attempt to execute invalid operations. 
+Invalid operations will return NaN.
+
+\subsection{Rounding}
+\noindent
+When a number requires too much precision to be represented in 32 bits, rounding to an adjacent representable number occurs. There are a number of different rounding standards detailing whether to round up or down.\\
+
+\noindent
+In the entire project, rounding to the nearest, tied to even (RTE) will be utilized. RTE means that the floating-point number is usually rounded to the nearer number. For example, if the mantissa is 25 bits (disregarding the implicit 1 in the msb) and the only non-zero bit is the last one, then rounding down closer to zero will be performed. If the number is halfway between representable numbers, for example a 24 bit mantissa with only the last two bits non-zero, then rounding to the number that ends in a zero is performed (in this case, rounding up to 00\dots010).
+
+\clearpage
+\section{FPU Requirements}\label{sec:requirements}
+Table~\ref{tab:fpuops} states the functionality of the FPU, along with the accuracy and speed required. The throughput (in clock cycles per operation) and the latency required for each case can be seen below.
+
+\ctable[
+  caption = The required operations for the FPU,
+  label = tab:fpuops,
+  pos = hp,
+  doinside=\hspace*{-33pt}
+]{l l l r r r}{
+\tnote[a]{Round to Nearest, tied to Even}
+\tnote[b]{No set accuracy; the Group is to specify how accurate the result will be}
+\tnote[c]{No Worse than Chaining constituent operations}
+\tnote[d]{Units in Last Place}
+\tnote[e]{Opcode decided on an ad-hoc basis; subject to change}
+\tnote[f]{a,b,..,f each represents a floating-point number as described in Section~\ref{sec:numFormat}}
+\tnote[g]{As yet unspecified, but each operation is measured relatively}
+}{
+\FL
+Opcode\tmark[e] & Operation & Mathematical Representation\tmark[f]& Accuracy & Throughput (cycles/op) & Latency\tmark[g]
+\ML
+0000 & No Operation & --- & RTE\tmark[a] & 1 & ---\NN
+0001 & Multiply & $a\times b$ & RTE\tmark[a] & 1 & $x$\NN
+0010 & Add & $a+b$ & RTE\tmark[a] & 1 & $x$\NN
+0011 & Subtract & $a-b$ & RTE\tmark[a] & 1 & $x$\NN
+0100 & Multiply-Accumulate & $ab+c$ & RTE\tmark[a] & 1 & $x$\NN
+0101 & Divide & $a\div b$ & ---\tmark[b] & 4 & $4x$\NN
+0110 & 2D Dot Product & $ab+cd$ & nwc\tmark[c] & 1 & $2x$\NN
+0111 & 3D Dot Product & $ab+cd+ef$ & nwc\tmark[c] & 1 & $2x$\NN
+\\
+
+1000 & Square Root & $a^{1/2}$ & 4 ulp\tmark[d] & 3 & $3x$\NN
+1001 & Inverse Square Root & $a^{-1/2}$ & 4 ulp\tmark[d] & 4 & $4x$\NN
+1010 & 2D Euclidean Distance & $\sqrt{a^2+b^2}$ & nwc\tmark[c] & nwc\tmark[c] & nwc\tmark[c]\NN
+1011 & 3D Euclidean Distance & $\sqrt{a^2+b^2+c^2}$ & nwc\tmark[c] & nwc\tmark[c] & nwc\tmark[c]\NN
+1100 & Normalised Vector & $\frac{a}{\sqrt{a^2+b^2+c^2}}$& ---\tmark[b] & nwc\tmark[c] & nwc\tmark[c]\NN
+1101 & Unused & & & &\NN
+1110 & Unused & & & &\NN
+1111 & Unused & & & &
+\LL
+}
+
+\noindent
+In this part of the report, a formal definition of the Units in the Last Place (ulp) is deemed necessary. There are many definitions of the ulp. In this report, the following definition of the ulp will be used. The ulp is defined as the value of a 1 in the last place of a number representation \cite{ver2}. Therefore, for a floating-point number $c_0.c_1c_2…c_k \times 2^m$, ulp = $1 \times 2^{m-k}$. This is the definition of the ulp that will be used for the accuracy of the square root and the inverse square root functions. \\
+
+\noindent
+This paragraph describes a different definition of the ulp. This definition of the ulp as a function is presented so that the relationship between the ulp and the relative error becomes apparent. Based on J.Muller \cite{ulp}, the definition of the ulp requires the use of a different notation for floating point numbers. The floating point number x can be expressed as $x = M \times 2^{e-p+1}$, where M is the integral significand and p is the precision used. The quantum exponent q is defined as $q = e-p+1$. In the previous notation, $x = (-1)^{s} \times m \times 2^{e}$. The exponent e is the same as before. However, the mantissa m is evaluated from the equation $m = |M| \times 2^{1-p}$. In order to define the ulp, we also use $2^{emin}$, which is the smallest positive normal number. When $x = M \times 2^{e-p+1}$, then we have the following concept for the ulp. If x belongs to $[2^{e}, 2^{e+1})$, then $ulp(x) = 2^{max(e, emin)-p+1}$. The properties of the ulp can be found in \cite{MPFR}, which however uses a different definition of the ulp: $ulp(x) = 2^{e-p}$, where p is the precision used.\\
+
+\noindent
+After implementing the above functions with satisfactory accuracy, optimisation will be performed. The following list indicates the way in which optimisation will be prioritised.
+
+\begin{enumerate}
+\item Produce the lowest possible value for $x$ (latency)
+\item Minimise the power consumption
+\item Minimise the area used
+\end{enumerate}
+\noindent
+Software microcodes can be used to implement higher-level machine code instructions to simplify hardware design.\\ %Who wrote this? What does it mean?
+
+\section{Verification Methods}
+Regarding verification, three main testing steps will be taken. Firstly, a certain range of random numbers will be tested. This will ensure that the design works as expected in at least some cases. Next, constraint random testing will be performed. Finally, directed testing will be performed, where corner cases, which are known to be difficult to deal with, will be used to justify that the whole design works. For example, numbers that can lead to rounding errors will be examined. These tests will be implemented using testbenches. Code coverage from running simulations on Modelsim will be one of the metrics used to measure the completeness of the tests performed.\\
+
+Apart from the aforementioned testing approach, formal tools for verification will be investigated. However, these tools require knowledge and experience that might be hard to achieve, as well as access that might be hard to gain. Further consultation with Imagination Technologies will be sought.
+%Write here what we know about verification, after talking to George and/or Imagination
+
+\section{Technology}\label{sec:tech}
+The RTL hardware will be designed using VHDL and then synthesised. Since it will be difficult to get access to ASIC tools and run them with useful libraries, the Group decided to prototype the FPU design on a high-end FPGA. The FPGA will most likely be one of the following: Xilinx Virtex 7, Altera Stratix IV or Stratix V. The decision will require further discussion with our client, Imagination Technology. Since FPGA implementations are not the end-goal of this project, the Group will ensure that the RTL does not use any FPGA directives %% ????? - are they called directives?
+and that the RTL is ASIC-synthesisable. 
+
+
+%Talk to George to decide this - may even remove this section
+
+\section{Evaluation Methods}
+The FPU design will be evaluated in terms of power consumption, area and frequency, as well as of achieving the required accuracy, throughput and latency. Initial evaluation will be based on the result of static timing analysis using synthesis tools, with a focus on resource utilisation and timing analysis. Power will be measured via power analysis tools provided by Xilinx or Altera depending on the FPGA chosen as mention in Section~\ref{sec:tech}. However, these tools might sometimes provide inaccurate results due to statistically estimating certain parameters. As a result, the Group will investigate the aspects of power and frequency further with bench measurements. 
+%The application aspects go here: power, area, frequency, etc. Maybe a talk with Imagination will help.
+By comparing our solution to existing technologies, we will be able to evaluate its effectiveness in the market. One open-source floating-point compiler we have found is FloPoCo. Comparing corresponding operators with their generated VHDL design will be useful for us to benchmark our solution.
+
+\clearpage
+\section{Timeline and Team}
+In this part of the report, the Group structure and the Gantt Chart for the entire duration of the project will be presented. The Group has been separated to architects, design engineers, verification engineers and application engineers. The following table shows the timeline for the entire duration of the project.
+\begin{figure}[H]
+%\begin{framed}
+\centering
+\includegraphics[scale=0.52]{gantt_1.png}
+%\end{framed}
+\caption{Gantt Chart timeline that will be used for the project. }
+\end{figure}
+
+
+\pagebreak
+
+\stepcounter{section}   %somehow the references take the same section number as the previous one so this is to "skip" the section counter
+\renewcommand{\bibname}{\Large \arabic{section}. References \vspace{-1.5em}}
+\begin{thebibliography}{9}
+
+\bibitem{designHandout}
+ Imagination Technologies, 
+ \emph{FPU Design Project Handout}, 
+ 2014.
+  
+\bibitem{Apple14}
+ Apple, Imagination Technologies Extend IPhone, IPad Graphics Chip License Pact,
+ \emph{``Apple, Imagination Technologies Extend IPhone, IPad Graphics Chip License Pact."}, 
+ N.p., n.d., Web, accessed 05 May 2014.
+
+\bibitem{ver2}.
+FPgen Team. 
+\emph{Floating-Point Test-Suite for IEEE. Rep. N.p.: IBM Labs in Haifa, n.d. Web.} \url{https://www.research.ibm.com/haifa/projects/verification/fpgen/papers/ieee-test-suite-v2.pdf}.
+
+
+\bibitem{ulp}
+Muller, J. M. 
+\emph{"2. Definitions and Basic Notions." Handbook of Floating-point Arithmetic. Boston: Birkhäuser, 2010. N. pag.52. Print.}
+\bibitem{MPFR}
+\emph{THE MPFR LIBRARY: ALGORITHMS AND PROOFS. Rep. N.p.: n.p., n.d. Web.} \url{http://www.cs.berkeley.edu/~fateman/generic/algorithms.pdf}.
+
+
+\end{thebibliography}
+
+
+
+\end{document}

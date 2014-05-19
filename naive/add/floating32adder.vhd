@@ -6,22 +6,22 @@ USE IEEE.std_logic_1164.ALL;
 USE IEEE.numeric_std.ALL;
 USE work.all;
 
-ENTITY floating32adder IS 
+ENTITY add IS 
 	PORT 
-	( clk_i,reset_i,mode_i	: IN  std_logic;
+	( clk,reset  :IN std_logic;
 	  A_i			: IN  std_logic_vector(31 downto 0);
 	  B_i			: IN  std_logic_vector(31 downto 0);
 	  result_o		: OUT std_logic_vector(31 downto 0)
 	);
-END ENTITY floating32adder;
+END ENTITY add;
 
-ARCHITECTURE rtl of floating32adder IS 
+ARCHITECTURE rtl of add IS 
 
-SIGNAL s_A_man,s_B_man		: std_logic_vector(26 downto 0);
+SIGNAL s_A_man,s_B_man		: std_logic_vector(25 downto 0);
 SIGNAL s_eop			: std_logic;
 SIGNAL s_prenorm_exponent	: std_logic_vector(7 downto 0);
 SIGNAL s_sign			: std_logic;
-SIGNAL s_prenorm_man		: std_logic_vector(27 downto 0);
+SIGNAL s_prenorm_man		: std_logic_vector(26 downto 0);
 
 SIGNAL s_result_o		: std_logic_vector(31 downto 0);
 BEGIN
@@ -29,9 +29,8 @@ BEGIN
 
 pre_addsub:ENTITY prenorm_addsub
 PORT MAP
-	(clk		=>	clk_i,
-	 reset		=>	reset_i,
-	 mode		=>	mode_i,
+	(--clk		=>	clk_i,
+	 --reset	=>	reset_i,
 	 A_i		=>	A_i,
 	 B_i		=>	B_i,
 	 A_man_o	=>	s_A_man,
@@ -43,8 +42,8 @@ PORT MAP
 
 add_sub: ENTITY addsub
 PORT MAP
-	(clk		=>	clk_i,
-	 reset		=>	reset_i,
+	(--clk		=>	clk_i,
+	 --reset	=>	reset_i,
 	 opA_i		=>	s_A_man,		
 	 opB_i		=>	s_B_man,
 	 operation_i	=>	s_eop,
@@ -53,15 +52,17 @@ PORT MAP
 
 post_addsub:ENTITY postnorm_add_sub
 PORT MAP
-	(clk		=>	clk_i,
-	 reset		=>	reset_i,
+	(--clk		=>	clk_i,
+	 --reset	=>	reset_i,
 	 r_sign_i	=>	s_sign,
-	 operation_i	=>	s_eop,
 	 r_exponent_i	=>	s_prenorm_exponent,	
 	 r_man_i	=>	s_prenorm_man,		
 	 result_o	=>	s_result_o
 	);
 
-result_o	<=	s_result_o;
-
+--output:PROCESS
+--BEGIN
+--  WAIT UNTIL clk'EVENT AND clk='1';
+    result_o	<=	s_result_o;
+--END PROCESS output;
 END ARCHITECTURE rtl;
