@@ -5,8 +5,8 @@ use work.all;
 
 entity mult is
   port(
-    a_in, b_in : in std_logic_vector(31 downto 0);
-    product_out : out std_logic_vector(31 downto 0)
+    mult_in1, mult_in2 : in std_logic_vector(31 downto 0);
+    mult_out : out std_logic_vector(31 downto 0)
     );
 end entity mult;
 
@@ -24,17 +24,17 @@ architecture arch of mult is
   signal a, b, product : float32_t;
   
 begin
-  a.sign <= a_in(31);
-  a.exponent <= a_in(30 downto 23);
-  a.significand <= a_in(22 downto 0);
+  a.sign <= mult_in1(31);
+  a.exponent <= mult_in1(30 downto 23);
+  a.significand <= mult_in1(22 downto 0);
   
-  b.sign <= b_in(31);
-  b.exponent <= b_in(30 downto 23);
-  b.significand <= b_in(22 downto 0);
+  b.sign <= mult_in2(31);
+  b.exponent <= mult_in2(30 downto 23);
+  b.significand <= mult_in2(22 downto 0);
   
-  product_out(31) <= product.sign;
-  product_out(30 downto 23) <= product.exponent;
-  product_out(22 downto 0) <= product.significand;
+  mult_out(31) <= product.sign;
+  mult_out(30 downto 23) <= product.exponent;
+  mult_out(22 downto 0) <= product.significand;
   
   -----------------------------------------------------------
   -- compute sign
