@@ -39,3 +39,8 @@
 	#define NUM_INPUTS 2
 	#define OUTFILE_NAME "twoInput_datapak.txt"
 #endif
+
+//generate zeroes if 0 --for dernom_gen.cpp only [20/05/2014]
+#ifndef NO_ZEROES
+	#define NO_ZEROES 0
+#endif

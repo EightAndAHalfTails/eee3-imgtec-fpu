@@ -21,7 +21,7 @@ END add_tb;
 
 ARCHITECTURE tb OF add_tb IS
 
-	SIGNAL clk, reset: STD_LOGIC;
+	SIGNAL clk, reset, operation: STD_LOGIC;   --operation 0 for add, 1 for sub
 	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
 
 	ALIAS slv IS std_logic_vector;
@@ -38,6 +38,8 @@ ARCHITECTURE tb OF add_tb IS
 	
 BEGIN
 
+  operation <= '0';
+  
 	-- clock generation process
 	clkgen: PROCESS
 	BEGIN
@@ -48,12 +50,13 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	addsub: ENTITY work.addsub
+	add: ENTITY work.addsub
 	PORT MAP(
 		clk			=>clk,
 		reset		=>reset,
 		add_in1		=>A,
 		add_in2		=>B,
+		operation_i => operation,
 		add_out		=>result
 	);
 
