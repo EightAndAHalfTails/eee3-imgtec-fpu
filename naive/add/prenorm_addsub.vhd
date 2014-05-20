@@ -13,8 +13,9 @@ ENTITY prenorm_addsub IS
 	( 
 	  A_i				: IN  std_logic_vector(31 downto 0);
 	  B_i				: IN  std_logic_vector(31 downto 0);
-	  A_man_o,B_man_o	: OUT std_logic_vector(25 downto 0);	--(hidden &mantissa &guard &round &sticky)(1+23+1+1+1=27)
-	  temp_exp_o		: OUT std_logic_vector(7 downto 0);
+	  operation_i			: IN  std_logic;
+	  A_man_o,B_man_o		: OUT std_logic_vector(25 downto 0);	--(hidden &mantissa &guard &round &sticky)(1+23+1+1+1=27)
+	  temp_exp_o			: OUT std_logic_vector(7 downto 0);
 	  sign_o			: OUT std_logic;
 	  eop_o				: OUT std_logic
 	);
@@ -83,11 +84,10 @@ BEGIN
 	shift_unit<=to_integer(abs(sgn(expo_diff(8 downto 0))));				--take exponent difference as number of shifts required
 		
 --------------------------------------------------------------------------------------------
---same sign=>addition(0)
---different sign=>subtraction(1)
+--for add(0):same sign=>addition(0)	different sign=>subtraction(1)
+--for subtract(1):same sign=>subtraction(1)	different sign=>addition(0)
 --------------------------------------------------------------------------------------------
-	operation<=A_si_s XOR B_si_s;								--effective operation mode for adder stage	
-
+	operation<=A_si_s XOR B_si_s XOR operation_i;								--effective operation mode for adder stage	
 
 --------------------------------------------------------------------------------------------
 --sign_logic
@@ -95,11 +95,14 @@ BEGIN
 --abs(A)<abs(B)=>sign to be sign of B
 --abs(A)>=abs(B)=>sign to be sign of A	
 --------------------------------------------------------------------------------------------	
-	sign_logic:PROCESS(addsub_expoA_st_expoB,addsub_expoA_eq_expoB,addsub_opA_st_opB,B_si_s,A_si_s)
+	sign_logic:PROCESS(addsub_expoA_st_expoB,addsub_expoA_eq_expoB,addsub_opA_st_opB,operation_i,B_si_s,A_si_s)
 	BEGIN
 		IF addsub_expoA_st_expoB='1' OR (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1' THEN			--if abs(A) is smaller than abs(B)
-			temp_sign<=B_si_s;
-									
+			IF operation_i='0' THEN		
+				temp_sign<=B_si_s;
+			ELSE
+				temp_sign<=NOT B_si_s;
+			END IF;						
 		ELSE													--abs(A)>=abs(B)
 			temp_sign<=A_si_s;					
 		END IF;

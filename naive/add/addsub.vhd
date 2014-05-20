@@ -12,6 +12,7 @@ ENTITY addsub IS
 	( clk,reset  		: IN  std_logic;
 	  add_in1		: IN  std_logic_vector(31 downto 0);
 	  add_in2		: IN  std_logic_vector(31 downto 0);
+	  operation_i		: IN  std_logic;
 	  add_out		: OUT std_logic_vector(31 downto 0)
 	);
 END ENTITY addsub;
@@ -31,8 +32,9 @@ BEGIN
 pre_addsub:ENTITY prenorm_addsub
 PORT MAP
 	(
-	 A_i	    =>add_in1,
-	 B_i	    =>add_in2,
+	 A_i	    	=>	add_in1,
+	 B_i	    	=>	add_in2,
+	 operation_i	=>	operation_i,
 	 A_man_o	=>	s_A_man,
 	 B_man_o	=>	s_B_man,
 	 temp_exp_o	=>	s_prenorm_exponent,
