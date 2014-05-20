@@ -1,38 +1,38 @@
 --------------------------------------------------------------------------------------
---floating32adder.vhd
+--addsub.vhd
 --------------------------------------------------------------------------------------
 LIBRARY ieee;
 USE IEEE.std_logic_1164.ALL;
 USE IEEE.numeric_std.ALL;
 USE work.all;
+USE config_pack.all;
 
-ENTITY add IS 
+ENTITY addsub IS 
 	PORT 
-	( clk,reset  :IN std_logic;
-	  A_i			: IN  std_logic_vector(31 downto 0);
-	  B_i			: IN  std_logic_vector(31 downto 0);
-	  result_o		: OUT std_logic_vector(31 downto 0)
+	( clk,reset  		: IN  std_logic;
+	  add_in1		: IN  std_logic_vector(31 downto 0);
+	  add_in2		: IN  std_logic_vector(31 downto 0);
+	  add_out		: OUT std_logic_vector(31 downto 0)
 	);
-END ENTITY add;
+END ENTITY addsub;
 
-ARCHITECTURE rtl of add IS 
+ARCHITECTURE rtl of addsub IS 
 
 SIGNAL s_A_man,s_B_man		: std_logic_vector(25 downto 0);
 SIGNAL s_eop			: std_logic;
-SIGNAL s_prenorm_exponent	: std_logic_vector(7 downto 0);
-SIGNAL s_sign			: std_logic;
+SIGNAL s_prenorm_exponent	: exponent_t;
+SIGNAL s_sign			: sign_t;
 SIGNAL s_prenorm_man		: std_logic_vector(26 downto 0);
 
-SIGNAL s_result_o		: std_logic_vector(31 downto 0);
+SIGNAL s_result_o		: float32_t;
 BEGIN
 
 
 pre_addsub:ENTITY prenorm_addsub
 PORT MAP
-	(--clk		=>	clk_i,
-	 --reset	=>	reset_i,
-	 A_i		=>	A_i,
-	 B_i		=>	B_i,
+	(
+	 A_i	    =>add_in1,
+	 B_i	    =>add_in2,
 	 A_man_o	=>	s_A_man,
 	 B_man_o	=>	s_B_man,
 	 temp_exp_o	=>	s_prenorm_exponent,
@@ -40,10 +40,9 @@ PORT MAP
 	 eop_o		=>	s_eop
 	);
 
-add_sub: ENTITY addsub
+add_sub: ENTITY int26adder
 PORT MAP
-	(--clk		=>	clk_i,
-	 --reset	=>	reset_i,
+	(
 	 opA_i		=>	s_A_man,		
 	 opB_i		=>	s_B_man,
 	 operation_i	=>	s_eop,
@@ -52,17 +51,14 @@ PORT MAP
 
 post_addsub:ENTITY postnorm_add_sub
 PORT MAP
-	(--clk		=>	clk_i,
-	 --reset	=>	reset_i,
+	(
 	 r_sign_i	=>	s_sign,
 	 r_exponent_i	=>	s_prenorm_exponent,	
 	 r_man_i	=>	s_prenorm_man,		
-	 result_o	=>	s_result_o
+	 result_o		=>	s_result_o
 	);
 
---output:PROCESS
---BEGIN
---  WAIT UNTIL clk'EVENT AND clk='1';
-    result_o	<=	s_result_o;
---END PROCESS output;
+    add_out(31)	<=	s_result_o.sign;
+    add_out(30 downto 23)	<=	s_result_o.exponent;
+    add_out(22 downto 0)	<=	s_result_o.significand;
 END ARCHITECTURE rtl;
