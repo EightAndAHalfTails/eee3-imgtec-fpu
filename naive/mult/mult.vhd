@@ -20,7 +20,6 @@ architecture arch of mult is
     significand : significand_t;
   end record;
   
-  signal must_normalise : std_logic;
   signal a, b, product : float32_t;
   
   signal computed_exponent : signed(8 downto 0);
@@ -54,7 +53,7 @@ begin
   -- extra power of 2 that needs to be brought into the
   -- exponent.
   -----------------------------------------------------------
-  compute_exponent: process(a, b, must_normalise)
+  compute_exponent: process(a, b)
     variable exp_a, exp_b : signed(8 downto 0) := (others => '0');
   begin
     -- exponent bits represent (exponent + 127) so must
@@ -132,24 +131,24 @@ begin
         -- round up = increment significand
         final_significand := final_significand + to_unsigned(1, 24);
       end if; -- round down = truncate
+    end if;
       
-      --TODO: handle denormals
-      -- check if out of bounds
-      -- If exponent is lower than -126 or greater than 126,
-      -- it must be rounded
-      if final_exponent < -126 then
-        --for now, round to 0
-        product.exponent <= (others => '0');
-        product.significand <= (others => '0');
-      elsif final_exponent > 126 then
-        --for now, round to inf
-        product.exponent <= (others => '1');
-        product.significand <= (others =>'0');
-      else
-        --normal
-        product.exponent <= std_logic_vector(resize(final_exponent + to_signed(127, 9), 8));
-        product.significand <= std_logic_vector(final_significand(22 downto 0));
-      end if;
+    --TODO: handle denormals
+    -- check if out of bounds
+    -- If exponent is lower than -126 or greater than 126,
+    -- it must be rounded
+    if final_exponent < -126 then
+      --for now, round to 0
+      product.exponent <= (others => '0');
+      product.significand <= (others => '0');
+    elsif final_exponent > 126 then
+      --for now, round to inf
+      product.exponent <= (others => '1');
+      product.significand <= (others =>'0');
+    else
+      --normal
+      product.exponent <= std_logic_vector(resize(final_exponent + to_signed(127, 9), 8));
+      product.significand <= std_logic_vector(final_significand(22 downto 0));
     end if;
   end process fp_normalise_round;
 end architecture arch;
