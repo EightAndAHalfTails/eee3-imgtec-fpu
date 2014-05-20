@@ -26,6 +26,7 @@ ARCHITECTURE rtl of prenorm_addsub IS
 
 --control signals
 SIGNAL addsub_opA_st_opB,addsub_expoA_st_expoB,addsub_expoA_eq_expoB						:std_logic;
+SIGNAL addsub_A_denorm,addsub_B_denorm  :std_logic;
 SIGNAL operation             											:std_logic;
 
 --internal signals
@@ -75,8 +76,12 @@ BEGIN
 --------------------------------------------------------------------------------------------
 --internal signal connections
 --------------------------------------------------------------------------------------------
+
 	expo_diff<=slv(Resize(usg(A_e_s),9)-Resize(usg(B_e_s),9));				--exponent difference (with one signed bit)
 	--control logic flags
+	addsub_A_denorm<='1'  WHEN  usg(A_e_s)=0 ELSE '0';                --flag: A is denormal
+  addsub_B_denorm<='1'  WHEN  usg(B_e_s)=0 ELSE '0';                --flag: B is denormal
+  
 	addsub_expoA_st_expoB<='1'	WHEN usg(A_e_s)<usg(B_e_s) ELSE '0';			--flag: exponent of A< exponent of B
 	addsub_expoA_eq_expoB<='1'	WHEN usg(A_e_s)=usg(B_e_s) ELSE '0';			--flag:	exponent of A= exponent of B
 	addsub_opA_st_opB<='1'		WHEN usg(A_man_s)<usg(B_man_s) ELSE '0';		--flag: mantissa of A< mantissa of B
@@ -118,7 +123,7 @@ BEGIN
 
 		IF addsub_expoA_st_expoB='1' THEN						--if exponent of A is smaller than B
 			temp_expo	<=	B_e_s;
-		ELSE
+		ELSE		  
 			temp_expo	<=	A_e_s;
 		END IF;
 
@@ -129,14 +134,36 @@ BEGIN
 --swap process
 --swap the inputs when abs(A)<abs(B)
 --------------------------------------------------------------------------------------------	
-	swap:PROCESS(addsub_expoA_st_expoB,addsub_opA_st_opB,addsub_expoA_eq_expoB,A_man_s,B_man_s)
+	swap:PROCESS(addsub_expoA_st_expoB,addsub_opA_st_opB,addsub_expoA_eq_expoB,A_man_s,B_man_s,addsub_A_denorm,addsub_B_denorm)
+	VARIABLE A_man_v,B_man_v       :slv(25 downto 1);
+	
 	BEGIN
-		IF addsub_expoA_st_expoB='1' OR (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1' THEN		--if exponent of A is smaller than B
-			pre_shift_opA<='1'& B_man_s&'0';							--restore the hidden bit & initialise guard bit
-			pre_shift_opB<='1'& A_man_s&'0';			
-		ELSE												--exponent of A is larger or equal to that of B
-			pre_shift_opA<='1'& A_man_s&'0';
-			pre_shift_opB<='1'& B_man_s&'0';
+	  --------------------------------------------------------------------------
+	  --normalise A if denormal,restore the hidden bit & initialise guard bit  
+	  --------------------------------------------------------------------------
+	  IF addsub_A_denorm='1' THEN          --if A is a denormal number
+	    A_man_v:=A_man_s&"00";             --normalise to 2^127*0.man*2
+	  ELSE
+	    A_man_v:='1'& A_man_s&'0';	        --restore the hidden bit & initialise guard bit
+	  END IF;
+	  --------------------------------------------------------------------------
+	  --normalise B if denormal,restore the hidden bit & initialise guard bit  
+	  --------------------------------------------------------------------------
+	  IF addsub_B_denorm='1' THEN
+	    B_man_v:=B_man_s&"00";
+	  ELSE
+	    B_man_v:='1'& B_man_s&'0';
+	  END IF;
+	  
+	  --------------------------
+	  --swap if abs(A)<abs(B)
+	  --------------------------
+		IF addsub_expoA_st_expoB='1' OR (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1' THEN		--if abs(A)<abs(B)
+			pre_shift_opA<=B_man_v;						
+		  pre_shift_opB<=A_man_v;		
+		ELSE												                    --abs(A)>=abs(B)
+			pre_shift_opA<=A_man_v;
+			pre_shift_opB<=B_man_v;
 		END IF;
 	END PROCESS swap;
 	

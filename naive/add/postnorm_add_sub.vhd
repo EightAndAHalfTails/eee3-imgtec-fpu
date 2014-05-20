@@ -49,6 +49,8 @@ BEGIN
 	result_o.significand	<=finalised_result_man_s;
 END BLOCK pack;
 
+--denormal flag
+result_denorm<='1'  WHEN  usg(r_exponent_i)=0 ELSE '0';                --flag: result is denormal
 --------------------------------------------------------------------------------------
 --leading zero detector
 --The process detect the number of leading zeros in result to enable
@@ -78,8 +80,9 @@ END PROCESS leading_zero_detector;
 --The process normalise the result to be a 26 bit output with hidden+mantissa+G+T
 --ready for rounding
 --------------------------------------------------------------------------------------
-normaliser:PROCESS(prenorm_result_man_s,prenorm_result_e_s,leadingzeros)
+normaliser:PROCESS(prenorm_result_man_s,prenorm_result_e_s,leadingzeros,result_denorm)
 BEGIN	
+    
 	postnorm_result_e_s	<=	prenorm_result_e_s;
 	
 	IF prenorm_result_man_s(26)='1' THEN							--if mantissa has overflowed(1x.man)
