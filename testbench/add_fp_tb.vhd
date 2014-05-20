@@ -1,11 +1,11 @@
 ------------------------------------------------------------------
 --Testbench for floating point adder
---reads adder_datapak.txt for input data
+--reads twoInput_datapak.txt for input data
 --use IEEE floating point package to calculate reference result
 
---vhdl test entity: add
+--vhdl test entity: addsub
 --author: Weng Lio
---version: 13/05/2014
+--version: 20/05/2014
 ------------------------------------------------------------------
 
 LIBRARY ieee;
@@ -48,22 +48,22 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	add: ENTITY work.add
+	addsub: ENTITY work.addsub
 	PORT MAP(
-		clk		=>clk,
-		reset	=>reset,
-		A_i		=>A,
-		B_i		=>B,
-		result_o=>result
+		clk			=>clk,
+		reset		=>reset,
+		add_in1		=>A,
+		add_in2		=>B,
+		add_out		=>result
 	);
 
 	------------------------------------------------------------
-	-- main process reads lines from "adder_datapak.txt"
+	-- main process reads lines from "twoInput_datapak.txt"
 	-- each line consists of 2 fp numbers to be added
 	-- check sum of these numbers with output of test entity
 	------------------------------------------------------------
 	main: PROCESS
-		FILE f				: TEXT OPEN read_mode IS "adder_datapak.txt";
+		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
 		VARIABLE i1, i2     : INTEGER;
