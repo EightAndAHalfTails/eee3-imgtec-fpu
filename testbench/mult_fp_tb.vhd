@@ -50,11 +50,9 @@ BEGIN
 	-- test entity
 	mult: ENTITY work.mult
 	PORT MAP(
-	--	clk		=>clk,
-	--	reset	=>reset,
-		A_in		=>A,
-		B_in		=>B,
-		product_out=>result
+		mult_in1		=>A,
+		mult_in2		=>B,
+		mult_out=>result
 	);
 
 	------------------------------------------------------------
