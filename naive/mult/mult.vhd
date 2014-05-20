@@ -58,8 +58,8 @@ begin
   begin
     -- exponent bits represent (exponent + 127) so must
     -- subtract 127 to obtain actual exponent.
-    exp_a := signed(resize(unsigned(a.exponent), 9)) - to_signed(127, 9);
-    exp_b := signed(resize(unsigned(b.exponent), 9)) - to_signed(127, 9);
+    exp_a := signed(resize(unsigned(a.exponent), 9)) + to_signed(-127, 9);
+    exp_b := signed(resize(unsigned(b.exponent), 9)) + to_signed(-127, 9);
     computed_exponent <= exp_a + exp_b;
   end process compute_exponent;
   -----------------------------------------------------------
@@ -137,11 +137,11 @@ begin
     -- check if out of bounds
     -- If exponent is lower than -126 or greater than 126,
     -- it must be rounded
-    if final_exponent < -126 then
+    if final_exponent < to_signed(-126, 9) then
       --for now, round to 0
       product.exponent <= (others => '0');
       product.significand <= (others => '0');
-    elsif final_exponent > 126 then
+    elsif final_exponent > to_signed(126, 9) then
       --for now, round to inf
       product.exponent <= (others => '1');
       product.significand <= (others =>'0');
