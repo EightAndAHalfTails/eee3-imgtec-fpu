@@ -19,11 +19,11 @@ END ENTITY addsub;
 
 ARCHITECTURE rtl of addsub IS 
 
-SIGNAL s_A_man,s_B_man		: std_logic_vector(25 downto 0);
+SIGNAL s_A_man,s_B_man		: std_logic_vector(27 downto 0);
 SIGNAL s_eop			: std_logic;
 SIGNAL s_prenorm_exponent	: exponent_t;
 SIGNAL s_sign			: sign_t;
-SIGNAL s_prenorm_man		: std_logic_vector(26 downto 0);
+SIGNAL s_prenorm_man		: std_logic_vector(28 downto 0);
 
 SIGNAL s_result_o		: float32_t;
 BEGIN

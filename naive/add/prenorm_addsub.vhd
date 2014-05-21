@@ -14,7 +14,7 @@ ENTITY prenorm_addsub IS
 	  A_i				: IN  std_logic_vector(31 downto 0);
 	  B_i				: IN  std_logic_vector(31 downto 0);
 	  operation_i			: IN  std_logic;
-	  A_man_o,B_man_o		: OUT std_logic_vector(25 downto 0);	--(hidden &mantissa &guard &round &sticky)(1+23+1+1+1=27)
+	  A_man_o,B_man_o		: OUT std_logic_vector(27 downto 0);	--(hidden &mantissa &3 guard bits &sticky)(1+23+3+1=28)
 	  temp_exp_o			: OUT std_logic_vector(7 downto 0);
 	  sign_o			: OUT std_logic;
 	  eop_o				: OUT std_logic
@@ -36,10 +36,10 @@ SIGNAL A_man_s,B_man_s   											:significand_t;
 SIGNAL expo_diff												:slv(8 downto 0);
 SIGNAL shift_unit												:integer range 0 to 255;
 
-SIGNAL pre_shift_opA												:slv(25 downto 1);
-SIGNAL pre_shift_opB												:slv(25 downto 1);
-SIGNAL post_shift_opA												:slv(25 downto 0);
-SIGNAL post_shift_opB												:slv(25 downto 0);
+SIGNAL pre_shift_opA												:slv(27 downto 1);
+SIGNAL pre_shift_opB												:slv(27 downto 1);
+SIGNAL post_shift_opA												:slv(27 downto 0);
+SIGNAL post_shift_opB												:slv(27 downto 0);
 
 
 BEGIN
@@ -142,24 +142,24 @@ BEGIN
 --swap the inputs when abs(A)<abs(B)
 --------------------------------------------------------------------------------------------	
 	swap:PROCESS(addsub_expoA_st_expoB,addsub_opA_st_opB,addsub_expoA_eq_expoB,A_man_s,B_man_s,addsub_A_denorm,addsub_B_denorm)
-	VARIABLE A_man_v,B_man_v       :slv(25 downto 1);
+	VARIABLE A_man_v,B_man_v       :slv(27 downto 1);
 	
 	BEGIN
 	  --------------------------------------------------------------------------
 	  --normalise A if denormal,restore the hidden bit & initialise guard bit  
 	  --------------------------------------------------------------------------
 	  IF addsub_A_denorm='1' THEN          --if A is a denormal number
-	    A_man_v:=A_man_s&"00";             --normalise to 2^127*0.man*2
+	    A_man_v:=A_man_s&"0000";             --normalise to 2^127*0.man*2
 	  ELSE
-	    A_man_v:='1'& A_man_s&'0';	        --restore the hidden bit & initialise guard bit
+	    A_man_v:='1'& A_man_s&"000";	        --restore the hidden bit & initialise guard bit
 	  END IF;
 	  --------------------------------------------------------------------------
 	  --normalise B if denormal,restore the hidden bit & initialise guard bit  
 	  --------------------------------------------------------------------------
 	  IF addsub_B_denorm='1' THEN
-	    B_man_v:=B_man_s&"00";
+	    B_man_v:=B_man_s&"0000";
 	  ELSE
-	    B_man_v:='1'& B_man_s&'0';
+	    B_man_v:='1'& B_man_s&"000";
 	  END IF;
 	  
 	  --------------------------
@@ -184,7 +184,7 @@ BEGIN
 		sticky_b := '0';
 		post_shift_opA	<=	pre_shift_opA&'0';					--A+sticky bit
 		
-			FOR i IN 1 TO 25 LOOP
+			FOR i IN 1 TO 27 LOOP
 						
 				----------------------------------
 				--sticky bit
@@ -195,7 +195,7 @@ BEGIN
 				----------------------------------
 				--shift by shift_unit
 				----------------------------------
-				IF i+shift_unit<26	THEN 				
+				IF i+shift_unit<28	THEN 				
 					post_shift_opB(i)<=pre_shift_opB(i+shift_unit);		--right shift
 				ELSE
 					post_shift_opB(i)<='0';					--zero padding				
