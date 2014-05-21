@@ -147,7 +147,7 @@ begin
       product.significand <= (others =>'0');
     else
       --normal
-      product.exponent <= std_logic_vector(resize(final_exponent + to_signed(127, 9), 8));
+      product.exponent <= std_logic_vector(resize(unsigned(final_exponent + to_signed(127, 9)), 8));
       product.significand <= std_logic_vector(final_significand(22 downto 0));
     end if;
   end process fp_normalise_round;

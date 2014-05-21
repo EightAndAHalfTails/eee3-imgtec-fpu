@@ -3,3 +3,6 @@
 
 # modelsim buffer files
 *.bak
+
+# executables
+*.exe
