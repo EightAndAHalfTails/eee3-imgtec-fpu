@@ -25,7 +25,7 @@ END ENTITY prenorm_addsub;
 ARCHITECTURE rtl of prenorm_addsub IS
 
 --control signals
-SIGNAL addsub_opA_st_opB,addsub_expoA_st_expoB,addsub_expoA_eq_expoB						:std_logic;
+SIGNAL addsub_opA_st_opB,addsub_expoA_st_expoB,addsub_expoA_eq_expoB,addsub_opA_eq_opB						:std_logic;
 SIGNAL addsub_A_denorm,addsub_B_denorm  :std_logic;
 SIGNAL operation             											:std_logic;
 
@@ -85,6 +85,7 @@ BEGIN
 	addsub_expoA_st_expoB<='1'	WHEN usg(A_e_s)<usg(B_e_s) ELSE '0';			--flag: exponent of A< exponent of B
 	addsub_expoA_eq_expoB<='1'	WHEN usg(A_e_s)=usg(B_e_s) ELSE '0';			--flag:	exponent of A= exponent of B
 	addsub_opA_st_opB<='1'		WHEN usg(A_man_s)<usg(B_man_s) ELSE '0';		--flag: mantissa of A< mantissa of B
+	addsub_opA_eq_opB<='1'  WHEN usg(A_man_s)=usg(B_man_s) ELSE '0';  --flag: mantissa of A= mantissa of B
 	--compute shift unit
 	shift_unit<=to_integer(abs(sgn(expo_diff(8 downto 0))));				--take exponent difference as number of shifts required
 		
@@ -100,16 +101,22 @@ BEGIN
 --abs(A)<abs(B)=>sign to be sign of B
 --abs(A)>=abs(B)=>sign to be sign of A	
 --------------------------------------------------------------------------------------------	
-	sign_logic:PROCESS(addsub_expoA_st_expoB,addsub_expoA_eq_expoB,addsub_opA_st_opB,operation_i,B_si_s,A_si_s)
+	sign_logic:PROCESS(addsub_expoA_st_expoB,addsub_expoA_eq_expoB,addsub_opA_st_opB,addsub_opA_eq_opB,operation_i,B_si_s,A_si_s)
 	BEGIN
 		IF addsub_expoA_st_expoB='1' OR (addsub_expoA_eq_expoB AND addsub_opA_st_opB)='1' THEN			--if abs(A) is smaller than abs(B)
 			IF operation_i='0' THEN		
 				temp_sign<=B_si_s;
 			ELSE
 				temp_sign<=NOT B_si_s;
-			END IF;						
-		ELSE													--abs(A)>=abs(B)
-			temp_sign<=A_si_s;					
+			END IF;		
+		ELSIF 	(addsub_expoA_eq_expoB AND addsub_opA_eq_opB) ='1' THEN                                  --abs(A)=abs(B)
+		   IF operation_i='0' THEN		
+				temp_sign<=A_si_s AND B_si_s;
+			 ELSE
+				temp_sign<=A_si_s AND (NOT B_si_s);
+			 END IF;	
+		ELSE													                                                                --abs(A)>abs(B)
+			  temp_sign<=A_si_s;					
 		END IF;
 
 	END PROCESS;

@@ -29,8 +29,9 @@ SIGNAL postnorm_result_man_s		:std_logic_vector(25 downto 0);
 SIGNAL finalised_result_e_s		:exponent_t;
 SIGNAL finalised_result_man_s		:significand_t;
 
-SIGNAL leadingzeros			:integer range 0 to 26;
+SIGNAL leadingzeros			:integer range 0 to 27;
 
+SIGNAL result_denorm  :std_logic;
 BEGIN
 
 --signals connecting to port
@@ -50,7 +51,7 @@ BEGIN
 END BLOCK pack;
 
 --denormal flag
---result_denorm<='1'  WHEN  usg(r_exponent_i)=0 ELSE '0';                --flag: result is denormal
+result_denorm<='1'  WHEN  usg(r_exponent_i)=0 ELSE '0';                --flag: result is denormal
 --------------------------------------------------------------------------------------
 --leading zero detector
 --The process detect the number of leading zeros in result to enable
@@ -64,7 +65,7 @@ VARIABLE count		:integer range 0 to 27;
 BEGIN
   count:=0;
 	
-	FOR i IN 26 DOWNTO  0 LOOP
+	FOR i IN prenorm_result_man_s'HIGH DOWNTO  prenorm_result_man_s'LOW LOOP
 		IF prenorm_result_man_s(i)='0' 	THEN
 		  count:=count+1;
 		ELSE EXIT;
@@ -110,7 +111,7 @@ END PROCESS normaliser;
 --rounder
 --The process round the result to be to be 23 bit mantissa
 --------------------------------------------------------------------------------------
-rounder:PROCESS(postnorm_result_man_s,postnorm_result_e_s)
+rounder:PROCESS(postnorm_result_man_s,postnorm_result_e_s,prenorm_result_man_s,prenorm_result_e_s,result_denorm)
 
 VARIABLE rounded_result_e_s		:exponent_t;
 VARIABLE rounded_result_man_s		:slv(23 downto 0);
@@ -128,8 +129,13 @@ BEGIN
 		finalised_result_man_s	<=	rounded_result_man_s(23 downto 1);		--1 bit shift adjustment
 		finalised_result_e_s	<=	slv(usg(rounded_result_e_s)+1);
 	ELSE											--otherwise
-		finalised_result_man_s	<=	rounded_result_man_s(22 downto 0);
-		finalised_result_e_s	<=	rounded_result_e_s;
+	  IF result_denorm = '1' THEN 
+	      finalised_result_man_s	<=	prenorm_result_man_s(25 downto 3);
+	      finalised_result_e_s	  <=	prenorm_result_e_s;
+	  ELSE
+		    finalised_result_man_s	<=	rounded_result_man_s(22 downto 0);
+	      finalised_result_e_s	<=	rounded_result_e_s;
+	  END IF;
 	END IF;
 
 END PROCESS rounder;
