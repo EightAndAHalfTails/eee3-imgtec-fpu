@@ -110,7 +110,7 @@ END PROCESS normaliser;
 --rounder
 --The process round the result to be to be 23 bit mantissa
 --------------------------------------------------------------------------------------
-rounder:PROCESS(postnorm_result_man_s,postnorm_result_e_s,prenorm_result_man_s,result_denorm)
+rounder:PROCESS(postnorm_result_man_s,postnorm_result_e_s,prenorm_result_man_s,prenorm_result_e_s,result_denorm)
 
 VARIABLE rounded_result_e_s		:exponent_t;
 VARIABLE rounded_result_man_s		:slv(23 downto 0);
