@@ -50,7 +50,7 @@ BEGIN
 END BLOCK pack;
 
 --denormal flag
-result_denorm<='1'  WHEN  usg(r_exponent_i)=0 ELSE '0';                --flag: result is denormal
+--result_denorm<='1'  WHEN  usg(r_exponent_i)=0 ELSE '0';                --flag: result is denormal
 --------------------------------------------------------------------------------------
 --leading zero detector
 --The process detect the number of leading zeros in result to enable
@@ -80,7 +80,7 @@ END PROCESS leading_zero_detector;
 --The process normalise the result to be a 26 bit output with hidden+mantissa+G+T
 --ready for rounding
 --------------------------------------------------------------------------------------
-normaliser:PROCESS(prenorm_result_man_s,prenorm_result_e_s,leadingzeros,result_denorm)
+normaliser:PROCESS(prenorm_result_man_s,prenorm_result_e_s,leadingzeros)--result_denorm
 BEGIN	
     
 	postnorm_result_e_s	<=	prenorm_result_e_s;

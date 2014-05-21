@@ -182,7 +182,7 @@ BEGIN
 				----------------------------------
 				--sticky bit
 				----------------------------------
-				IF i<shift_unit	THEN 
+				IF i<shift_unit+1	THEN 
 					sticky_b:=sticky_b OR pre_shift_opB(i);			--after shifting, sticky bit become bitwiseOR of shifted bits
 				END IF;
 				----------------------------------
