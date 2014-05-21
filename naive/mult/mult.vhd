@@ -135,13 +135,16 @@ begin
       
     --TODO: handle denormals
     -- check if out of bounds
-    -- If exponent is lower than -126 or greater than 126,
+    -- (final_exponent + 127) must be in range [1, 254]
+    -- (0 is reserved for subnormals, and 255 is inf and nan)
+    -- which makes the range of final_exponent [-126, 127]
+    -- If exponent is lower than -126 or greater than 127,
     -- it must be rounded
     if final_exponent < to_signed(-126, 9) then
       --for now, round to 0
       product.exponent <= (others => '0');
       product.significand <= (others => '0');
-    elsif final_exponent > to_signed(126, 9) then
+    elsif final_exponent > to_signed(127, 9) then
       --for now, round to inf
       product.exponent <= (others => '1');
       product.significand <= (others =>'0');
