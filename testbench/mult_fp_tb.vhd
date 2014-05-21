@@ -1,6 +1,6 @@
 ------------------------------------------------------------------
 --Testbench for floating point multiplier
---reads datapak.txt for input data
+--reads twoInput_datapak.txt for input data (IEEE 754 format)
 --use IEEE floating point package to calculate reference result
 
 --vhdl test entity: mult
