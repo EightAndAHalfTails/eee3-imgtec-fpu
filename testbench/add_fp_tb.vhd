@@ -1,11 +1,11 @@
 ------------------------------------------------------------------
 --Testbench for floating point adder
---reads adder_datapak.txt for input data
+--reads twoInput_datapak.txt for input data
 --use IEEE floating point package to calculate reference result
 
---vhdl test entity: add
+--vhdl test entity: addsub
 --author: Weng Lio
---version: 13/05/2014
+--version: 20/05/2014
 ------------------------------------------------------------------
 
 LIBRARY ieee;
@@ -21,7 +21,7 @@ END add_tb;
 
 ARCHITECTURE tb OF add_tb IS
 
-	SIGNAL clk, reset: STD_LOGIC;
+	SIGNAL clk, reset, operation: STD_LOGIC;   --operation 0 for add, 1 for sub
 	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
 
 	ALIAS slv IS std_logic_vector;
@@ -38,6 +38,8 @@ ARCHITECTURE tb OF add_tb IS
 	
 BEGIN
 
+  operation <= '0';
+  
 	-- clock generation process
 	clkgen: PROCESS
 	BEGIN
@@ -48,22 +50,23 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	add: ENTITY work.add
+	add: ENTITY work.addsub
 	PORT MAP(
-		clk		=>clk,
-		reset	=>reset,
-		A_i		=>A,
-		B_i		=>B,
-		result_o=>result
+		clk			=>clk,
+		reset		=>reset,
+		add_in1		=>A,
+		add_in2		=>B,
+		operation_i => operation,
+		add_out		=>result
 	);
 
 	------------------------------------------------------------
-	-- main process reads lines from "adder_datapak.txt"
+	-- main process reads lines from "twoInput_datapak.txt"
 	-- each line consists of 2 fp numbers to be added
 	-- check sum of these numbers with output of test entity
 	------------------------------------------------------------
 	main: PROCESS
-		FILE f				: TEXT OPEN read_mode IS "adder_datapak.txt";
+		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
 		VARIABLE i1, i2     : INTEGER;

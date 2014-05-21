@@ -1,6 +1,6 @@
 ------------------------------------------------------------------
 --Testbench for floating point multiplier
---reads datapak.txt for input data
+--reads twoInput_datapak.txt for input data (IEEE 754 format)
 --use IEEE floating point package to calculate reference result
 
 --vhdl test entity: mult
@@ -48,22 +48,20 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	add: ENTITY work.mult
+	mult: ENTITY work.mult
 	PORT MAP(
-		clk		=>clk,
-		reset	=>reset,
-		A_i		=>A,
-		B_i		=>B,
-		result_o=>result
+		mult_in1		=>A,
+		mult_in2		=>B,
+		mult_out=>result
 	);
 
 	------------------------------------------------------------
-	-- main process reads lines from "adder_datapak.txt"
+	-- main process reads lines from "twoInput_datapak.txt"
 	-- each line consists of 2 fp numbers to be added
 	-- check sum of these numbers with output of test entity
 	------------------------------------------------------------
 	main: PROCESS
-		FILE f				: TEXT OPEN read_mode IS "datapak.txt";
+		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
 		VARIABLE i1, i2     : INTEGER;
@@ -98,8 +96,8 @@ BEGIN
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				IF result /= (to_slv(x*y)) THEN
 					incorrect_result := incorrect_result+1;
-					REPORT to_string(x) & "+" & to_string(y) & "is " & to_string(to_float(result)) &
-						". Correct answer should be " & to_string(x+y) SEVERITY warning;
+					REPORT to_string(x) & "*" & to_string(y) & "is " & to_string(to_float(result)) &
+						". Correct answer should be " & to_string(x*y) SEVERITY warning;
 				END IF;
 				
 			END IF;	
