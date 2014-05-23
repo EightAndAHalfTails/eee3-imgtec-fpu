@@ -116,13 +116,17 @@ VARIABLE rounded_result_e_s		:exponent_t;
 VARIABLE rounded_result_man_s		:slv(23 downto 0);
 
 BEGIN
-	rounded_result_e_s			:=postnorm_result_e_s;
-
+	
 	CASE postnorm_result_man_s(2 downto 0) IS						--rounding decoder(LSB+GUARD+STICKY)  RTE rounding mode
 	WHEN "000"|"001"|"010"|"100"|"101"	=>rounded_result_man_s := '0'&postnorm_result_man_s(24 downto 2);			--round down
 	WHEN "011"|"110"|"111"			=>rounded_result_man_s := slv(RESIZE(usg(postnorm_result_man_s(24 downto 2)),24)+1);	--round up
 	WHEN OTHERS => NULL;
 	END CASE;
+	IF rounded_result_man_s(23)='1' THEN
+	  rounded_result_e_s:=slv(usg(postnorm_result_e_s)+1);
+	ELSE
+	  rounded_result_e_s			:=postnorm_result_e_s;
+	END IF;
 	
 	IF usg(prenorm_result_e_s)=255 THEN                                --INPUT NaN or infinity
 	   finalised_result_e_s	  <=	(OTHERS=>'1');
@@ -138,16 +142,14 @@ BEGIN
         finalised_result_man_s	<=	prenorm_result_man_s(27 downto 5);
 	      finalised_result_e_s	  <=	prenorm_result_e_s;
   ELSE
+        finalised_result_e_s	  <=	rounded_result_e_s;
 	   IF rounded_result_e_s="11111111" THEN                           --overflow 
-	      finalised_result_man_s	<=(OTHERS=>'0');
-	      finalised_result_e_s	  <=	rounded_result_e_s;
+	      finalised_result_man_s	<=(OTHERS=>'0');	     
 	   ELSE
 	    IF rounded_result_man_s(23)='1' THEN						                     --mantissa overflow
 		    finalised_result_man_s	<=	rounded_result_man_s(23 downto 1);	--1 bit shift adjustment
-		    finalised_result_e_s	<=	slv(usg(rounded_result_e_s)+1);
 	    ELSE											                                             --otherwise
 		    finalised_result_man_s	<=	rounded_result_man_s(22 downto 0);
-	      finalised_result_e_s	<=	rounded_result_e_s;
 	    END IF;
 	  END IF;
 	END IF;
