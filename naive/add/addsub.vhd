@@ -25,10 +25,12 @@ SIGNAL s_prenorm_exponent	: exponent_t;
 SIGNAL s_sign			: sign_t;
 SIGNAL s_prenorm_man		: std_logic_vector(28 downto 0);
 
+SIGNAL add_in1_denorm,add_in2_denorm  :std_logic;
 SIGNAL s_result_o		: float32_t;
 BEGIN
 
-
+add_in1_denorm<='1' WHEN usg(add_in1(30 downto 23))=255 AND usg(add_in1(22 downto 0))/=0 ELSE '0';
+add_in2_denorm<='1' WHEN usg(add_in2(30 downto 23))=255 AND usg(add_in2(22 downto 0))/=0 ELSE '0';
 pre_addsub:ENTITY prenorm_addsub
 PORT MAP
 	(
@@ -60,7 +62,16 @@ PORT MAP
 	 result_o		=>	s_result_o
 	);
 
-    add_out(31)	<=	s_result_o.sign;
-    add_out(30 downto 23)	<=	s_result_o.exponent;
-    add_out(22 downto 0)	<=	s_result_o.significand;
+sel:PROCESS(add_in1_denorm,add_in2_denorm,s_result_o)
+  BEGIN
+    IF (add_in1_denorm OR add_in2_denorm)='1' THEN
+      add_out(31)	<=	'0';
+      add_out(30 downto 23)	<=(OTHERS=>'1');
+      add_out(22 downto 0)	<=	(0=>'1',OTHERS=>'0');
+    ELSE
+      add_out(31)	<=	s_result_o.sign;
+      add_out(30 downto 23)	<=	s_result_o.exponent;
+      add_out(22 downto 0)	<=	s_result_o.significand;
+    END IF;
+  END PROCESS sel;
 END ARCHITECTURE rtl;

@@ -124,36 +124,33 @@ BEGIN
 	WHEN OTHERS => NULL;
 	END CASE;
 	
-	IF usg(prenorm_result_e_s)=255 THEN
+	IF usg(prenorm_result_e_s)=255 THEN                                --INPUT NaN or infinity
 	   finalised_result_e_s	  <=	(OTHERS=>'1');
-	     IF prenorm_result_man_s ="10000000000000000000000000000" THEN 
-	        finalised_result_man_s	  <=	(OTHERS=>'0');
+	     IF usg(prenorm_result_man_s) =0 THEN 
+	       finalised_result_man_s	  <=	(0=>'1',OTHERS=>'0');   
 	     ELSE
-	        finalised_result_man_s	  <=	(0=>'1',OTHERS=>'0');
+	        finalised_result_man_s	  <=	(OTHERS=>'0');
 	     END IF;
-	ELSIF usg(prenorm_result_man_s)=0 THEN
+	ELSIF usg(prenorm_result_man_s)=0 THEN                             --result is zero
 	   finalised_result_e_s	  <=	(OTHERS=>'0');
      finalised_result_man_s	  <=	(OTHERS=>'0');
+  ELSIF result_denorm = '1' THEN                                     --result is denormal
+        finalised_result_man_s	<=	prenorm_result_man_s(27 downto 5);
+	      finalised_result_e_s	  <=	prenorm_result_e_s;
   ELSE
-	
-	 IF rounded_result_e_s="11111111" THEN                --overflow 
+	   IF rounded_result_e_s="11111111" THEN                           --overflow 
 	      finalised_result_man_s	<=(OTHERS=>'0');
 	      finalised_result_e_s	  <=	rounded_result_e_s;
-	 ELSE
-	    IF rounded_result_man_s(23)='1' THEN							--rounded result with mantissa overflow
-		    finalised_result_man_s	<=	rounded_result_man_s(23 downto 1);		--1 bit shift adjustment
+	   ELSE
+	    IF rounded_result_man_s(23)='1' THEN						                     --mantissa overflow
+		    finalised_result_man_s	<=	rounded_result_man_s(23 downto 1);	--1 bit shift adjustment
 		    finalised_result_e_s	<=	slv(usg(rounded_result_e_s)+1);
-	    ELSE											--otherwise
-	     IF result_denorm = '1' THEN 
-	      finalised_result_man_s	<=	prenorm_result_man_s(26 downto 4);
-	      finalised_result_e_s	  <=	prenorm_result_e_s;
-	     ELSE
+	    ELSE											                                             --otherwise
 		    finalised_result_man_s	<=	rounded_result_man_s(22 downto 0);
 	      finalised_result_e_s	<=	rounded_result_e_s;
-	     END IF;
 	    END IF;
 	  END IF;
-	 END IF;
+	END IF;
 
 END PROCESS rounder;
 
