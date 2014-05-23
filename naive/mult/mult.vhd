@@ -37,9 +37,18 @@ architecture arch of mult is
         exit;
       end if;
     end loop;
-  return result;
-
+    return result;
   end function leading_one;
+    
+  function v2s(inp: std_logic_vector) return string is
+    variable result: string(1 to inp'length);
+  begin
+    for i in inp'left downto inp'right loop
+      result(1+inp'left-i) := std_logic'image(inp(i))(2);
+    end loop;
+    return result;
+  end function v2s;
+
   
 begin
   a.sign <= mult_in1(31);
@@ -133,90 +142,105 @@ begin
     variable exponent_leeway : integer := 0;
   begin
     report "computed_exponent is " & integer'image(to_integer(computed_exponent)) severity note;
-    case computed_significand(47 downto 46) is
-    when "00" => null; -- subnormal
+    report "computed_significand is " & v2s(std_logic_vector(computed_significand)) severity note;
+    if computed_exponent < to_signed(-127, 9) then
+      -- try to bring into denormal range
+      shift_amount := to_integer(to_signed(-127, 9) - computed_exponent);
+      final_exponent := to_signed(-127, 9);
+      final_significand := SHIFT_RIGHT(computed_significand, shift_amount)(47 downto 24);
+      
       ---------------------------------------------------------
-      -- This function to detect the leading one may synthesise
-      -- to pretty large hardware. I saw another method which
-      -- involves reversing the vector, inverting it, adding 1,
-      -- and then ANDing it with the original reversed vector,
-      -- which may be smaller. However, this gives the result
-      -- one-hot encoded.
-      shift_amount := leading_one(std_logic_vector(computed_significand(45 downto 0)));
-      exponent_leeway := to_integer(computed_exponent - to_signed(-127, 9));
-      report "shift_amount = " & integer'image(shift_amount) severity note;
-      report "exponent_leeway = " & integer'image(exponent_leeway) severity note;
-      if shift_amount = 0 then -- no ones in significand --> number is 0
-        final_significand := (others => '0');
-        final_exponent := to_signed(-127, 9);
-      else
-        if exponent_leeway < shift_amount then -- cannot be normalised
-          report "cannot be normalised" severity note;
-          shift_amount := exponent_leeway;
+      -- We examine the truncated part to find out if we should
+      -- have rounded up:
+      if SHIFT_RIGHT(computed_significand, shift_amount)(23 downto 0) > one_half --round up
+      or(SHIFT_RIGHT(computed_significand, shift_amount)(23 downto 0) = one_half and final_significand(0) = '1') -- rte, round down gives odd
+      then
+        -- round up = increment significand
+        final_significand := final_significand + to_unsigned(1, 24);
+      end if; -- round down = truncate (which we already did)
+      ---------------------------------------------------------
+    else
+      case computed_significand(47 downto 46) is
+      when "00" => null; -- subnormal
+        ---------------------------------------------------------
+        -- This function to detect the leading one may synthesise
+        -- to pretty large hardware. I saw another method which
+        -- involves reversing the vector, inverting it, adding 1,
+        -- and then ANDing it with the original reversed vector,
+        -- which may be smaller. However, this gives the result
+        -- one-hot encoded.
+        shift_amount := leading_one(std_logic_vector(computed_significand(45 downto 0)));
+        exponent_leeway := to_integer(computed_exponent - to_signed(-127, 9));
+        report "shift_amount = " & integer'image(shift_amount) severity note;
+        report "exponent_leeway = " & integer'image(exponent_leeway) severity note;
+        if shift_amount = 0 then -- no ones in significand --> number is 0
+          final_significand := (others => '0');
+          final_exponent := to_signed(-127, 9);
+        else
+          if exponent_leeway < shift_amount then -- cannot be normalised
+            report "cannot be normalised" severity note;
+            shift_amount := exponent_leeway;
+          end if;
+          final_significand := SHIFT_LEFT(computed_significand(47 downto 0), shift_amount)(46 downto 23);
+          final_exponent := computed_exponent - to_signed(shift_amount, 9);
         end if;
-        final_significand := SHIFT_LEFT(computed_significand(47 downto 0), shift_amount)(46 downto 23);
-        final_exponent := computed_exponent - to_signed(shift_amount, 9);
-      end if;
+        
+        ---------------------------------------------------------
+        -- We examine the truncated part to find out if we should
+        -- have rounded up:
+        if computed_significand(22 downto 0)&'0' > one_half --round up
+        or(computed_significand(22 downto 0)&'0' = one_half and final_significand(0) = '1') -- rte, round down gives odd
+        then
+          -- round up = increment significand
+          final_significand := final_significand + to_unsigned(1, 24);
+        end if; -- round down = truncate (which we already did)
+        ---------------------------------------------------------
+      when "01" => -- normal
+        ---------------------------------------------------------
+        -- Truncate the significand to 23 bits, taking only the
+        -- fractional part. This is equivalent to rounding down
+        final_significand := computed_significand(46 downto 23);
+        final_exponent := computed_exponent;
+        
+        ---------------------------------------------------------
+        -- We examine the truncated part to find out if we should
+        -- have rounded up:
+        if computed_significand(22 downto 0)&'0' > one_half --round up
+        or(computed_significand(22 downto 0)&'0' = one_half and final_significand(0) = '1') -- rte, round down gives odd
+        then
+          -- round up = increment significand
+          final_significand := final_significand + to_unsigned(1, 24);
+        end if; -- round down = truncate (which we already did)
+        ---------------------------------------------------------
+      when "10" | "11" => null; -- supernormal
+        ---------------------------------------------------------
+        -- If the whole part is greater than 2, then we need to
+        -- half the result. We can achieve this by simply taking
+        -- the slice one bit more significant.
+        final_significand := computed_significand(47 downto 24);
+        final_exponent := computed_exponent + to_signed(1, 9);
       
-      ---------------------------------------------------------
-      -- We examine the truncated part to find out if we should
-      -- have rounded up:
-      if computed_significand(22 downto 0)&'0' > one_half --round up
-      or(computed_significand(22 downto 0)&'0' = one_half and final_significand(0) = '1') -- rte, round down gives odd
-      then
-        -- round up = increment significand
-        final_significand := final_significand + to_unsigned(1, 24);
-      end if; -- round down = truncate (which we already did)
-      ---------------------------------------------------------
-    when "01" => -- normal
-      ---------------------------------------------------------
-      -- Truncate the significand to 23 bits, taking only the
-      -- fractional part. This is equivalent to rounding down
-      final_significand := computed_significand(46 downto 23);
-      final_exponent := computed_exponent;
-      
-      ---------------------------------------------------------
-      -- We examine the truncated part to find out if we should
-      -- have rounded up:
-      if computed_significand(22 downto 0)&'0' > one_half --round up
-      or(computed_significand(22 downto 0)&'0' = one_half and final_significand(0) = '1') -- rte, round down gives odd
-      then
-        -- round up = increment significand
-        final_significand := final_significand + to_unsigned(1, 24);
-      end if; -- round down = truncate (which we already did)
-      ---------------------------------------------------------
-    when "10" | "11" => null; -- supernormal
-      ---------------------------------------------------------
-      -- If the whole part is greater than 2, then we need to
-      -- half the result. We can achieve this by simply taking
-      -- the slice one bit more significant.
-      final_significand := computed_significand(47 downto 24);
-      final_exponent := computed_exponent + to_signed(1, 9);
-      
-      ---------------------------------------------------------
-      -- We examine the truncated part to find out if we should
-      -- have rounded up:
-      if computed_significand(23 downto 0) > one_half --round up
-      or(computed_significand(23 downto 0) = one_half and final_significand(0) = '1') -- rte, round down gives odd
-      then
-        -- round up = increment significand
-        final_significand := final_significand + to_unsigned(1, 24);
-      end if; -- round down = truncate (which we already did)
-      ---------------------------------------------------------
-    when others => null;
-    end case;
+        ---------------------------------------------------------
+        -- We examine the truncated part to find out if we should
+        -- have rounded up:
+        if computed_significand(23 downto 0) > one_half --round up
+        or(computed_significand(23 downto 0) = one_half and final_significand(0) = '1') -- rte, round down gives odd
+        then
+          -- round up = increment significand
+          final_significand := final_significand + to_unsigned(1, 24);
+        end if; -- round down = truncate (which we already did)
+        ---------------------------------------------------------
+      when others => null;
+      end case;
+    end if;
       
     -- check if out of bounds
     -- (final_exponent + 127) must be in range [1, 254]
     -- (0 is reserved for subnormals, and 255 is inf and nan)
     -- which makes the range of final_exponent [-126, 127]
-    -- If exponent is lower than -126 or greater than 127,
-    -- it must be rounded
-    if final_exponent < to_signed(-127, 9) then
-      --round to 0
-      product.exponent <= (others => '0');
-      product.significand <= (others => '0');
-    elsif final_exponent = to_signed(127, 9) then
+    report "final_exponent is " & integer'image(to_integer(final_exponent));
+    report "final_significand is " & v2s(std_logic_vector(final_significand)) severity note;
+    if final_exponent = to_signed(-127, 9) then
       -- denormal
       product.exponent <= (others => '0');
       product.significand <= std_logic_vector(final_significand(22 downto 0));
