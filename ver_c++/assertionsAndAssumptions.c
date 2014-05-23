@@ -50,7 +50,7 @@ int main ()
 	unpack(add_test1A);
 	unpack(add_test1B);
 	//addition function: use add_test1A and add_test1B
-	test1_add = adderadd_test1A, add_test1B, 0);
+	test1_add = adder(add_test1A, add_test1B, 0);
 	//result is test1_add
 	testCase(test1_add, result1_add);
 	//end of testing for addition
@@ -63,7 +63,7 @@ int main ()
 	unpack(add_test2A);
 	unpack(add_test2B);
 	//addition function: use add_test2A and add_test2B
-	test1_add = adderadd_test2A, add_test2B, 0);
+	test1_add = adder(add_test2A, add_test2B, 0);
 	//result is test2_add
 	testCase(test2_add, result2_add);
 	//end of testing for addition
