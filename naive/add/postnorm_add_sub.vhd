@@ -51,7 +51,7 @@ BEGIN
 END BLOCK pack;
 
 --denormal flag
-result_denorm<='1'  WHEN  usg(r_exponent_i)=0 AND r_man_i(28)='0' ELSE '0';                --flag: result is denormal
+result_denorm<='1'  WHEN  (usg(r_exponent_i)=0 AND r_man_i(28)='0') OR usg(r_exponent_i)<leadingzeros ELSE '0';                --flag: result is denormal
 --------------------------------------------------------------------------------------
 --leading zero detector
 --The process detect the number of leading zeros in result to enable
@@ -81,7 +81,7 @@ END PROCESS leading_zero_detector;
 --The process normalise the result to be a 26 bit output with hidden+mantissa+G+T
 --ready for rounding
 --------------------------------------------------------------------------------------
-normaliser:PROCESS(prenorm_result_man_s,prenorm_result_e_s,leadingzeros)--result_denorm
+normaliser:PROCESS(prenorm_result_man_s,prenorm_result_e_s,leadingzeros,result_denorm)
     VARIABLE sft_man: slv(28 downto 0);
     VARIABLE sft_exp: slv(7 downto 0);
 BEGIN	
@@ -89,15 +89,26 @@ BEGIN
   IF prenorm_result_man_s(28)='1' THEN	                           --if mantissa has overflowed(1x.man)
     sft_exp:=slv(usg(prenorm_result_e_s)+1);                      --add 1 to exponent
     sft_man:=prenorm_result_man_s;
-  ELSE                                                            --if mantissa cancellation happens(result is with leading zeros) OR normal operation(01.man)
-    sft_exp:= slv(usg(prenorm_result_e_s)-leadingzeros+1);
+  ELSIF result_denorm='1' THEN                                    --result is denormal
+    sft_exp:= (OTHERS=>'0');
     FOR i IN 0 TO 28 LOOP
-		  IF i<leadingzeros THEN
-		     sft_man(i):='0';      --pad zeros to the right of significand
-		  ELSE 
-		     sft_man(i):=prenorm_result_man_s(i-leadingzeros);--left shift				
-			END IF;
-		END LOOP;
+		    IF i<usg(prenorm_result_e_s) THEN
+		      sft_man(i):='0';      --pad zeros to the right of significand
+		    ELSE 
+		      sft_man(i):=prenorm_result_man_s(i-to_integer(usg(prenorm_result_e_s)));--left shift				
+			  END IF;
+		 END LOOP;  
+  ELSE                                                            --if mantissa cancellation happens(result is with leading zeros) OR normal operation(01.man)
+    
+      sft_exp:= slv(usg(prenorm_result_e_s)-leadingzeros+1);
+      FOR i IN 0 TO 28 LOOP
+		    IF i<leadingzeros THEN
+		      sft_man(i):='0';      --pad zeros to the right of significand
+		    ELSE 
+		      sft_man(i):=prenorm_result_man_s(i-leadingzeros);--left shift				
+			  END IF;
+		  END LOOP;
+		  		
 	END IF;
 	
 	  postnorm_result_e_s<=sft_exp;
@@ -110,7 +121,7 @@ END PROCESS normaliser;
 --rounder
 --The process round the result to be to be 23 bit mantissa
 --------------------------------------------------------------------------------------
-rounder:PROCESS(postnorm_result_man_s,postnorm_result_e_s,prenorm_result_man_s,prenorm_result_e_s,result_denorm)
+rounder:PROCESS(postnorm_result_man_s,postnorm_result_e_s,prenorm_result_man_s,prenorm_result_e_s)
 
 VARIABLE rounded_result_e_s		:exponent_t;
 VARIABLE rounded_result_man_s		:slv(23 downto 0);
@@ -138,9 +149,6 @@ BEGIN
 	ELSIF usg(prenorm_result_man_s)=0 THEN                             --result is zero
 	   finalised_result_e_s	  <=	(OTHERS=>'0');
      finalised_result_man_s	  <=	(OTHERS=>'0');
-  ELSIF result_denorm = '1' THEN                                     --result is denormal
-        finalised_result_man_s	<=	prenorm_result_man_s(27 downto 5);
-	      finalised_result_e_s	  <=	prenorm_result_e_s;
   ELSE
         finalised_result_e_s	  <=	rounded_result_e_s;
 	   IF rounded_result_e_s="11111111" THEN                           --overflow 
