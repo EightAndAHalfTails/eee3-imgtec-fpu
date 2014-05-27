@@ -1,11 +1,11 @@
 ------------------------------------------------------------------
---Testbench for floating point multiplier
+--Testbench for floating point divider
 --reads twoInput_datapak.txt for input data (IEEE 754 format)
 --use IEEE floating point package to calculate reference result
 
---vhdl test entity: mult
+--vhdl test entity: div
 --author: Weng Lio
---version: 13/05/2014
+--version: 27/05/2014
 ------------------------------------------------------------------
 
 LIBRARY ieee;
@@ -16,10 +16,10 @@ use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 USE std.textio.ALL;
 
-ENTITY mult_tb IS
-END mult_tb;
+ENTITY div_tb IS
+END div_tb;
 
-ARCHITECTURE tb OF mult_tb IS
+ARCHITECTURE tb OF div_tb IS
 
 	SIGNAL clk, reset: STD_LOGIC;
 	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
@@ -48,11 +48,11 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	mult: ENTITY work.mult
+	div: ENTITY work.div
 	PORT MAP(
-		mult_in1		=>A,
-		mult_in2		=>B,
-		mult_out=>result
+		div_in1		=>A,
+		div_in2		=>B,
+		div_out		=>result
 	);
 
 	------------------------------------------------------------
@@ -63,7 +63,7 @@ BEGIN
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
-		VARIABLE x, y       : FLOAT32;
+		VARIABLE x, y, z    : FLOAT32;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 	
@@ -83,20 +83,19 @@ BEGIN
 			ELSE
 				REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
 				
-				-------------------------------------------------------------
-				-- note: x and y from file must be in binary
-				-------------------------------------------------------------
 				read(buf, x);
 				read(buf, y);
 				
 				A<=to_slv(x);
 				B<=to_slv(y);
 				
+				z = x/y;
+				
 				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF result /= (to_slv(x*y)) THEN
+				IF result /= (to_slv(z)) THEN
 					incorrect_result := incorrect_result+1;
-					REPORT to_string(x) & "*" & to_string(y) & "is " & to_string(to_float(result)) &
-						". Correct answer should be " & to_string(x*y) SEVERITY warning;
+					REPORT to_string(x) & "/" & to_string(y) & "is " & to_string(to_float(result)) &
+						". Correct answer should be " & to_string(z) SEVERITY warning;
 				END IF;
 				
 			END IF;	

@@ -10,10 +10,29 @@
 	#define GEN_NEG 0
 #endif
 
-//Percentage of denormal numbers
+//------------------------------------------------------------------------
+// all of the following probabilities should not sum up to more than 1
+
+//percentage of denormal numbers
 #ifndef DENORM_PROB
 	#define DENORM_PROB 0
 #endif
+
+//percentage of infinities
+#ifndef INF_PROB
+	#define INF_PROB 0
+#endif
+
+//percentage of zeros
+#ifndef ZEROS_PROB
+	#define ZEROS_PROB 0
+#endif
+
+//percentage of NaNs
+#ifndef NAN_PROB
+	#define NAN_PROB 0
+#endif
+//------------------------------------------------------------------------
 
 //generate numbers in binary ieee754 format
 #ifndef GEN_BIN

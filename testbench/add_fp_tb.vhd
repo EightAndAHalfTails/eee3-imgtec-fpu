@@ -36,9 +36,15 @@ ARCHITECTURE tb OF add_tb IS
 		RETURN slv(to_signed(x, 32));
 	END;
 	
+	FUNCTION b2l(b : BIT) return std_logic is
+	BEGIN
+		IF b = '0' THEN
+			RETURN '0';
+		END IF;
+		RETURN '1';
+	END FUNCTION;
+	
 BEGIN
-
-  operation <= '0';
   
 	-- clock generation process
 	clkgen: PROCESS
@@ -69,9 +75,11 @@ BEGIN
 		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
-		VARIABLE i1, i2     : INTEGER;
+		VARIABLE op			: BIT;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
+		VARIABLE nan_lines : INTEGER;
+		VARIABLE inf_lines : INTEGER;
 	
 	BEGIN
 		reset <= '1';
@@ -80,7 +88,33 @@ BEGIN
 		
 		n := 1;
 		incorrect_result := 0;
+		nan_lines := 0;
+		inf_lines := 0;
 		
+		---------------------------------------------------------------------
+		-- read first line of file
+		-- the first line should contain the operation code
+		-- 0 for addition and 1 for subtraction
+		-- testbench default to addition if none is supplied 
+		-- and first line of data file will be ignored
+		readline(f,buf);
+		If buf'LENGTH = 0 THEN
+			REPORT "skipping line: " & INTEGER'IMAGE(n) SEVERITY note;
+		ELSE
+			REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
+				
+			IF buf'LENGTH > 1 THEN
+				REPORT "Undefined operation option, default to 0. Skipping line 1" SEVERITY warning;
+				operation <= '0';
+			ELSE
+				read(buf, op);			
+				operation <= b2l(op);
+				REPORT " ***************** Operation = " & BIT'IMAGE(op) & " ***************** " SEVERITY note;
+			END IF;
+		END IF;
+		
+		---------------------------------------------------------------------
+		-- read data file until eof
 		WHILE NOT endfile(f) LOOP
 			WAIT UNTIL clk'EVENT and clk = '1';
 			readline(f, buf);
@@ -99,24 +133,52 @@ BEGIN
 				B<=to_slv(y);
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF result /= (to_slv(x+y)) THEN
-					incorrect_result := incorrect_result+1;
-					REPORT to_string(x) & "+" & to_string(y) & "is " & to_string(to_float(result)) &
-						". Correct answer should be " & to_string(x+y) SEVERITY warning;
+				IF op = '0' THEN
+					IF result /= (to_slv(x+y)) THEN
+						incorrect_result := incorrect_result+1;
+						REPORT to_string(x) & "+" & to_string(y) & "is " & to_string(to_float(result)) &
+							". Correct answer should be " & to_string(x+y) SEVERITY warning;
+					END IF;
+				ELSE
+					IF result /= (to_slv(x-y)) THEN
+						incorrect_result := incorrect_result+1;
+						REPORT to_string(x) & "-" & to_string(y) & "is " & to_string(to_float(result)) &
+							". Correct answer should be " & to_string(x-y) SEVERITY warning;
+					END IF;
+				END IF;
+				--------------------------------------------------------------
+				-- if either input or output is NaN
+				IF unordered(x,y) = true THEN
+					nan_lines := nan_lines + 1;
+					REPORT "NaN input(s): " & to_string(x) & " and " & to_string(y) & ". Result is " & 
+						to_string(to_float(result)) SEVERITY note;			
+				--------------------------------------------------------------
+				-- there's something wrong with this ELSIF condition 
+				-- but whatever I will change it later
+				ELSIF finite(x) = false or finite(y)=false or finite(to_float(result))=false THEN
+					inf_lines := inf_lines + 1;
+					REPORT "infinite: " & to_string(x) & " and " & to_string(y) & ". Result is " & 
+						to_string(to_float(result)) SEVERITY note;
 				END IF;
 				
 			END IF;	
 			
 			n := n+1;
 		END LOOP;
-	
+
 	IF incorrect_result = 0 THEN
 		REPORT "***************** TEST PASSED *****************";
+		REPORT "Number of NaN lines: " & INTEGER'IMAGE(nan_lines) SEVERITY note;
+		REPORT "Number of Inf lines: " & INTEGER'IMAGE(inf_lines) SEVERITY note;
 	ELSE
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
 	END IF;
 	
-	REPORT "Test finished normally." SEVERITY failure;
+	IF op = '0' THEN
+		REPORT "Addition test finished normally." SEVERITY failure;
+	ELSE
+		REPORT "Subtraction test finished normally." SEVERITY failure;
+	END IF;
 	END PROCESS main;
 	
 END tb; 
