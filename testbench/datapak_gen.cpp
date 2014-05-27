@@ -5,12 +5,15 @@
 // 			-DNUMLINES=x, define number of lines in datapak (default=20)	   		//
 //			-DGEN_NEG=x, generate negative numbers (default=0)						//
 //			-DGEN_BIN=x, generate numbers in binary IEEE 754 format (default=1)		//
-//			-DDENORM_PROB=x, Percentage of denormals, between 1 and 0 (default=0)	//
+//			-DDENORM_PROB=x, percentage of denormals, between 1 and 0 (default=0)	//
+//			-DINF_PROB=x, percentage of +/- infinity, between 1 and 0 (default=0)	//
+//			-DNAN_PROB=x, percentage of NaNs, between 1 and 0 (default=0)			//
+//			-DZEROS_PROB=x, percentage of zeros, between 1 and 0 (default=0)		//
 //																					//
 // To compile: g++ -o datapak_gen.exe datapak_gen.cpp datapak_config.h <options>	//
 //																					//
 // author: Weng Lio										   							//
-// last modified: 23/05/2014	-under development for denorm prob					// 
+// last modified: 27/05/2014														// 
 //**********************************************************************************//
 
 #include <ctime>
@@ -88,6 +91,8 @@ float generate_random_fp(){
 	int e;
 	long m;
 	float num;
+	double r; //random number for exponent generation
+	bool zeromantissa = false;
 	
 	// sign generation
 	if(GEN_NEG)
@@ -97,29 +102,36 @@ float generate_random_fp(){
 	
 	
 	// exponent generation
-	// -- if DENORM_PROB is greater than 0, we generate denormal numbers according to the probability
-	// -- else we only generate normal numbers
-	if(DENORM_PROB>0){
-		if(((double)rand()/RAND_MAX)>DENORM_PROB){
-			do{
-				e = rand()%255;
-			}while(e == 0);
-		}
-		else
-			e = 0;
+	
+	// -- r is a uniform random number, where it lies between 0 and 1 
+	// -- determine the number generated	
+	r = (double)rand()/RAND_MAX;
+	
+	if(r < INF_PROB){
+		e = 255;
+		zeromantissa = true;
 	}
+	else if (r < (INF_PROB+NAN_PROB))
+		e = 255;
+	else if (r < (INF_PROB+NAN_PROB+ZEROS_PROB)){
+		e = 0;
+		zeromantissa = true;
+	}
+	else if (r < (INF_PROB+NAN_PROB+ZEROS_PROB+DENORM_PROB))
+		e = 0;
 	else{
-		do{
-			e = rand()%255;
-		}while(e == 0);
+		e = rand()%254+1;		// e between 1 and 254 inclusive
 	}
 	
 	// mantissa generation
 	m = 0;
-	for (int j = 0; j < 23 ; j++){
-		m += (rand()%2) << j;
+	if(!zeromantissa){
+		for (int j = 0; j < 23 ; j++){
+			m += (rand()%2) << j;
+		}
 	}
-
+	
+	
 	num = pack(s, e, m);
 
 	return num;
