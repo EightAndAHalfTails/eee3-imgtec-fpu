@@ -244,7 +244,7 @@ begin
     if final_exponent = to_signed(-127, 9) then
       -- denormal
       product.exponent <= (others => '0');
-      product.significand <= std_logic_vector(final_significand(22 downto 0));
+      product.significand <= std_logic_vector(final_significand(23 downto 1));
     elsif final_exponent > to_signed(127, 9) then
       --for now, round to inf
       product.exponent <= (others => '1');
