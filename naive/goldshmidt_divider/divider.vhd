@@ -10,7 +10,7 @@ use work.all;
 use config_pack.all;
 
 ENTITY div IS
-  GENERIC (lsize :integer :=10);
+  GENERIC (lsize :integer :=4);
   PORT
     (div_IN1:IN std_logic_vector(31 downto 0);
      div_IN2:IN std_logic_vector(31 downto 0);
@@ -72,11 +72,11 @@ unpack:BLOCK
   BEGIN
     A_si_s<=div_IN1(31);
     A_e_s<=div_IN1(30 downto 23);
-    A_significand_s<=div_IN1(22 downto 0);
+    A_significand_s<='1'&div_IN1(22 downto 0);
       
     B_si_s<=div_IN2(31);
     B_e_s<=div_IN2(30 downto 23);
-    B_significand_s<=div_IN2(22 downto 0);
+    B_significand_s<='1'&div_IN2(22 downto 0);
 
     selection<=to_integer(usg(div_IN2(22 downto 19)));
   END BLOCK unpack;
@@ -88,6 +88,7 @@ div_OUT(31)<=finalised_si_s;
 div_OUT(30 downto 23)<=finalised_e_s;
 div_OUT(22 downto 0)<=finalised_man_s;
 
+x_0<=lut(selection);
 ------------------------------------------------------
 --significand division (range of result: 0.5<x<2)
 ------------------------------------------------------
@@ -136,7 +137,7 @@ prenorm_e_s		<=slv(usg(A_e_s)-usg(B_e_s)+127);
 ------------------------------------------------------
 normalise:PROCESS (prenorm_e_s,prenorm_significand_s)
 BEGIN
-	IF prenorm_significand_s(24)='1' THEN 
+	IF prenorm_significand_s(23)='1' THEN 
 		postnorm_e_s<=prenorm_e_s;
 		postnorm_man_s<=prenorm_significand_s(22 downto 0);
 	ELSE

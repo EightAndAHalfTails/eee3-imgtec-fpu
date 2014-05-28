@@ -155,7 +155,7 @@ BEGIN
 	      finalised_result_man_s	<=(OTHERS=>'0');	     
 	   ELSE
 	    IF rounded_result_man_s(23)='1' THEN						                     --mantissa overflow
-		    finalised_result_man_s	<=	rounded_result_man_s(23 downto 1);	--1 bit shift adjustment
+		    finalised_result_man_s	<=	rounded_result_man_s(22 downto 0);	--1 bit shift adjustment
 	    ELSE											                                             --otherwise
 		    finalised_result_man_s	<=	rounded_result_man_s(22 downto 0);
 	    END IF;
