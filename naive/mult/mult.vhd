@@ -106,18 +106,19 @@ begin
     constant zeros : exponent_t := (others => '0');
   begin
     if a.exponent = zeros then
-      sig_a := unsigned('0' & a.significand);
+      sig_a := unsigned(a.significand & '0');
     else
       sig_a := unsigned('1' & a.significand);
     end if;
 
     if b.exponent = zeros then
-      sig_b := unsigned('0' & b.significand);
+      sig_b := unsigned(b.significand & '0');
     else
       sig_b := unsigned('1' & b.significand);
     end if;
     
     computed_significand <= sig_a * sig_b;
+    report "Performing " & v2s(std_logic_vector(sig_a)) & " * " & v2s(std_logic_vector(sig_b)) severity note;
   end process compute_significand;
   -----------------------------------------------------------
   
