@@ -144,7 +144,7 @@ begin
   begin
     report "computed_exponent is " & integer'image(to_integer(computed_exponent)) severity note;
     report "computed_significand is " & v2s(std_logic_vector(computed_significand)) severity note;
-    if computed_exponent < to_signed(-127, 9) then
+    if computed_exponent <= to_signed(-127, 9) then
       -- try to bring into denormal range
       shift_amount := to_integer(to_signed(-127, 9) - computed_exponent);
       final_exponent := to_signed(-127, 9);
@@ -244,7 +244,7 @@ begin
     if final_exponent = to_signed(-127, 9) then
       -- denormal
       product.exponent <= (others => '0');
-      product.significand <= std_logic_vector(final_significand(23 downto 1));
+      product.significand <= std_logic_vector(final_significand(22 downto 0));
     elsif final_exponent > to_signed(127, 9) then
       --for now, round to inf
       product.exponent <= (others => '1');
