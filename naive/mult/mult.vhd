@@ -171,7 +171,7 @@ begin
         -- which may be smaller. However, this gives the result
         -- one-hot encoded.
         shift_amount := leading_one(std_logic_vector(computed_significand(45 downto 0)));
-        exponent_leeway := to_integer(computed_exponent - to_signed(-127, 9));
+        exponent_leeway := to_integer(computed_exponent - to_signed(-126, 9));
         report "shift_amount = " & integer'image(shift_amount) severity note;
         report "exponent_leeway = " & integer'image(exponent_leeway) severity note;
         if shift_amount = 0 then -- no ones in significand --> number is 0
@@ -181,9 +181,12 @@ begin
           if exponent_leeway < shift_amount then -- cannot be normalised
             report "cannot be normalised" severity note;
             shift_amount := exponent_leeway;
+            final_significand := SHIFT_LEFT(computed_significand(47 downto 0), shift_amount)(46 downto 23);
+            final_exponent := to_signed(-127, 9);
+          else
+            final_significand := SHIFT_LEFT(computed_significand(47 downto 0), shift_amount)(46 downto 23);
+            final_exponent := computed_exponent - to_signed(shift_amount, 9);
           end if;
-          final_significand := SHIFT_LEFT(computed_significand(47 downto 0), shift_amount)(46 downto 23);
-          final_exponent := computed_exponent - to_signed(shift_amount, 9);
         end if;
         
         ---------------------------------------------------------
