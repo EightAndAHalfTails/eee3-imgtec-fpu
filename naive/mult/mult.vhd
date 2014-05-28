@@ -189,8 +189,8 @@ begin
         ---------------------------------------------------------
         -- We examine the truncated part to find out if we should
         -- have rounded up:
-        if computed_significand(22 downto 0)&'0' > one_half --round up
-        or(computed_significand(22 downto 0)&'0' = one_half and final_significand(0) = '1') -- rte, round down gives odd
+        if SHIFT_LEFT(computed_significand(47 downto 0), shift_amount)(22 downto 0)&'0' > one_half --round up
+        or(SHIFT_LEFT(computed_significand(47 downto 0), shift_amount)(22 downto 0)&'0' = one_half and final_significand(0) = '1') -- rte, round down gives odd
         then
           -- round up = increment significand
           final_significand := final_significand + to_unsigned(1, 24);
