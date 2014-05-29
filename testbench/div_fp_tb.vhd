@@ -26,6 +26,8 @@ ARCHITECTURE tb OF div_tb IS
 
 	ALIAS slv IS std_logic_vector;
 	
+	CONSTANT INFINITY: slv := "01111111100000000000000000000000";
+	
 	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER IS
 	BEGIN
 		RETURN to_integer(SIGNED(x));
@@ -64,6 +66,10 @@ BEGIN
 		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y, z    : FLOAT32;
+		VARIABLE four_ulps	: FLOAT32;
+		VARIABLE max_z		: slv(31 DOWNTO 0);
+		VARIABLE exponent	: unsigned(8 DOWNTO 0);
+		VARIABLE mantissa	: unsigned(24 DOWNTO 0); --25 bits for overflow
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 	
@@ -89,13 +95,39 @@ BEGIN
 				A<=to_slv(x);
 				B<=to_slv(y);
 				
-				z = x/y;
+				z := x/y;
+				
+				----------------------------------------------------------------------
+				-- TODO: check z for infinity, NaNs
+				----------------------------------------------------------------------
+				exponent := '0'& unsigned(z(7 DOWNTO 0));
+				mantissa := unsigned("01" & z(-1 DOWNTO -23)) + to_unsigned(4, 25);
+				
+				--if mantissa overflow, increment exponent
+				IF mantissa(24) = '1' THEN
+					exponent := exponent + to_unsigned(1, 9);
+					max_z := slv(z(8)&exponent(7 DOWNTO 0)&mantissa(22 DOWNTO 0));
+					
+					--if exp overflow then max is infinity
+					IF exponent(8) = '1' THEN
+						max_z := INFINITY;
+					END IF;
+				ELSE
+					max_z := slv(z(8)&exponent(7 DOWNTO 0)&mantissa(22 DOWNTO 0));
+				END IF;
+				
+				--magnitude of 4 ulps
+				four_ulps := to_float(max_z) - z;
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF result /= (to_slv(z)) THEN
+
+				IF (z-to_float(result)) > four_ulps OR (to_float(result)-z) > four_ulps THEN
 					incorrect_result := incorrect_result+1;
 					REPORT to_string(x) & "/" & to_string(y) & "is " & to_string(to_float(result)) &
 						". Correct answer should be " & to_string(z) SEVERITY warning;
+				ELSIF result /= to_slv(z) THEN
+					REPORT "Result ok(?)" & to_string(x) & "/" & to_string(y) & "is " & to_string(to_float(result)) &
+						". Correct answer should be " & to_string(z) SEVERITY note;
 				END IF;
 				
 			END IF;	
