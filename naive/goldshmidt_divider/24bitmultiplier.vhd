@@ -1,20 +1,24 @@
+----------------------------------------=
+--mult27bit.vhd
+-----------------------------------------
+
 library ieee;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 use work.all;
 use config_pack.all;
 
-ENTITY mult24bit IS
+ENTITY mult27bit IS
   PORT
-    (A_in		:IN std_logic_vector(23 downto 0);
-     B_in		:IN std_logic_vector(23 downto 0);
-     C_out		:OUT std_logic_vector(23 downto 0)
+    (A_in		:IN std_logic_vector(26 downto 0);
+     B_in		:IN std_logic_vector(26 downto 0);
+     C_out		:OUT std_logic_vector(26 downto 0)
       );
-END ENTITY mult24bit;
+END ENTITY mult27bit;
 
-ARCHITECTURE rtl OF mult24bit IS
+ARCHITECTURE rtl OF mult27bit IS
 
-SIGNAL prenorm_result 	:usg(47 downto 0);
+SIGNAL prenorm_result 	:usg(53 downto 0);
 
 BEGIN
 
@@ -25,7 +29,7 @@ END PROCESS compute_significand;
 
 Rounding: PROCESS(prenorm_result)
 BEGIN
-	C_out<=slv(prenorm_result(46 downto 23));
+	C_out<=slv(prenorm_result(52 downto 26));
 END PROCESS rounding;
 
 END ARCHITECTURE rtl;
