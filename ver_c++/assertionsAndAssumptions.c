@@ -5,26 +5,6 @@ using namespace std;
 #include <fstream>
 #include <string>
 
-
-//////////////global variables: test cases///////////////////
-////////////////////////addition/////////////////////////////
-float add_test1A = 10.1;
-float add_test1B = 10.2;
-float result1_add = 20.3;
-
-float add_test2A = 10.3;
-float add_test2B = 10.4;
-float result2_add = 20.7;
-
-/////////////////////multiplication//////////////////////////
-float mul_test1A = 10.1;
-float mul_test1B = 10.2;
-float result1_mul = 103.02;
-
-float mul_test2A = 10.3;
-float mul_test2B = 10.4;
-float result2_mul = 107.12;
-
 //////////////////floating point struct//////////////////////
 struct fp_t{
 	int s;	//sign
@@ -40,77 +20,21 @@ void testCase(fp_t* floatingPointNumber);
 float adder(float, float, bool);	//takes in 32-bit floating point numbers and return sum
 //multiplication function
 float multiplier(float, float);
-
-
+//function for testing
 int testCode();
 
 //////////////////////main function//////////////////////////
 int main ()
 {
-	//declare variables
-	float test1_add, test2_add, test1_mul, test2_mul;
-		
-
-
-	//start of testing for addition
-	unpack(add_test1A);
-	unpack(add_test1B);
-	//addition function: use add_test1A and add_test1B
-	test1_add = adder(add_test1A, add_test1B, 0);
-	//result is test1_add
-	testCase(test1_add, result1_add);
-	//end of testing for addition
 
 
 
 
 
-	//start of testing for addition
-	unpack(add_test2A);
-	unpack(add_test2B);
-	//addition function: use add_test2A and add_test2B
-	test1_add = adder(add_test2A, add_test2B, 0);
-	//result is test2_add
-	testCase(test2_add, result2_add);
-	//end of testing for addition
-
-	
-	
-	
-	
-	
-	//start of testing for multiplication
-	unpack(mul_test1A);
-	unpack(mul_test1B);
-	//multiplication function: use mul_test1A and mul_test1B
-	test1_mul = multiplier(mul_test1A, mul_test1B);
-	//result is test1_mul
-	testCase(test1_mul, result1_mul);
-	//end of testing for multiplication
+	testCode();
 
 
 
-
-	
-	
-	
-	//start of testing for multiplication
-	unpack(mul_test2A);
-	unpack(mul_test2B);
-	//multiplication function: use mul_test2A and mul_test2B
-	test2_mul = multiplier(mul_test2A, mul_test2B);
-	//result is test2_mul
-	testCase(test2_mul, result2_mul);
-	//end of testing for multiplication
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	return 0;
 }
 
@@ -352,7 +276,7 @@ void testCase(float* floatingPointNumber, float* floatingPointNumber2) {
 
 
 
-
+//test for adder
 int testCode () {
 	
 	ifstream inFile ("test2-positive_negative.txt");
