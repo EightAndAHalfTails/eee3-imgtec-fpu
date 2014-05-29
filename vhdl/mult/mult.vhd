@@ -2,6 +2,7 @@ library ieee;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 use work.all;
+use work.types.all;
 
 entity mult is
   port(
@@ -11,44 +12,10 @@ entity mult is
 end entity mult;
 
 architecture naive of mult is
-  alias sign_t is std_logic;
-  subtype exponent_t is std_logic_vector(7 downto 0);
-  subtype significand_t is std_logic_vector(22 downto 0);
-  type float32_t is record
-    sign : sign_t;
-    exponent : exponent_t;
-    significand : significand_t;
-  end record;
-  
   signal a, b, product : float32_t;
   
   signal computed_exponent : signed(8 downto 0);
   signal computed_significand : unsigned(47 downto 0);
-  
-  function leading_one(inp: std_logic_vector) return integer is
-    variable result, count: integer; 
-  begin
-    count := 0;
-    result := 0;
-    for i in inp'left downto inp'right loop
-      count := count + 1;
-      if inp(i) = '1' then 
-        result := count;
-        exit;
-      end if;
-    end loop;
-    return result;
-  end function leading_one;
-    
-  function v2s(inp: std_logic_vector) return string is
-    variable result: string(1 to inp'length);
-  begin
-    for i in inp'left downto inp'right loop
-      result(1+inp'left-i) := std_logic'image(inp(i))(2);
-    end loop;
-    return result;
-  end function v2s;
-
   
 begin
   a.sign <= mult_in1(31);
