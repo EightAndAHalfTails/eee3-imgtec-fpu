@@ -5,7 +5,12 @@ use ieee.math_real;
 use work.all;
 
 package types is
+
+  alias slv IS std_logic_vector;
+  alias usg IS unsigned;
+  alias sgn IS signed;
   alias sign_t is std_logic;
+
   subtype exponent_t is std_logic_vector(7 downto 0);
   subtype significand_t is std_logic_vector(22 downto 0);
   type float32_t is record
