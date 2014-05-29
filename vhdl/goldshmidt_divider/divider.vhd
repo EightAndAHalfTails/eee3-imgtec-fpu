@@ -34,7 +34,9 @@ ARCHITECTURE rtl of div is
   
   SIGNAL x_0		 : slv(26 downto 0);
 
-  SIGNAL prenorm_e_s	 :slv(7 downto 0);
+  SIGNAL prenorm_result_exception:std_logic;
+  
+  SIGNAL prenorm_e_s	 :slv(8 downto 0);
   SIGNAL prenorm_significand_s  : slv(26 downto 0);
 
   SIGNAL postnorm_e_s	 :slv(7 downto 0);
@@ -44,23 +46,23 @@ ARCHITECTURE rtl of div is
   SIGNAL finalised_e_s   : std_logic_vector(7 downto 0);
   SIGNAL finalised_man_s : std_logic_vector(22 downto 0);
 
-  CONSTANT lut :rom := (                 --1/B(22 downto 19)
-    0=> "100000000000000000000000000",       --0000=>
-    1=> "011110000111100001111000100",       --0001=>
-    2=> "011100011100011100011100100",       --0010=>
-    3=> "011010111100101000011011000",       --0011=>
-    4=> "011001100110011001100110011",       --0100=>
-    5=> "011000011000011000011000011",       --0101=>
-    6=> "010111010001011101000101111",       --0110=>
-    7=> "010110010000101100100001011",       --0111=>
-    8=> "010101010101010101010101011",       --1000=>
-    9=> "010100011110101110000101001",       --1001=>
-    10=>"010011101100010011101100010",       --1010=>
-    11=>"010010111101101000010011000",       --1011=>
-    12=>"010010010010010010010010010",       --1100=>
-    13=>"010001101001111011100101100",       --1101=>
-    14=>"010001000100010001000100010",       --1110=>
-    15=>"010000100001000010000100001"        --1111=>
+  CONSTANT lut :rom := (                 --1/1.B(22 downto 19)
+    0=> "100000000000000000000000000",       --1/1.0000=>
+    1=> "011110000111100001111000100",       --1/1.0001=>
+    2=> "011100011100011100011100100",       --1/1.0010=>
+    3=> "011010111100101000011011000",       --1/1.0011=>
+    4=> "011001100110011001100110011",       --1/1.0100=>
+    5=> "011000011000011000011000011",       --1/1.0101=>
+    6=> "010111010001011101000101111",       --1/1.0110=>
+    7=> "010110010000101100100001011",       --1/1.0111=>
+    8=> "010101010101010101010101011",       --1/1.1000=>
+    9=> "010100011110101110000101001",       --1/1.1001=>
+    10=>"010011101100010011101100010",       --1/1.1010=>
+    11=>"010010111101101000010011000",       --1/1.1011=>
+    12=>"010010010010010010010010010",       --1/1.1100=>
+    13=>"010001101001111011100101100",       --1/1.1101=>
+    14=>"010001000100010001000100010",       --1/1.1110=>
+    15=>"010000100001000010000100001"        --1/1.1111=>
 );
 
 
@@ -72,13 +74,13 @@ unpack:BLOCK
   BEGIN
     A_si_s<=div_IN1(31);
     A_e_s<=div_IN1(30 downto 23);
-    A_significand_s<='1'&div_IN1(22 downto 0)&"000";
+    A_significand_s<='1'&div_IN1(22 downto 0)&"000";  --modified to 27 bits(Hidden+man+3bit guard)
       
     B_si_s<=div_IN2(31);
     B_e_s<=div_IN2(30 downto 23);
     B_significand_s<='1'&div_IN2(22 downto 0)&"000";
 
-    selection<=to_integer(usg(div_IN2(22 downto 19)));
+    selection<=to_integer(usg(div_IN2(22 downto 19))); --choose initial guess 
   END BLOCK unpack;
 
 ------------------------------------------------------
@@ -89,21 +91,26 @@ div_OUT(30 downto 23)<=finalised_e_s;
 div_OUT(22 downto 0)<=finalised_man_s;
 
 x_0<=lut(selection);
+
 ------------------------------------------------------
 --significand division (range of result: 0.5<x<2)
+--    	   N f(0) f(1) f(2) f(3)
+--compute -*----*----*----*---- such that the dividend 
+--        D f(0) f(1) f(2) f(3)  
+--converges to 1.
 ------------------------------------------------------
 div_gen:FOR i in 0 to lsize GENERATE	
-	case0: IF i=0 GENERATE
-      		mult0:ENTITY mult27bit 	-- d(0)=x_0*b
-		PORT MAP (
-   		    A_in  => x_0,
+	case0: IF i=0 GENERATE                                 -- first iteration
+    		mult0:ENTITY mult27bit 	-- d(0)=x_0*b              -- multiplied by a initial guess of 
+		PORT MAP (                                           -- 1/b to try to set dividend to 1  
+   		    A_in  => x_0,                                   
         	B_in  => B_significand_s,
         	C_out => d(0)
 		);
 
-    		f(0)<=NOT d(0); 	-- f=1-d(0)
+    		f(0)<=NOT d(0); 	                                  -- f=1-d(0)                      
 
-	   	mult1:ENTITY mult27bit 	-- n(0)=a*x_0
+	   	mult1:ENTITY mult27bit 	-- n(0)=a*x_0              -- multiply with initial guess accordingly
 		PORT MAP (
         	A_in  => x_0,
         	B_in  => A_significand_s,
@@ -111,15 +118,15 @@ div_gen:FOR i in 0 to lsize GENERATE
 		); 
     	end generate case0;
 	
-	case1: IF i>0 GENERATE
-		mult3:ENTITY mult27bit 	-- d=d*f
+	case1: IF i>0 GENERATE                                 --multiply with f
+		mult3:ENTITY mult27bit 	-- d=d*f                     
 		PORT MAP (
         	A_in  => d(i-1),
         	B_in  => f(i-1),
         	C_out => d(i)
 		);
-		f(i)<= NOT d(i);	-- f=1-d
-		mult4:ENTITY mult27bit 	-- n=n*f
+		f(i)<= NOT d(i);	                                    -- f=1-d                            
+		mult4:ENTITY mult27bit 	-- n=n*f                     --multiply with f
 		PORT MAP (
         	A_in  => n(i-1),
         	B_in  => f(i-1),
@@ -127,22 +134,31 @@ div_gen:FOR i in 0 to lsize GENERATE
 		);
 	END GENERATE case1;
 END GENERATE div_gen;
+
 ------------------------------------------------------
 --ready for normalization
 ------------------------------------------------------
 prenorm_significand_s	<=n(lsize);	--use the final result as output
-prenorm_e_s		<=slv(usg(A_e_s)-usg(B_e_s)+127);
+prenorm_e_s		<=slv(RESIZE(usg(A_e_s),9)-RESIZE(usg(B_e_s),9)+127);
+
+------------------------------------------------------
+--flag signals
+------------------------------------------------------
+prenorm_result_exception<=prenorm_e_s(8);
+
+
+
 ------------------------------------------------------
 --normalization
 ------------------------------------------------------
 normalise:PROCESS (prenorm_e_s,prenorm_significand_s)
 BEGIN
 	IF prenorm_significand_s(26)='1' THEN 
-		postnorm_e_s<=prenorm_e_s;
+		postnorm_e_s<=prenorm_e_s(7 downto 0);
 		postnorm_man_s(24 downto 1)<=prenorm_significand_s(25 downto 2);
 		postnorm_man_s(0)<=prenorm_significand_s(1) OR prenorm_significand_s(0);
 	ELSE
-		postnorm_e_s<=slv(usg(prenorm_e_s)-1);
+		postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-1);
 		postnorm_man_s<=prenorm_significand_s(24 downto 0);
 	END IF;
 
@@ -151,7 +167,7 @@ END PROCESS normalise;
 ------------------------------------------------------
 --rounding
 ------------------------------------------------------
-rounding: PROCESS(postnorm_man_s,postnorm_e_s)
+rounding: PROCESS(postnorm_man_s,postnorm_e_s,A_e_s,prenorm_result_exception)
   VARIABLE rounded_result_man_s :slv(23 downto 0);
   VARIABLE rounded_result_e_s   :slv(7 downto 0);
   
@@ -160,16 +176,26 @@ BEGIN
 	WHEN "000"|"001"|"010"|"100"|"101"	=>rounded_result_man_s := '0'&postnorm_man_s(24 downto 2);			--round down
 	WHEN "011"|"110"|"111"			=>rounded_result_man_s := slv(RESIZE(usg(postnorm_man_s(24 downto 2)),24)+1);	--round up
 	WHEN OTHERS => NULL;
-	END CASE;
+	END CASE;   
 	
-	IF rounded_result_man_s(23)='1' THEN
-	  rounded_result_e_s:=slv(usg(postnorm_e_s)+1);
+	   IF rounded_result_man_s(23)='1' THEN
+	     rounded_result_e_s:=slv(usg(postnorm_e_s)+1);
+	   ELSE
+	     rounded_result_e_s			:=postnorm_e_s;
+	   END IF;
+	
+	IF prenorm_result_exception ='1' THEN
+	   IF  A_e_s(7) ='1' THEN
+	     finalised_e_s<= (OTHERS=>'1');
+	     finalised_man_s<=(OTHERS=>'0');
+	   ELSE
+	     finalised_e_s<= (OTHERS=>'0'); 
+	     finalised_man_s<=rounded_result_man_s(22 downto 0);	
+	   END IF;	
 	ELSE
-	  rounded_result_e_s			:=postnorm_e_s;
+	   finalised_e_s<=rounded_result_e_s;
+	   finalised_man_s<=rounded_result_man_s(22 downto 0);	
 	END IF;
-	
-	finalised_e_s<=rounded_result_e_s;
-	finalised_man_s<=rounded_result_man_s(22 downto 0);	
 END PROCESS rounding;
 
 finalised_si_s<=A_si_s XOR B_si_s;
