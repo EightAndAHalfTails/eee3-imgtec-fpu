@@ -10,7 +10,7 @@ entity mult is
     );
 end entity mult;
 
-architecture arch of mult is
+architecture naive of mult is
   alias sign_t is std_logic;
   subtype exponent_t is std_logic_vector(7 downto 0);
   subtype significand_t is std_logic_vector(22 downto 0);
@@ -258,4 +258,4 @@ begin
       product.significand <= std_logic_vector(final_significand(22 downto 0));
     end if;
   end process fp_normalise_round;
-end architecture arch;
+end architecture naive;
