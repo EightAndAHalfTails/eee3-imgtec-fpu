@@ -360,7 +360,7 @@ int testCode () {
     	ofstream outFile;
 	outFile.open ("test2_output.txt");
 
-	int add_test1A, add_test1B;
+	ft_p add_test1A, add_test1B;
 	
 	if (inFile.is_open())
 	{
@@ -372,7 +372,7 @@ int testCode () {
 			
 			//addition function: use add_test1A and add_test1B
 			//the result is test1_add
-			test1_add = adder(add_test1A, add_test1B, 0);
+			test1_add = adder(pack_f(add_test1A), pack_f(add_test1B), 0);
 			outFile << unpack_f(test1_add);
 
 
