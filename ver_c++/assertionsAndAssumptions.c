@@ -354,11 +354,13 @@ void testCase(float* floatingPointNumber, float* floatingPointNumber2) {
 
 
 int testCode () {
+	
 	ifstream inFile ("test2-positive_negative.txt");
-    ofstream outFile;
+    	
+    	ofstream outFile;
 	outFile.open ("test2_output.txt");
 
-	int32 add_test1A, add_test1B;
+	int add_test1A, add_test1B;
 	
 	if (inFile.is_open())
 	{
