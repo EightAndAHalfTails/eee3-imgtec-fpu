@@ -1,6 +1,10 @@
 #include <stdio.h>      /* printf */
 #include <assert.h>     /* assert */
 using namespace std;
+#include <iostream>
+#include <fstream>
+#include <string>
+
 
 //////////////global variables: test cases///////////////////
 ////////////////////////addition/////////////////////////////
@@ -37,6 +41,8 @@ float adder(float, float, bool);	//takes in 32-bit floating point numbers and re
 //multiplication function
 float multiplier(float, float);
 
+
+int testCode();
 
 //////////////////////main function//////////////////////////
 int main ()
@@ -337,5 +343,53 @@ void testCase(float* floatingPointNumber, float* floatingPointNumber2) {
 		printf ("Error: %f\n",*floatingPointNumber);
 }
 
+
+
+
+
+
+
+
+
+
+
+int testCode () {
+	ifstream inFile ("test2-positive_negative.txt");
+    ofstream outFile;
+	outFile.open ("test2_output.txt");
+
+	int32 add_test1A, add_test1B;
+	
+	if (inFile.is_open())
+	{
+		while ( getline (inFile,line) )
+		{
+
+			cout << add_test1A << add_test1B << '\n';
+
+			
+			//addition function: use add_test1A and add_test1B
+			//the result is test1_add
+			test1_add = adder(add_test1A, add_test1B, 0);
+			outFile << unpack_f(test1_add);
+
+
+			
+		}
+		inFile.close();
+	}
+
+	else cout << "Unable to open file"; 
+
+	outFile.close();
+
+  
+  
+  
+  
+  
+	//return 0 if no errors	
+	return 0;
+}
 
 
