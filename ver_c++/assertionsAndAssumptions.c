@@ -1,10 +1,15 @@
-#include <stdio.h> /* printf */
-#include <assert.h> /* assert */
-using namespace std;
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <stdio.h> /* printf */
+#include <assert.h> /* assert */
+using namespace std;
+
+
+////////////global variables/////////////////////////////////
+string testfile = "test1.txt";
+string testfile_output = "test1_output.txt";
 
 //////////////////floating point struct//////////////////////
 struct fp_t{
@@ -12,9 +17,6 @@ int s;	//sign
 int e;	//exponent
 int m;	//mantissa
 };
-
-
-
 
 //////////////////////function prototypes////////////////////
 fp_t unpack_f(float a_f);
@@ -28,22 +30,22 @@ fp_t multiplier(fp_t, fp_t);
 float fma(float, float, float);
 fp_t good_ol_adder(fp_t x, fp_t y, bool IsSub);
 
-//function for testing
-int testCode();
+//functions for testing
+int testCodeAddition();
+int testCodeMultiplication();
 
 //////////////////////main function//////////////////////////
 int main ()
 {
-
-
-
-
-
-	testCode();
-
-
-
+	//call the function for testing addition
+	int add_test = testCodeAddition();
 	
+	//call function for testing multiplication
+	int mul_test = testCodeMultiplication();
+
+	//check the return value of the functions
+	if (add_test != 0 || mul_test != 0)
+		cout << "error";
 	return 0;
 }
 
@@ -618,18 +620,20 @@ return c_f;
 
 
 
+
 //test for the addition function
-int testCode () {
+int testCodeAddition () {
 	//declare the name of the input text file	
-	ifstream inFile ("test2-positive_negative.txt");
+	ifstream inFile (testfile);
     //declare the name of the output file
     ofstream outFile;
-	outFile.open ("test2_output.txt");
+	outFile.open (testfile_output);
 
 	//declare string to read one line from the text file
 	string line;
 	//divide line to 2 strings
 	string line1, line2;
+	int line1_int, line2_int;
 
 	//declare char arrays for the 2 input numbers
 	//from 0 to 64
@@ -644,32 +648,21 @@ int testCode () {
 	//declare a stringstream so as to write the data to a text file
 	stringstream ss_s_test1_add_fp, ss_e_test1_add_fp, ss_m_test1_add_fp;
 	
-	//declare string for the exponent and the mantissa for the input values
-	string exponent, mantissa;
-
 	//declare string variables for the output	
 	string str_s_test1_add_fp, str_e_test1_add_fp, str_m_test1_add_fp;
 	int int_test1_add_fp;
 
 	//declare a string to write to the txt file
 	string final_test1_add_fp;
-		
-
-
-
+	
 	while (!inFile.eof()) {
 		//read the line to the string "line"
 		getline(inFile,line);
-
-
-
+		//separate the string line to line1 and line2
 		istringstream iss(line);
-
-		do
-		{
+		do {
 			iss >> line1 >> line2;
 		} while (iss);
-
 
 		//find the 2 numbers
 		for(int i=0; i<32; i++){
@@ -679,48 +672,66 @@ int testCode () {
 			add_test1B[i] = line2[i];
 		}
 	
+		//integer conversion
+//		line1_int = stoi(line1, nullptr, 2);
+//		line2_int = stoi(line2, nullptr, 2);
+		
 		//find the sign of the first number
 		if (add_test1A[0] == '1'){
 			add_test1A_fp.s = 1;
 		}
 		else {
 			add_test1A_fp.s = 0;
-	
 		}
+		//add_test1A_fp.s = extractBits(30,31, line1_int);
 
 		//find the exponent of the first number
-		//exponent = add_test1A[1] + add_test1A[2] + add_test1A[3] + add_test1A[4] + add_test1A[5] + add_test1A[6] + add_test1A[7] + add_test1A[8];
-		//add_test1A_fp.e = atoi(exponent.c_str());
-		add_test1A_fp.e = extractBits(1,8, (int)atoi(line1.c_str()));
+		//the variable "exponent" is a string
+		char exponent[] = {add_test1A[1], add_test1A[2], add_test1A[3], add_test1A[4], add_test1A[5], add_test1A[6], add_test1A[7], add_test1A[8], '\0'};
+//		add_test1A_fp.e = atoi(exponent.c_str());
+		add_test1A_fp.e = stoi(exponent, nullptr, 2);
+//		add_test1A_fp.e = extractBits(23,30, (int)atoi(line1.c_str()));
+//		add_test1A_fp.e = extractBits(23,30, line1_int);
 
 		//find the mantissa of the first number
-		//mantissa = add_test1A[9]*(1/2) + add_test1A[10]*(1/4) + add_test1A[11]*(1/8) + add_test1A[12]*(1/16) + add_test1A[13]*(1/32) + add_test1A[14]*(1/64) + add_test1A[15]*(1/128) + add_test1A[16]*(1/256) + add_test1A[17]*(1/512) + add_test1A[18]*(1/1024) + add_test1A[19]*(1/2048) + add_test1A[20]*(2^(-12)) + add_test1A[21] + add_test1A[22] + add_test1A[23] + add_test1A[24] + add_test1A[25] + add_test1A[26] + add_test1A[27] + add_test1A[28] + add_test1A[29] + add_test1A[30] + add_test1A[31];
+		//the variable "mantissa" is a string
+		char mantissa[] = {add_test1A[9], add_test1A[10], add_test1A[11], add_test1A[12], add_test1A[13], add_test1A[14], add_test1A[15], add_test1A[16], add_test1A[17], add_test1A[18], add_test1A[19], add_test1A[20], add_test1A[21], add_test1A[22], add_test1A[23], add_test1A[24], add_test1A[25], add_test1A[26], add_test1A[27], add_test1A[28], add_test1A[29], add_test1A[30], add_test1A[31], '\0'};
 		//add_test1A_fp.m = atoi(mantissa.c_str());
-		add_test1A_fp.m = extractBits(9,31, (int)atoi(line1.c_str()));
-		
+		add_test1A_fp.m = stoi(mantissa, nullptr, 2);
+//		add_test1A_fp.m = extractBits(0,22, (int)atoi(line1.c_str()));
+//		add_test1A_fp.m = extractBits(0,22, line1_int);
+
+
+		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 		//find the sign of the second number
-		if (add_test1A[0] == 1){
+		if (add_test1B[0] == 1){
 			add_test1B_fp.s = 1;
 		}
 		else {
 			add_test1B_fp.s = 0;
 		}
+//		add_test1B_fp.s = extractBits(30,31, line2_int);
 
 		//find the exponent of the second number
-		//exponent = add_test1B[1]*1 + add_test1B[2]*2 + add_test1B[3]*4 + add_test1B[4]*8 + add_test1B[5]*16 + add_test1B[6]*32 + add_test1B[7]*64 + add_test1B[8]*128;
+		//the variable "exponent" is a string
+		char exponent2[] = {add_test1B[1], add_test1B[2], add_test1B[3], add_test1B[4], add_test1B[5], add_test1B[6], add_test1B[7], add_test1B[8], '\0'};
 		//add_test1B_fp.e = atoi(exponent.c_str());
-		add_test1B_fp.e = extractBits(1,8, (int)atoi(line2.c_str()));
+		add_test1B_fp.e = stoi(exponent, nullptr, 2);
+//		add_test1B_fp.e = extractBits(23,30, (int)atoi(line2.c_str()));
+//		add_test1B_fp.e = extractBits(23,30, line2_int);
 
 		//find the mantissa of the second number
-		//mantissa = add_test1B[9] + add_test1B[10] + add_test1B[11] + add_test1B[12] + add_test1B[13] + add_test1B[14] + add_test1B[15] + add_test1B[16] + add_test1B[17] + add_test1B[18] + add_test1B[19] + add_test1B[20] + add_test1B[21] + add_test1B[22] + add_test1B[23] + add_test1B[24] + add_test1B[25] + add_test1B[26] + add_test1B[27] + add_test1B[28] + add_test1B[29] + add_test1B[30] + add_test1B[31];
+		char mantissa2[] = {add_test1B[9], add_test1B[10], add_test1B[11], add_test1B[12], add_test1B[13], add_test1B[14], add_test1B[15], add_test1B[16], add_test1B[17], add_test1B[18], add_test1B[19], add_test1B[20], add_test1B[21], add_test1B[22], add_test1B[23], add_test1B[24], add_test1B[25], add_test1B[26], add_test1B[27], add_test1B[28], add_test1B[29], add_test1B[30], add_test1B[31], '\0'};
 		//add_test1B_fp.m = atoi(mantissa.c_str());
-		add_test1B_fp.m = extractBits(9,31, (int)atoi(line2.c_str()));
+		add_test1B_fp.m = stoi(mantissa, nullptr, 2);
+//		add_test1B_fp.m = extractBits(0,22, (int)atoi(line2.c_str()));
+//		add_test1B_fp.m = extractBits(0,22, line2_int);
+		
 
+		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 		//addition function: use add_test1A and add_test1B
 		//the result is test1_add_fp, the result is in fp_t
 		test1_add_fp = adder((add_test1A_fp), (add_test1B_fp), 0);
-
-		
 
 
 		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -762,9 +773,19 @@ int testCode () {
 	inFile.close();
 
 
+	//outFile << line2;
+
 	//close the output file	
 	outFile.close();
   
 	//return 0 if no errors
+	return 0;
+}
+
+
+//test for the multiplication function
+int testCodeMultiplication () {
+
+
 	return 0;
 }
