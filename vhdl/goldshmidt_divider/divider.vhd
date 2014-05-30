@@ -144,23 +144,40 @@ prenorm_e_s		<=slv(RESIZE(usg(A_e_s),9)-RESIZE(usg(B_e_s),9)+127);
 ------------------------------------------------------
 --flag signals
 ------------------------------------------------------
-prenorm_result_exception<=prenorm_e_s(8);
+prenorm_result_exception<='1' WHEN prenorm_e_s(8)='1' OR usg(prenorm_e_s)=0 ELSE '0';
 
 
 
 ------------------------------------------------------
 --normalization
 ------------------------------------------------------
-normalise:PROCESS (prenorm_e_s,prenorm_significand_s)
+normalise:PROCESS (prenorm_e_s,prenorm_significand_s,prenorm_result_exception,A_e_s)
+--VARIABLE sticky_b :std_logic;
+--VARIABLE sft_man  :slv(24 downto 0);
+VARIABLE sft_unit   :integer range 0 to 255;
 BEGIN
-	IF prenorm_significand_s(26)='1' THEN 
-		postnorm_e_s<=prenorm_e_s(7 downto 0);
-		postnorm_man_s(24 downto 1)<=prenorm_significand_s(25 downto 2);
-		postnorm_man_s(0)<=prenorm_significand_s(1) OR prenorm_significand_s(0);
-	ELSE
-		postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-1);
-		postnorm_man_s<=prenorm_significand_s(24 downto 0);
-	END IF;
+  sft_unit:=to_integer(usg(NOT prenorm_e_s(7 downto 0))+1);--TO_INTEGER(abs(sgn(prenorm_e_s)));
+  IF prenorm_result_exception='1' AND A_e_s(7)='0' THEN
+    FOR i in 0 to 24 LOOP
+      --IF i<abs(sgn(prenorm_e_s))+2 THEN
+       -- sticky_b:=sticky_b&prenorm_significand_s(i)
+      IF i+sft_unit<25 THEN
+        postnorm_man_s(i)<=prenorm_significand_s(i+sft_unit+2);
+      ELSE
+        postnorm_man_s(i)<='0';
+      END IF;
+      
+    END LOOP;
+ELSE
+	   IF prenorm_significand_s(26)='1' THEN 
+		    postnorm_e_s<=prenorm_e_s(7 downto 0);
+		    postnorm_man_s(24 downto 1)<=prenorm_significand_s(25 downto 2);
+		    postnorm_man_s(0)<=prenorm_significand_s(1) OR prenorm_significand_s(0);
+	   ELSE
+		    postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-1);
+		    postnorm_man_s<=prenorm_significand_s(24 downto 0);
+	   END IF;
+END IF;
 
 END PROCESS normalise;
  
@@ -186,7 +203,7 @@ BEGIN
 	
 	IF prenorm_result_exception ='1' THEN
 	   IF  A_e_s(7) ='1' THEN
-	     finalised_e_s<= (OTHERS=>'1');
+       finalised_e_s<= (OTHERS=>'1');
 	     finalised_man_s<=(OTHERS=>'0');
 	   ELSE
 	     finalised_e_s<= (OTHERS=>'0'); 
