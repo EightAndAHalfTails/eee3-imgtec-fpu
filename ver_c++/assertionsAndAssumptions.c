@@ -284,7 +284,16 @@ int testCode () {
     	ofstream outFile;
 	outFile.open ("test2_output.txt");
 
-	ft_p add_test1A, add_test1B;
+	//from 0 to 31
+	char add_test1A[32], add_test1B[32];
+	
+	fp_t add_test1A_fp, add_test1B_fp;
+	fp_t test1_add;
+	
+	String exponent, mantissa;
+	
+	
+	
 	
 	if (inFile.is_open())
 	{
@@ -293,10 +302,43 @@ int testCode () {
 
 			cout << add_test1A << add_test1B << '\n';
 
+
+			if (add_test1A[0] == 1){
+				add_test1A_fp.s = 1;
+			}
+			else {
+				add_test1A_fp.s = 0; 	
+			}
+
+				
+			exponent = add_test1A[1] + add_test1A[2] + add_test1A[3] + add_test1A[4] + add_test1A[5] + add_test1A[6] + add_test1A[7] + add_test1A[8];
+			add_test1A_fp.e = atoi(exponent.c_str());
+		
 			
+			mantissa = add_test1A[9] + add_test1A[10] + add_test1A[11] + add_test1A[12] + add_test1A[13] + add_test1A[14] + add_test1A[15] + add_test1A[16] + add_test1A[17] + add_test1A[18] + add_test1A[19] + add_test1A[20] + add_test1A[21] + add_test1A[22] + add_test1A[23] + add_test1A[24] + add_test1A[25] + add_test1A[26] + add_test1A[27] + add_test1A[28] + add_test1A[29] + add_test1A[30] + add_test1A[31];
+			add_test1A_fp.m = atoi(mantissa.c_str());
+			
+			
+			if (add_test1A[0] == 1){
+				add_test1B_fp.s = 1;
+			}
+			else {
+				add_test1B_fp.s = 0; 	
+			}
+
+				
+			exponent = add_test1B[1] + add_test1B[2] + add_test1B[3] + add_test1B[4] + add_test1B[5] + add_test1B[6] + add_test1B[7] + add_test1B[8];
+			add_test1A_fp.e = atoi(exponent.c_str());
+		
+			
+			mantissa = add_test1B[9] + add_test1B[10] + add_test1B[11] + add_test1B[12] + add_test1B[13] + add_test1B[14] + add_test1B[15] + add_test1B[16] + add_test1B[17] + add_test1B[18] + add_test1B[19] + add_test1B[20] + add_test1B[21] + add_test1B[22] + add_test1B[23] + add_test1B[24] + add_test1B[25] + add_test1B[26] + add_test1B[27] + add_test1B[28] + add_test1B[29] + add_test1B[30] + add_test1B[31];
+			add_test1B_fp.m = atoi(mantissa.c_str());
+			
+			
+		
 			//addition function: use add_test1A and add_test1B
 			//the result is test1_add
-			test1_add = adder(pack_f(add_test1A), pack_f(add_test1B), 0);
+			test1_add = adder(pack_f(add_test1A_fp), pack_f(add_test1B_fp), 0);
 			outFile << unpack_f(test1_add);
 
 
