@@ -736,9 +736,7 @@ int testCode () {
 		//else {
 		//	str_s_test1_add_fp = '1';
 		//}
-
-
-
+		
 
 
 		//use the stringstream for the exponent of the output
@@ -763,10 +761,6 @@ int testCode () {
 	//close the input file
 	inFile.close();
 
-
-	//outFile <<  add_test1A;
-	
-	//+  (char)add_test1B[2] +  (char)add_test1B[3] +  (char)add_test1B[4] +  (char)add_test1B[5] +  (char) add_test1B[6] +  (char)add_test1B[7] +  (char)add_test1B[8];
 
 	//close the output file	
 	outFile.close();
