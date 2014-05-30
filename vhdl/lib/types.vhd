@@ -19,6 +19,12 @@ package types is
     significand : significand_t;
   end record;
   
+  constant pos_zero : float32_t := (sign => '0', exponent => (others => '0'), significand => (others => '0'));
+  constant neg_zero : float32_t := (sign => '1', exponent => (others => '0'), significand => (others => '0'));
+  constant pos_inf : float32_t := (sign => '0', exponent => (others => '1'), significand => (others => '0'));
+  constant neg_inf : float32_t := (sign => '1', exponent => (others => '1'), significand => (others => '0'));
+  constant nan : float32_t := (sign => '1', exponent => (others => '1'), significand => (others => '1'));
+  
   function leading_one(inp: std_logic_vector) return integer;
   function v2s(inp: std_logic_vector) return string;
 end package types;
