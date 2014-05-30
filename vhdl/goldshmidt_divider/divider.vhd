@@ -26,15 +26,16 @@ ARCHITECTURE rtl of div is
     
   SIGNAL A_si_s ,B_si_s  : std_logic;
   SIGNAL A_e_s,B_e_s 	 : std_logic_vector(7 downto 0);
-  SIGNAL A_significand_s,B_significand_s : std_logic_vector(26 downto 0);
+  SIGNAL A_significand_s,B_significand_s,sft_B_significand_s: std_logic_vector(26 downto 0);
 
   signal selection       : integer range 0 to 15;          -- select rom content
 
   SIGNAL n,d,f           : intermediate;
   
   SIGNAL x_0		 : slv(26 downto 0);
-
+  SIGNAL leadingzeros: integer range 0 to 27;
   SIGNAL prenorm_result_exception:std_logic;
+  SIGNAL div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity,div_opA_is_normal,div_opB_is_normal:std_logic;
   
   SIGNAL prenorm_e_s	 :slv(8 downto 0);
   SIGNAL prenorm_significand_s  : slv(26 downto 0);
@@ -68,21 +69,57 @@ ARCHITECTURE rtl of div is
 
 BEGIN
 ------------------------------------------------------
+--flag signals
+------------------------------------------------------
+div_opA_is_zero<='1' WHEN usg(div_IN1(30 downto 0))=0 ELSE '0'; 
+div_opB_is_zero<='1' WHEN usg(div_IN2(30 downto 0))=0 ELSE '0'; 
+div_opA_is_infinity<='1' WHEN div_IN1(30 downto 0)="1111111100000000000000000000000" ELSE '0'; 
+div_opB_is_infinity<='1' WHEN div_IN2(30 downto 0)="1111111100000000000000000000000" ELSE '0'; 
+div_opA_is_normal<='0' WHEN usg(div_IN1(30 downto 23))=0 AND usg(div_IN1(22 DOWNTO 0))/=0 ELSE '1'; 
+div_opB_is_normal<='0' WHEN usg(div_IN2(30 downto 23))=0 AND usg(div_IN2(22 DOWNTO 0))/=0 ELSE '1'; 
+
+
+prenorm_result_exception<='1' WHEN prenorm_e_s(8)='1' OR usg(prenorm_e_s)=0 ELSE '0';
+------------------------------------------------------
 --unpack the inputs
 ------------------------------------------------------
 unpack:BLOCK
   BEGIN
     A_si_s<=div_IN1(31);
     A_e_s<=div_IN1(30 downto 23);
-    A_significand_s<='1'&div_IN1(22 downto 0)&"000";  --modified to 27 bits(Hidden+man+3bit guard)
+    A_significand_s<=div_opA_is_normal&div_IN1(22 downto 0)&"000";  --modified to 27 bits(Hidden+man+3bit guard)
       
     B_si_s<=div_IN2(31);
     B_e_s<=div_IN2(30 downto 23);
-    B_significand_s<='1'&div_IN2(22 downto 0)&"000";
+    B_significand_s<=div_opb_is_normal&div_IN2(22 downto 0)&"000";
 
-    selection<=to_integer(usg(div_IN2(22 downto 19))); --choose initial guess 
+--    selection<=to_integer(usg(div_IN2(22 downto 19))); --choose initial guess 
   END BLOCK unpack;
 
+--------------------------------------------------------------------------------------
+--leading zero detector
+--The process detect the number of leading zeros in result to enable
+--normalization in later stage
+--------------------------------------------------------------------------------------
+
+leading_zero_detector:PROCESS(B_significand_s)
+
+VARIABLE count		:integer range 0 to 27;
+VARIABLE sft_B  :usg(26 downto 0);
+BEGIN
+  count:=0;
+  sft_B:=usg(B_significand_s);
+	FOR i IN B_significand_s'HIGH DOWNTO  B_significand_s'LOW LOOP
+		IF B_significand_s(i)='0' 	THEN
+		  count:=count+1;
+		  sft_B:=sft_B sll 1;
+		ELSE EXIT;
+		END IF;
+	END LOOP;
+	sft_B_significand_s<=slv(sft_B);
+	selection<=to_integer(sft_B(25 downto 22));          --choose initial guess 
+	leadingzeros	<= count;
+END PROCESS leading_zero_detector;
 ------------------------------------------------------
 --pack outputs
 ------------------------------------------------------
@@ -104,7 +141,7 @@ div_gen:FOR i in 0 to lsize GENERATE
     		mult0:ENTITY mult27bit 	-- d(0)=x_0*b              -- multiplied by a initial guess of 
 		PORT MAP (                                           -- 1/b to try to set dividend to 1  
    		    A_in  => x_0,                                   
-        	B_in  => B_significand_s,
+        	B_in  => sft_B_significand_s,
         	C_out => d(0)
 		);
 
@@ -141,12 +178,6 @@ END GENERATE div_gen;
 prenorm_significand_s	<=n(lsize);	--use the final result as output
 prenorm_e_s		<=slv(RESIZE(usg(A_e_s),9)-RESIZE(usg(B_e_s),9)+127);
 
-------------------------------------------------------
---flag signals
-------------------------------------------------------
-prenorm_result_exception<='1' WHEN prenorm_e_s(8)='1' OR usg(prenorm_e_s)=0 ELSE '0';
-
-
 
 ------------------------------------------------------
 --normalization
@@ -158,6 +189,7 @@ VARIABLE sft_unit   :integer range 0 to 255;
 BEGIN
   sft_unit:=to_integer(usg(NOT prenorm_e_s(7 downto 0))+1);--TO_INTEGER(abs(sgn(prenorm_e_s)));
   IF prenorm_result_exception='1' AND A_e_s(7)='0' THEN
+    postnorm_e_s<=(OTHERS=>'0');
     FOR i in 0 to 24 LOOP
       --IF i<abs(sgn(prenorm_e_s))+2 THEN
        -- sticky_b:=sticky_b&prenorm_significand_s(i)
@@ -184,7 +216,7 @@ END PROCESS normalise;
 ------------------------------------------------------
 --rounding
 ------------------------------------------------------
-rounding: PROCESS(postnorm_man_s,postnorm_e_s,A_e_s,prenorm_result_exception)
+rounding: PROCESS(postnorm_man_s,postnorm_e_s,A_e_s,prenorm_result_exception,div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity)
   VARIABLE rounded_result_man_s :slv(23 downto 0);
   VARIABLE rounded_result_e_s   :slv(7 downto 0);
   
@@ -200,7 +232,18 @@ BEGIN
 	   ELSE
 	     rounded_result_e_s			:=postnorm_e_s;
 	   END IF;
-	
+IF (div_opA_is_zero OR div_opA_is_infinity)='1' THEN
+    IF (div_opA_is_zero AND div_opB_is_zero)='1' OR (div_opA_is_infinity AND div_opB_is_zero)='1' THEN
+       finalised_e_s<= (OTHERS=>'1');
+       finalised_man_s<= (0=>'1',OTHERS=>'0');
+    ELSE
+       finalised_e_s<= (OTHERS=>'0');
+       finalised_man_s<= (OTHERS=>'0');
+    END IF;    
+ELSIF (div_opB_is_zero OR div_opA_is_infinity) = '1'THEN
+       finalised_e_s<= (OTHERS=>'1');
+       finalised_man_s<= (OTHERS=>'0');
+ELSE
 	IF prenorm_result_exception ='1' THEN
 	   IF  A_e_s(7) ='1' THEN
        finalised_e_s<= (OTHERS=>'1');
@@ -213,6 +256,7 @@ BEGIN
 	   finalised_e_s<=rounded_result_e_s;
 	   finalised_man_s<=rounded_result_man_s(22 downto 0);	
 	END IF;
+END IF;
 END PROCESS rounding;
 
 finalised_si_s<=A_si_s XOR B_si_s;
