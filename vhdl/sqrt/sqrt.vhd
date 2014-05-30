@@ -101,11 +101,17 @@ begin
   end generate gen_iter;
   
   encode_output: process(input, s_final_approx)
+    variable shift_amount : integer;
   begin
-    if input.sign = '1' then --usually nan
-      null;
+    if input = neg_zero then
+      output <= neg_zero;
+    elsif input.sign = '1' then
+      output <= nan;
     else
-      null;
+      shift_amount := leading_one(s_final_approx);
+      output.sign <= '0';
+      output.exponent <= slv(usg(s_half_exp) - to_unsigned(shift_amount, s_half_exp'length));
+      output.significand <= slv(shift_left(usg(s_final_approx), shift_amount)(24 downto 2));
     end if;
   end process encode_output;
   
