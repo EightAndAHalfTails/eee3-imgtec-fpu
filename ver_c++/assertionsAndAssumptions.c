@@ -12,6 +12,10 @@ using namespace std;
 string testfile = "test1.txt";
 string testfile_output = "test1_output.txt";
 
+//int array for the 32 bit floating-point number
+int num1[32];
+int num2[32];
+
 //////////////////floating point struct//////////////////////
 struct fp_t{
 int s;	//sign
@@ -33,6 +37,7 @@ fp_t good_ol_adder(fp_t x, fp_t y, bool IsSub);
 
 //functions for testing
 int testCodeAddition();
+void convertToInteger(char array1[], char array2[]);
 int testCodeMultiplication();
 
 //////////////////////main function//////////////////////////
@@ -619,118 +624,41 @@ return c_f;
 }
 //-------------------------------------------------------------------------------------------------------------------
 
-
-
-
 //test for the addition function
 int testCodeAddition () {
+	//declare the data types for the 2 numbers that will be added
+	bitset<32> b1, b2;		//read from the text file
+	float float1, float2;	//built in c++ float type
+	fp_t add_test1A_fp, add_test1B_fp;
+
 	//declare the name of the input text file	
 	ifstream inFile (testfile);
-    //declare the name of the output file
+    
+	//declare the name of the output file
     ofstream outFile;
 	outFile.open (testfile_output);
-
-	//declare string to read one line from the text file
-	string line;
-	//divide line to 2 strings
-	string line1, line2;
-	int line1_int, line2_int;
-
-	//declare char arrays for the 2 input numbers
-	//from 0 to 64
-	char add_test_inputs[65];
-	//from 0 to 31
-	char add_test1A[32], add_test1B[32];
-
-	//declare intermediate variables
-	fp_t add_test1A_fp, add_test1B_fp;
-	fp_t test1_add_fp;
-
-	//declare a stringstream so as to write the data to a text file
-	stringstream ss_s_test1_add_fp, ss_e_test1_add_fp, ss_m_test1_add_fp;
 	
-	//declare string variables for the output	
-	string str_s_test1_add_fp, str_e_test1_add_fp, str_m_test1_add_fp;
-	int int_test1_add_fp;
+	//declare variable for the output value
+	fp_t test1_add_fp;
+	//initialize the output variable
+	test1_add_fp.s=0; test1_add_fp.e=0; test1_add_fp.m=0;
+
+	//declare variables for the output	
 	float test1_add_float;
 	int itest1_add_float;
-
-	//declare a string to write to the txt file
-	string final_test1_add_fp;
-	
+		
 	while (!inFile.eof()) {
-		//read the line to the string "line"
-		getline(inFile,line);
-		//separate the string line to line1 and line2
-		istringstream iss(line);
-		do {
-			iss >> line1 >> line2;
-		} while (iss);
+		//read the 2 numbers from the text file
+		inFile >> b1 >> b2;
 
-		//find the 2 numbers
-		for(int i=0; i<32; i++){
-			add_test1A[i] = line1[i];
-		}
-		for(int i=0; i<32; i++){
-			add_test1B[i] = line2[i];
-		}
-	
-		//integer conversion
-//		line1_int = stoi(line1, nullptr, 2);
-//		line2_int = stoi(line2, nullptr, 2);
+		//changing the int to float
+		float1 = *(float*)&b1;	
+		float2 = *(float*)&b2;
+
+		//unpack into fp_t type
+		add_test1A_fp = unpack_f(float1);	
+		add_test1B_fp = unpack_f(float2);
 		
-		//find the sign of the first number
-		if (add_test1A[0] == '1'){
-			add_test1A_fp.s = 1;
-		}
-		else {
-			add_test1A_fp.s = 0;
-		}
-		//add_test1A_fp.s = extractBits(30,31, line1_int);
-
-		//find the exponent of the first number
-		//the variable "exponent" is a string
-		char exponent[] = {add_test1A[8], add_test1A[7], add_test1A[6], add_test1A[5], add_test1A[4], add_test1A[3], add_test1A[2], add_test1A[1], '\0'};
-//		add_test1A_fp.e = atoi(exponent.c_str());
-		add_test1A_fp.e = stoi(exponent, nullptr, 2);
-//		add_test1A_fp.e = extractBits(23,30, (int)atoi(line1.c_str()));
-//		add_test1A_fp.e = extractBits(23,30, line1_int);
-
-		//find the mantissa of the first number
-		//the variable "mantissa" is a string
-		char mantissa[] = {add_test1A[31], add_test1A[30], add_test1A[29], add_test1A[28], add_test1A[27], add_test1A[26], add_test1A[25], add_test1A[24], add_test1A[23], add_test1A[22], add_test1A[21], add_test1A[20], add_test1A[19], add_test1A[18], add_test1A[17], add_test1A[16], add_test1A[15], add_test1A[14], add_test1A[13], add_test1A[12], add_test1A[11], add_test1A[10], add_test1A[9], '\0'};
-		//add_test1A_fp.m = atoi(mantissa.c_str());
-		add_test1A_fp.m = stoi(mantissa, nullptr, 2);
-//		add_test1A_fp.m = extractBits(0,22, (int)atoi(line1.c_str()));
-//		add_test1A_fp.m = extractBits(0,22, line1_int);
-
-
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//find the sign of the second number
-		if (add_test1B[0] == 1){
-			add_test1B_fp.s = 1;
-		}
-		else {
-			add_test1B_fp.s = 0;
-		}
-//		add_test1B_fp.s = extractBits(30,31, line2_int);
-
-		//find the exponent of the second number
-		//the variable "exponent" is a string
-		char exponent2[] = {add_test1B[8], add_test1B[7], add_test1B[6], add_test1B[5], add_test1B[4], add_test1B[3], add_test1B[2], add_test1B[1], '\0'};
-		//add_test1B_fp.e = atoi(exponent.c_str());
-		add_test1B_fp.e = stoi(exponent, nullptr, 2);
-//		add_test1B_fp.e = extractBits(23,30, (int)atoi(line2.c_str()));
-//		add_test1B_fp.e = extractBits(23,30, line2_int);
-
-		//find the mantissa of the second number
-		char mantissa2[] = {add_test1B[31], add_test1B[30], add_test1B[29], add_test1B[28], add_test1B[27], add_test1B[26], add_test1B[25], add_test1B[24], add_test1B[23], add_test1B[22], add_test1B[21], add_test1B[20], add_test1B[19], add_test1B[18], add_test1B[17], add_test1B[16], add_test1B[15], add_test1B[14], add_test1B[13], add_test1B[12], add_test1B[11], add_test1B[10], add_test1B[9], '\0'};
-		//add_test1B_fp.m = atoi(mantissa.c_str());
-		add_test1B_fp.m = stoi(mantissa, nullptr, 2);
-//		add_test1B_fp.m = extractBits(0,22, (int)atoi(line2.c_str()));
-//		add_test1B_fp.m = extractBits(0,22, line2_int);
-		
-
 		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 		//addition function: use add_test1A and add_test1B
 		//the result is test1_add_fp, the result is in fp_t
@@ -738,37 +666,11 @@ int testCodeAddition () {
 
 
 		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//int_test1_add_fp = (test1_add_fp.s << 31)+((test1_add_fp.e<<23)&0x7F800000)+(test1_add_fp.m&0x007FFFFF);
-
 		//use the "pack_f" function, the result is now in a float data type
 		test1_add_float = pack_f(test1_add_fp);
 		
 		//convert to 32 bits
 		itest1_add_float = *(int*)&test1_add_float;	
-
-		//use the stringstream for the sign of the output
-		//if (test1_add_fp.s == 0){
-		//	str_s_test1_add_fp = '0';
-		//}
-		//else {
-		//	str_s_test1_add_fp = '1';
-		//}
-		
-
-		//use the stringstream for the exponent of the output
-		//ss_e_test1_add_fp << test1_add_fp.e;
-		//str_e_test1_add_fp = ss_e_test1_add_fp.str();
-
-		//use the stringstream for the mantissa of the output
-		//ss_m_test1_add_fp << test1_add_fp.m;
-		//str_m_test1_add_fp = ss_m_test1_add_fp.str();
-
-		//find the final output number
-		//final_test1_add_fp = str_s_test1_add_fp + str_e_test1_add_fp + str_m_test1_add_fp;
-//		stringstream ss_final;
-//		ss_final << int_test1_add_fp;
-//		final_test1_add_fp = ss_final.str();
-//		final_test1_add_fp = final_test1_add_fp + "\n";
 
 		//write the output to the text file
 		//outFile <<std::hex<< final_test1_add_fp;
@@ -778,9 +680,6 @@ int testCodeAddition () {
 	//close the input file
 	inFile.close();
 
-
-	//outFile << line2;
-
 	//close the output file	
 	outFile.close();
   
@@ -788,9 +687,23 @@ int testCodeAddition () {
 	return 0;
 }
 
-
 //test for the multiplication function
 int testCodeMultiplication () {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	return 0;
