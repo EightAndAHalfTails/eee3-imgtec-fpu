@@ -42,9 +42,7 @@ architecture babylon of sqrt is
   type intermed_t is array (1 to iterations-1) of slv(24 downto 0);
   signal intermediate_values : intermed_t;
 begin
-  input.sign <= sqrt_in1(31);
-  input.exponent <= sqrt_in1(30 downto 23);
-  input.significand <= sqrt_in1(22 downto 0);
+  input <= slv2float(sqrt_in1);
   
   s_initial_guess(24 downto 2) <= initial_guess_lut(to_integer(s_sig_in(24 downto 24-lookup_bits)));
   s_initial_guess(1 downto 0) <= "00";

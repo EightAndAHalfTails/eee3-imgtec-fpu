@@ -25,11 +25,27 @@ package types is
   constant neg_inf : float32_t := (sign => '1', exponent => (others => '1'), significand => (others => '0'));
   constant nan : float32_t := (sign => '1', exponent => (others => '1'), significand => (others => '1'));
   
+  function float2slv(inp: float32_t) return slv;
+  function slv2float(inp: slv) return float32_t;
   function leading_one(inp: std_logic_vector) return integer;
   function v2s(inp: std_logic_vector) return string;
 end package types;
 
 package body types is
+  function float2slv(inp: float32_t) return slv is
+  begin
+    return inp.sign & inp.exponent & inp.significand;
+  end function float2slv;
+    
+  function slv2float(inp: slv) return float32_t is
+    variable result : float32_t;
+  begin
+    result.sign := inp(31);
+    result.exponent := inp(30 downto 23);
+    result.significand := inp(22 downto 0);
+    return result;
+  end function slv2float;
+  
   function leading_one(inp: std_logic_vector) return integer is
     variable result, count: integer; 
   begin
