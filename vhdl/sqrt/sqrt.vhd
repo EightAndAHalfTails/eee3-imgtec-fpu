@@ -43,6 +43,7 @@ architecture babylon of sqrt is
   signal intermediate_values : intermed_t;
 begin
   input <= slv2float(sqrt_in1);
+  sqrt_out <= float2slv(output);
   
   s_initial_guess(24 downto 2) <= initial_guess_lut(to_integer(s_sig_in(24 downto 24-lookup_bits)));
   s_initial_guess(1 downto 0) <= "00";
