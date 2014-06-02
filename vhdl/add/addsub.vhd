@@ -9,8 +9,7 @@ USE config_pack.all;
 
 ENTITY addsub IS 
 	PORT 
-	( clk,reset  		: IN  std_logic;
-	  add_in1		: IN  std_logic_vector(31 downto 0);
+	( add_in1		: IN  std_logic_vector(31 downto 0);
 	  add_in2		: IN  std_logic_vector(31 downto 0);
 	  operation_i		: IN  std_logic;
 	  add_out		: OUT std_logic_vector(31 downto 0)
