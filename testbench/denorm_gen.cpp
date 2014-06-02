@@ -1,7 +1,7 @@
 //**********************************************************************************//
 // Generates random floating point denormal numbers				   					//
 //														   							//
-// Options: -DNUMINPUTS=x, define number of random number per line (default=2)		//
+// Options: -DNUM_INPUTS=x, define number of random number per line (default=2)		//
 // 			-DNUMLINES=x, define number of lines in datapak (default=20)	   		//
 //			-DGEN_NEG=x, generate negative numbers (default=0)						//
 //			-DNO_ZEROES=x, generate zeroes if 0 (default=0)							//
