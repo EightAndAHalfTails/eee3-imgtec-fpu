@@ -108,7 +108,8 @@ VARIABLE count		:integer range 0 to 27;
 VARIABLE sft_B  :usg(26 downto 0);
 BEGIN
   count:=0;
-  sft_B:=usg(B_significand_s);
+  
+sft_B:=usg(B_significand_s);
 	FOR i IN B_significand_s'HIGH DOWNTO  B_significand_s'LOW LOOP
 		IF B_significand_s(i)='0' 	THEN
 		  count:=count+1;
@@ -232,7 +233,7 @@ BEGIN
 	   ELSE
 	     rounded_result_e_s			:=postnorm_e_s;
 	   END IF;
-IF (div_opA_is_zero OR div_opA_is_infinity)='1' THEN
+IF (div_opA_is_zero OR div_opB_is_infinity)='1' THEN
     IF (div_opA_is_zero AND div_opB_is_zero)='1' OR (div_opA_is_infinity AND div_opB_is_zero)='1' THEN
        finalised_e_s<= (OTHERS=>'1');
        finalised_man_s<= (0=>'1',OTHERS=>'0');
