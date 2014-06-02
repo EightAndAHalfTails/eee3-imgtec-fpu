@@ -9,12 +9,13 @@ using namespace std;
 
 
 ////////////global variables/////////////////////////////////
+//the test file names are changed manually for all the test files
 string testfile = "test1.txt";
-string testfile_output = "test1_output.txt";
+string testfile_add_output = "test1_add_output.txt";
+string testfile_mul_output = "test1_mul_output.txt";
 
 //int array for the 32 bit floating-point number
-int num1[32];
-int num2[32];
+int num1[32]; int num2[32];
 
 //////////////////floating point struct//////////////////////
 struct fp_t{
@@ -37,8 +38,8 @@ fp_t good_ol_adder(fp_t x, fp_t y, bool IsSub);
 
 //functions for testing
 int testCodeAddition();
-void convertToInteger(char array1[], char array2[]);
 int testCodeMultiplication();
+int testCodeDivision();
 
 //////////////////////main function//////////////////////////
 int main ()
@@ -635,8 +636,8 @@ int testCodeAddition () {
 	ifstream inFile (testfile);
     
 	//declare the name of the output file
-    ofstream outFile;
-	outFile.open (testfile_output);
+	ofstream outFile;
+	outFile.open (testfile_add_output);
 	
 	//declare variable for the output value
 	fp_t test1_add_fp;
@@ -673,38 +674,88 @@ int testCodeAddition () {
 		itest1_add_float = *(int*)&test1_add_float;	
 
 		//write the output to the text file
-		//outFile <<std::hex<< final_test1_add_fp;
 		outFile << (bitset<32>)itest1_add_float << "\n";
 	}
 
 	//close the input file
 	inFile.close();
-
 	//close the output file	
 	outFile.close();
-  
+
 	//return 0 if no errors
 	return 0;
 }
 
 //test for the multiplication function
 int testCodeMultiplication () {
+	//declare the data types for the 2 numbers that will be multiplied
+	bitset<32> b1, b2;		//read from the text file
+	float float1, float2;	//built in c++ float type
+	fp_t mul_test1A_fp, mul_test1B_fp;
+
+	//declare the name of the input text file	
+	ifstream inFile (testfile);
+    
+	//declare the name of the output file
+	ofstream outFile;
+	outFile.open (testfile_mul_output);
+	
+	//declare variable for the output value
+	fp_t test1_mul_fp;
+	//initialize the output variable
+	test1_mul_fp.s=0; test1_mul_fp.e=0; test1_mul_fp.m=0;
+
+	//declare variables for the output	
+	float test1_mul_float;
+	int itest1_mul_float;
+		
+	while (!inFile.eof()) {
+		//read the 2 numbers from the text file
+		inFile >> b1 >> b2;
+
+		//changing the int to float
+		float1 = *(float*)&b1;	
+		float2 = *(float*)&b2;
+
+		//unpack into fp_t type
+		mul_test1A_fp = unpack_f(float1);	
+		mul_test1B_fp = unpack_f(float2);
+		
+		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+		//multiplication function
+		//the result is test1_mul_fp, the result is in fp_t
+		test1_mul_fp = multiplier((mul_test1A_fp), (mul_test1B_fp));
 
 
+		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+		//use the "pack_f" function, the result is now in a float data type
+		test1_mul_float = pack_f(test1_mul_fp);
+		
+		//convert to 32 bits
+		itest1_mul_float = *(int*)&test1_mul_float;	
 
+		//write the output to the text file
+		outFile << (bitset<32>)itest1_mul_float << "\n";
+	}
 
+	//close the input file
+	inFile.close();
+	//close the output file	
+	outFile.close();
 
-
-
-
-
-
-
-
-
-
-
-
-
+	//return 0 if no errors
 	return 0;
 }
+
+//test division
+int testCodeDivision(){
+
+
+
+
+
+	//return 0 if no errors
+	return 0;
+}
+
+
