@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <bitset>
 #include <stdio.h> /* printf */
 #include <assert.h> /* assert */
 using namespace std;
@@ -651,6 +652,8 @@ int testCodeAddition () {
 	//declare string variables for the output	
 	string str_s_test1_add_fp, str_e_test1_add_fp, str_m_test1_add_fp;
 	int int_test1_add_fp;
+	float test1_add_float;
+	int itest1_add_float;
 
 	//declare a string to write to the txt file
 	string final_test1_add_fp;
@@ -735,9 +738,13 @@ int testCodeAddition () {
 
 
 		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		int_test1_add_fp = (test1_add_fp.s << 31)+((test1_add_fp.e<<23)&0x7F800000)+(test1_add_fp.m&0x007FFFFF);
+		//int_test1_add_fp = (test1_add_fp.s << 31)+((test1_add_fp.e<<23)&0x7F800000)+(test1_add_fp.m&0x007FFFFF);
 
-				
+		//use the "pack_f" function, the result is now in a float data type
+		test1_add_float = pack_f(test1_add_fp);
+		
+		//convert to 32 bits
+		itest1_add_float = *(int*)&test1_add_float;	
 
 		//use the stringstream for the sign of the output
 		//if (test1_add_fp.s == 0){
@@ -758,13 +765,14 @@ int testCodeAddition () {
 
 		//find the final output number
 		//final_test1_add_fp = str_s_test1_add_fp + str_e_test1_add_fp + str_m_test1_add_fp;
-		stringstream ss_final;
-		ss_final << int_test1_add_fp;
-		final_test1_add_fp = ss_final.str();
-		final_test1_add_fp = final_test1_add_fp + "\n";
+//		stringstream ss_final;
+//		ss_final << int_test1_add_fp;
+//		final_test1_add_fp = ss_final.str();
+//		final_test1_add_fp = final_test1_add_fp + "\n";
 
 		//write the output to the text file
-		outFile <<std::hex<< final_test1_add_fp;
+		//outFile <<std::hex<< final_test1_add_fp;
+		outFile << (bitset<32>)itest1_add_float << "\n";
 	}
 
 	//close the input file
