@@ -25,7 +25,7 @@ architecture babylon of sqrt is
   begin
     for i in result'left to result'right loop
       radicand_bits := (others => '0');
-      radicand_bits(22 downto 22-keysize) := std_logic_vector(to_unsigned(i, keysize));
+      radicand_bits(22 downto 23-keysize) := std_logic_vector(to_unsigned(i, keysize));
       radicand_real := real(to_integer(unsigned(radicand_bits))) / (2.0**21);
       result(i) := significand_t(to_unsigned(integer(math_real.floor(math_real.sqrt(radicand_real) * (2.0**21))), 23));
     end loop;
@@ -100,7 +100,7 @@ begin
     end generate last;
   end generate gen_iter;
   
-  encode_output: process(input, s_final_approx)
+  encode_output: process(input, s_final_approx, s_half_exp)
     variable shift_amount : integer;
   begin
     if input = neg_zero then
