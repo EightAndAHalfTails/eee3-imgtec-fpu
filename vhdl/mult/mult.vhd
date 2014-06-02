@@ -18,17 +18,9 @@ architecture naive of mult is
   signal computed_significand : unsigned(47 downto 0);
   
 begin
-  a.sign <= mult_in1(31);
-  a.exponent <= mult_in1(30 downto 23);
-  a.significand <= mult_in1(22 downto 0);
-  
-  b.sign <= mult_in2(31);
-  b.exponent <= mult_in2(30 downto 23);
-  b.significand <= mult_in2(22 downto 0);
-  
-  mult_out(31) <= product.sign;
-  mult_out(30 downto 23) <= product.exponent;
-  mult_out(22 downto 0) <= product.significand;
+  a <= slv2float(mult_in1);
+  b <= slv2float(mult_in2);
+  mult_out <= float2slv(product);
   
   -----------------------------------------------------------
   -- compute sign
