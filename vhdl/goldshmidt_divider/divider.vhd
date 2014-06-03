@@ -26,7 +26,7 @@ ARCHITECTURE rtl of div is
   --input signals
   SIGNAL A_si_s ,B_si_s  : std_logic;
   SIGNAL A_e_s,B_e_s 	   : std_logic_vector(7 downto 0);
-  SIGNAL A_significand_s,B_significand_s,sft_B_significand_s: std_logic_vector(26 downto 0);
+  SIGNAL A_significand_s,B_significand_s,sft_B_significand_s,sft_A_significand_s: std_logic_vector(26 downto 0);
   --rom index
   signal selection       : integer range 0 to 15;          -- select rom content
   --intermediate signals during iterations
@@ -36,7 +36,7 @@ ARCHITECTURE rtl of div is
   SIGNAL leadingzeros1,leadingzeros2: integer range 0 to 27;
   --exception flags
   SIGNAL prenorm_result_exception:std_logic;
-  SIGNAL div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity,div_opA_is_normal,div_opB_is_normal:std_logic;
+  SIGNAL div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity,div_opA_is_normal,div_opB_is_normal,div_input_is_nan:std_logic;
   --normalization signals
   SIGNAL prenorm_e_s	 :slv(8 downto 0);
   SIGNAL prenorm_significand_s  : slv(26 downto 0);
@@ -77,7 +77,7 @@ div_opA_is_infinity<='1' WHEN div_IN1(30 downto 0)="1111111100000000000000000000
 div_opB_is_infinity<='1' WHEN div_IN2(30 downto 0)="1111111100000000000000000000000" ELSE '0'; 
 div_opA_is_normal<='0' WHEN usg(div_IN1(30 downto 23))=0 AND usg(div_IN1(22 DOWNTO 0))/=0 ELSE '1'; 
 div_opB_is_normal<='0' WHEN usg(div_IN2(30 downto 23))=0 AND usg(div_IN2(22 DOWNTO 0))/=0 ELSE '1'; 
-
+div_input_is_nan<='1' WHEN (usg(div_IN1(30 downto 23))=255 AND usg(div_IN1(22 DOWNTO 0))/=0) OR (usg(div_IN2(30 downto 23))=255 AND usg(div_IN2(22 DOWNTO 0))/=0) ELSE '0';
 prenorm_result_exception<='1' WHEN prenorm_e_s(8)='1' OR usg(prenorm_e_s)=0 ELSE '0';
 
 ------------------------------------------------------
@@ -130,20 +130,39 @@ BEGIN
 	leadingzeros1	<= count;                                --stores zero count
 END PROCESS LZC1;
 
+LZC2:PROCESS(A_significand_s)
+VARIABLE count		:integer range 0 to 27;
+VARIABLE sft_A  :usg(26 downto 0);
+
+BEGIN
+  count:=0;  
+  sft_A:=usg(A_significand_s);
+
+	FOR i IN A_significand_s'HIGH DOWNTO  A_significand_s'LOW LOOP
+		IF A_significand_s(i)='0' 	THEN
+		  count:=count+1;                                   --increment count
+		  sft_A:=sft_A sll 1;                               --shift left by one bit
+		ELSE EXIT;
+		END IF;	
+	END LOOP;
+
+	sft_A_significand_s<=slv(sft_A);
+	leadingzeros2	<= count;                                --stores zero count
+END PROCESS LZC2;
 -----------------------------------------------------------------
 --exponent logic
 --This process handles exponent field variation due to denormals
 --restore exponent because of zero shifting of B significand
 -----------------------------------------------------------------
 
-expo_logic:PROCESS (div_opA_is_normal,div_opB_is_normal,leadingzeros1,A_e_s,B_e_s)
+expo_logic:PROCESS (div_opA_is_normal,div_opB_is_normal,leadingzeros1,leadingzeros2,A_e_s,B_e_s)
 variable mode: slv(1 downto 0);
 BEGIN
     mode:=div_opA_is_normal&div_opB_is_normal;
   CASE mode IS
-    WHEN  "00"=>prenorm_e_s  <=slv(to_unsigned (126+leadingzeros1,9));
-    WHEN  "01"=>prenorm_e_s  <=slv(RESIZE(usg(A_e_s),9)-RESIZE(usg(B_e_s),9)+127);
-    WHEN  "10"=>prenorm_e_s  <=slv(RESIZE(usg(A_e_s),9)-RESIZE(usg(B_e_s),9)+128+leadingzeros1);
+    WHEN  "00"=>prenorm_e_s  <=slv(to_unsigned (127+leadingzeros1-leadingzeros2,9));
+    WHEN  "01"=>prenorm_e_s  <=slv(128-RESIZE(usg(B_e_s),9)-leadingzeros2);
+    WHEN  "10"=>prenorm_e_s  <=slv(RESIZE(usg(A_e_s),9)+126+leadingzeros1);
     WHEN  "11"=>prenorm_e_s		<=slv(RESIZE(usg(A_e_s),9)-RESIZE(usg(B_e_s),9)+127);
     WHEN OTHERS=>NULL;
   END CASE;
@@ -179,7 +198,7 @@ div_gen:FOR i in 0 to lsize GENERATE
 	   	mult1:ENTITY mult27bit 	-- n(0)=a*x_0              -- multiply with initial guess
 		PORT MAP (
         	A_in  => x_0,
-        	B_in  => A_significand_s,
+        	B_in  => sft_A_significand_s,
         	C_out => n(0)
 		); 
     	end generate case0;
@@ -204,30 +223,14 @@ END GENERATE div_gen;
 prenorm_significand_s	<=n(lsize);	--use the final result as output
 
 
-
 -----------------------------------------------------------------------------------------------------
 --normalization stage
 -----------------------------------------------------------------------------------------------------
-LZC2:PROCESS(prenorm_significand_s)
-VARIABLE count		:integer range 0 to 27;
-
-BEGIN
-  count:=0;
-  FOR i IN prenorm_significand_s'HIGH DOWNTO prenorm_significand_s'LOW LOOP
-		IF prenorm_significand_s(i)='0' 	THEN                             
-		  count:=count+1;
-		ELSE EXIT;
-		END IF;	 
-	  END LOOP;
-	  
-	  leadingzeros2<=count;
-	  
-END PROCESS LZC2;
 
 ------------------------------------------------------
 --normalization
 ------------------------------------------------------
-normalise:PROCESS (prenorm_e_s,prenorm_significand_s,prenorm_result_exception,A_e_s,leadingzeros2)
+normalise:PROCESS (prenorm_e_s,prenorm_significand_s,prenorm_result_exception,A_e_s)--leadingzeros2
 VARIABLE sft_unit   :integer range 0 to 255 :=0;
 
 BEGIN
@@ -235,7 +238,7 @@ BEGIN
                                                                     
   IF prenorm_result_exception='1' AND A_e_s(7)='0' THEN           --IF result causes a underflow
     
-    sft_unit:=to_integer(usg(NOT prenorm_e_s(7 downto 0))+1);       --shifting prenorm significand by abs(prenorm_e_s) in case of underflow 
+    sft_unit:=to_integer(usg(NOT prenorm_e_s(7 downto 0))+1);     --shifting prenorm significand by abs(prenorm_e_s) in case of underflow 
                                                                   --will set the prenorm_e_s back to zero
                                                                                                                                   
     postnorm_e_s<=(OTHERS=>'0');                                  --denormal or zero
@@ -255,34 +258,34 @@ BEGIN
   
     
     
-    FOR i in 0 to 24 LOOP    
+   -- FOR i in 0 to 24 LOOP    
       
-      IF  i<leadingzeros2-1 THEN
-        postnorm_man_s(i)<='0';
-      ELSE
-        postnorm_man_s(i)<=prenorm_significand_s(i-leadingzeros2+1);
-      END IF;
+   --   IF  i<leadingzeros2-1 THEN
+  --      postnorm_man_s(i)<='0';
+ --     ELSE
+---        postnorm_man_s(i)<=prenorm_significand_s(i-leadingzeros2+1);
+---      END IF;
       
-    END LOOP;
-    postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-leadingzeros2+1);
+--    END LOOP;
+--    postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-leadingzeros2+1);
     
     
---	   IF prenorm_significand_s(26)='1' THEN 
---		    postnorm_e_s<=prenorm_e_s(7 downto 0);
---		    postnorm_man_s(24 downto 1)<=prenorm_significand_s(25 downto 2);
---		    postnorm_man_s(0)<=prenorm_significand_s(1) OR prenorm_significand_s(0);
---	   ELSE
---		    postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-1);
---		    postnorm_man_s<=prenorm_significand_s(24 downto 0);
---	   END IF;
---  END IF;
-END IF;
+	   IF prenorm_significand_s(26)='1' THEN 
+		    postnorm_e_s<=prenorm_e_s(7 downto 0);
+		    postnorm_man_s(24 downto 1)<=prenorm_significand_s(25 downto 2);
+		    postnorm_man_s(0)<=prenorm_significand_s(1) OR prenorm_significand_s(0);
+	   ELSE
+		    postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-1);
+		    postnorm_man_s<=prenorm_significand_s(24 downto 0);
+	   END IF;
+  END IF;
+--END IF;
 END PROCESS normalise;
  
 ------------------------------------------------------
 --rounding
 ------------------------------------------------------
-rounding: PROCESS(postnorm_man_s,postnorm_e_s,A_e_s,prenorm_result_exception,div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity)
+rounding: PROCESS(postnorm_man_s,postnorm_e_s,A_e_s,prenorm_result_exception,div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity,div_input_is_nan)
   VARIABLE rounded_result_man_s :slv(23 downto 0);
   VARIABLE rounded_result_e_s   :slv(7 downto 0);
   
@@ -298,55 +301,52 @@ BEGIN
 	   ELSE
 	     rounded_result_e_s			:=postnorm_e_s;
 	   END IF;
-IF (div_opA_is_zero OR div_opB_is_infinity)='1' THEN
-    IF (div_opA_is_zero AND div_opB_is_zero)='1' OR (div_opA_is_infinity AND div_opB_is_zero)='1' THEN
-       finalised_e_s<= (OTHERS=>'1');
-       finalised_man_s<= (0=>'1',OTHERS=>'0');
-    ELSE
-       finalised_e_s<= (OTHERS=>'0');
-       finalised_man_s<= (OTHERS=>'0');
-    END IF;    
-ELSIF (div_opB_is_zero OR div_opA_is_infinity) = '1'THEN
-       finalised_e_s<= (OTHERS=>'1');
-       finalised_man_s<= (OTHERS=>'0');
-ELSE
-	IF prenorm_result_exception ='1' THEN
-	   IF  A_e_s(7) ='1' THEN
-       finalised_e_s<= (OTHERS=>'1');
-	     finalised_man_s<=(OTHERS=>'0');
-	   ELSE
-	     finalised_e_s<= (OTHERS=>'0'); 
-	     finalised_man_s<=rounded_result_man_s(22 downto 0);	
-	   END IF;	
-	ELSE
-	   finalised_e_s<=rounded_result_e_s;
-	   finalised_man_s<=rounded_result_man_s(22 downto 0);	
-	END IF;
+IF div_input_is_nan='1' THEN                                    --input is NaN
+      finalised_e_s<= (OTHERS=>'1');
+      finalised_man_s<= (0=>'1',OTHERS=>'0');  
+ELSE  
+  IF (div_opA_is_zero OR div_opB_is_infinity)='1' THEN          --result is zero or NaN case(0/0,0/X,X/inf,inf/inf) 
+      IF (div_opA_is_zero AND div_opB_is_zero)='1' OR (div_opA_is_infinity AND div_opB_is_infinity)='1' THEN--subcase for NaN
+         finalised_e_s<= (OTHERS=>'1');
+         finalised_man_s<= (0=>'1',OTHERS=>'0');
+      ELSE                                                      --zero
+         finalised_e_s<= (OTHERS=>'0');
+         finalised_man_s<= (OTHERS=>'0');
+      END IF;    
+  ELSIF (div_opB_is_zero OR div_opA_is_infinity) = '1'THEN      --result is infinity
+         finalised_e_s<= (OTHERS=>'1');
+         finalised_man_s<= (OTHERS=>'0');
+  ELSE
+	    IF prenorm_result_exception ='1' THEN                      --overflow or underflow
+	       IF  A_e_s(7) ='1' THEN                                  --overflow
+            finalised_e_s<= (OTHERS=>'1');
+	          finalised_man_s<=(OTHERS=>'0');
+	       ELSE                                                    --underflow
+	          finalised_e_s<= (OTHERS=>'0'); 
+	          finalised_man_s<=rounded_result_man_s(22 downto 0);	
+	       END IF;	
+	    ELSE                                                       --normal operation
+	          finalised_e_s<=rounded_result_e_s;
+	          finalised_man_s<=rounded_result_man_s(22 downto 0);	
+	    END IF;
+  END IF;
 END IF;
 END PROCESS rounding;
-
+------------------------------------------------------
+--sign computation
+------------------------------------------------------
+sign_logic:PROCESS(A_si_s,B_si_s,div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity,div_input_is_nan)
+BEGIN
+  
+IF div_input_is_nan='1' THEN
+  finalised_si_s<='0';
+ELSIF (div_opA_is_zero AND div_opB_is_zero)='1' OR (div_opA_is_infinity AND div_opB_is_infinity)='1' THEN
+  finalised_si_s<='0';
+ELSE
 finalised_si_s<=A_si_s XOR B_si_s;
+END IF;
+
+END PROCESS sign_logic;
 
 END rtl;
 
-
-
---  constant lut1:rom :=                     --A(22 downto 21)&B(22 downto 21)
---(
---    0=> "100000000000000000000000";       --0000=>1.0
---    1=> "011001100110011001100110";       --0001=>0.8
---    2=> "010101010101010101010101";       --0010=>0.66...
---    3=> "010010010010010010010010";       --0011=>0.57142857
---    4=> "101000000000000000000000";       --0100=>1.25
---    5=> "100000000000000000000000";       --0101=>1.0
---    6=> "011010101010101010101010";       --0110=>0.83..
---    7=> "010110110110110110110110";       --0111=>0.71428571
---    8=> "110000000000000000000000";       --1000=>1.5
---    9=> "100110011001100110011001";       --1001=>1.2
---    10=>"100000000000000000000000";       --1010=>1.0
---    11=>"011011011011011011011011";       --1011=>0.85714286
---    12=>"111000000000000000000000";       --1100=>1.75
---    13=>"101100110011001100110011";       --1101=>1.4
---    14=>"100101010101010101010101";       --1110=>1.16..
---    15=>"100000000000000000000000";       --1111=>1.0
---)
