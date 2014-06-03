@@ -12,8 +12,8 @@ use work.all;
 
 entity multacc is
   port(
-    a_in, b_in, c_in : in std_logic_vector(31 downto 0);
-    x_out : out std_logic_vector(31 downto 0)
+    multacc_in1, multacc_in2, multacc_in3 : in std_logic_vector(31 downto 0);
+    multacc_out : out std_logic_vector(31 downto 0)
     );
 end entity multacc;
 
@@ -21,9 +21,9 @@ architecture naive of multacc is
   signal product : std_logic_vector(31 downto 0);  
 begin
   multiplier: entity mult port map(
-    a_in => a_in,
-    b_in => b_in,
-    product_out => product
+    mult_in1 => multacc_in1,
+    mult_in2 => multacc_in2,
+    mult_out => product
     );
 
   ------------------------------
@@ -34,10 +34,29 @@ begin
   -- modify adder to fit this
   -- specification
   ------------------------------
-  adder: entity add port map(
-    a_in => product,
-    b_in => c_in,
-    sum_out => x_out
+  adder: entity addsub port map(
+    add_in1 => product,
+    add_in2 => multacc_in3,
+    add_out => multacc_out
   );
   ------------------------------
 end architecture naive;
+
+architecture fused of multacc is
+  signal post_mult_sign : std_logic;
+  signal post_mult_biased_exp : signed(8 downto 0);
+  signal post_mult_significand : unsigned(47 downto 0); --with 2 integer bits
+begin
+  multiply : process(multacc_in1, multacc_in2)
+    variable mult1, mult2 : float32;
+  begin
+    mult1 := slv2float(multacc_in1);
+    mult2 := slv2float(multacc_in2);
+    
+    post_mult_sign <= mult1.sign xor mult2.sign;
+    post_mult_biased_exp <= null;
+    post_mult_significand <= null;
+  end process multiply;
+    
+  
+end architecture fused;
