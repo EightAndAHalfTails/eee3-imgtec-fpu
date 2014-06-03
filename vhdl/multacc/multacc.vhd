@@ -79,16 +79,16 @@ begin
     mult2 := slv2float(multacc_in2);
     
     post_mult_sign <= mult1.sign xor mult2.sign;
-    post_mult_exp <= intermediate_exp := resize(unsigned(mult1.exponent), 9) + resize(unsigned(mult2.exponent), 9);
+    post_mult_exp <= resize(unsigned(mult1.exponent), 9) + resize(unsigned(mult2.exponent), 9);
     if mult1.exponent = zeros then
-      sig_a := unsigned(a.significand & '0');
+      sig_a := unsigned(mult1.significand & '0');
     else
-      sig_a := unsigned('1' & a.significand);
+      sig_a := unsigned('1' & mult1.significand);
     end if;
     if mult2.exponent = zeros then
-      sig_b := unsigned(b.significand & '0');
+      sig_b := unsigned(mult2.significand & '0');
     else
-      sig_b := unsigned('1' & b.significand);
+      sig_b := unsigned('1' & mult2.significand);
     end if;
     post_mult_significand <= sig_a * sig_b;
   end process multiply;
