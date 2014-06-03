@@ -72,7 +72,8 @@ BEGIN
 		VARIABLE mantissa	: unsigned(24 DOWNTO 0); --25 bits for overflow
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
-	
+		VARIABLE temp   :unsigned(22 DOWNTO 0);
+
 	BEGIN
 		reset <= '1';
 		WAIT UNTIL clk'EVENT and clk = '1';
@@ -101,7 +102,9 @@ BEGIN
 				-- TODO: check z for infinity, NaNs
 				----------------------------------------------------------------------
 				exponent := '0'& unsigned(z(7 DOWNTO 0));
-				mantissa := unsigned("01" & z(-1 DOWNTO -23)) + to_unsigned(4, 25);
+        temp:=unsigned(z(-1 DOWNTO -23));
+        mantissa := unsigned("01" & temp) + to_unsigned(4, 25);
+				--mantissa := unsigned("01" & z(-1 DOWNTO -23)) + to_unsigned(4, 25);
 				
 				--if mantissa overflow, increment exponent
 				IF mantissa(24) = '1' THEN

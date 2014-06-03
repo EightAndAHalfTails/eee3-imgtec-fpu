@@ -37,7 +37,8 @@ begin
   adder: entity addsub port map(
     add_in1 => product,
     add_in2 => multacc_in3,
-    add_out => multacc_out
+    add_out => multacc_out,
+    operation_i => '0'
   );
   ------------------------------
 end architecture naive;
