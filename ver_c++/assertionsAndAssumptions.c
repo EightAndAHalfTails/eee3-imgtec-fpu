@@ -48,6 +48,7 @@ fp_t quake_inverse_rooter(fp_t);
 int testCodeAddition();
 int testCodeMultiplication();
 int testCodeDivision();
+int testCodeSquareRoot();
 
 //////////////////////main function//////////////////////////
 int main(){
@@ -60,8 +61,10 @@ int main(){
 	//call function for testing division
 	int div_test = testCodeDivision();
 
+	int sqrt_test = testCodeSquareRoot();
+
 	//check the return value of the functions
-	if (add_test != 0 || mul_test != 0 || div_test != 0)
+	if (add_test != 0 || mul_test != 0 || div_test != 0 || sqrt_test != 0)
 		cout << "error";
 	return 0;
 }
@@ -826,8 +829,29 @@ int testCodeDivision(){
 
 
 
+
+
+
 	//return 0 if no errors
 	return 0;
 }
+//-------------------------------------------------------------------------------------------------------------------
 
+//test square root
+int testCodeSquareRoot(){
+
+
+
+
+
+
+
+
+
+
+
+
+	//return 0 if no errors
+	return 0;
+}
 
