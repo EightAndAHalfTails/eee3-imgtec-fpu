@@ -21,9 +21,9 @@ architecture naive of multacc is
   signal product : std_logic_vector(31 downto 0);  
 begin
   multiplier: entity mult port map(
-    a_in => a_in,
-    b_in => b_in,
-    product_out => product
+    mult_in1 => a_in,
+    mult_in2 => b_in,
+    mult_out => product
     );
 
   ------------------------------
@@ -34,10 +34,11 @@ begin
   -- modify adder to fit this
   -- specification
   ------------------------------
-  adder: entity add port map(
-    a_in => product,
-    b_in => c_in,
-    sum_out => x_out
+  adder: entity addsub port map(
+    add_in1 => product,
+    add_in2 => c_in,
+    operation_i => '0',
+    add_out => x_out
   );
   ------------------------------
 end architecture naive;
