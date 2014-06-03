@@ -1,12 +1,15 @@
+
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <sstream>
 #include <bitset>
-#include <stdio.h> /* printf */
-#include <assert.h> /* assert */
+#include <sstream>
+#include <bitset>		/* used to read/write from/to the text files */
+#include <stdio.h>		/* printf */
+#include <assert.h>		/* assert */
+#include <stdlib.h>		/* std */
+#include <cmath>
 using namespace std;
-
 
 ////////////global variables/////////////////////////////////
 //the test file names are changed manually for all the test files
@@ -14,14 +17,12 @@ string testfile = "test1.txt";
 string testfile_add_output = "test1_add_output.txt";
 string testfile_mul_output = "test1_mul_output.txt";
 
-//int array for the 32 bit floating-point number
-int num1[32]; int num2[32];
-
 //////////////////floating point struct//////////////////////
 struct fp_t{
 int s;	//sign
 int e;	//exponent
 int m;	//mantissa
+
 };
 
 //////////////////////function prototypes////////////////////
@@ -29,12 +30,19 @@ fp_t unpack_f(float a_f);
 fp_t header(float a_f);
 float pack_f(fp_t a_fp);
 float footer(fp_t a_fp);
+
 int extractBits(int, int, int);
 void round_norm(fp_t &z);
-fp_t adder(fp_t, fp_t, bool);	//takes in 32-bit floating point numbers and return sum
+
+//takes in 32-bit floating point numbers and return sum
+fp_t adder(fp_t, fp_t, bool);	
 fp_t multiplier(fp_t, fp_t);
 float fma(float, float, float);
-fp_t good_ol_adder(fp_t x, fp_t y, bool IsSub);
+fp_t gold_divider(fp_t, fp_t);
+fp_t newton_divider(fp_t, fp_t);
+fp_t newton_rooter(fp_t);
+fp_t newton_inverse_rooter(fp_t);
+fp_t quake_inverse_rooter(fp_t);
 
 //functions for testing
 int testCodeAddition();
@@ -42,16 +50,18 @@ int testCodeMultiplication();
 int testCodeDivision();
 
 //////////////////////main function//////////////////////////
-int main ()
-{
+int main(){
 	//call the function for testing addition
 	int add_test = testCodeAddition();
 	
 	//call function for testing multiplication
 	int mul_test = testCodeMultiplication();
 
+	//call function for testing division
+	int div_test = testCodeDivision();
+
 	//check the return value of the functions
-	if (add_test != 0 || mul_test != 0)
+	if (add_test != 0 || mul_test != 0 || div_test != 0)
 		cout << "error";
 	return 0;
 }
@@ -197,27 +207,31 @@ float a_f;
 
 // Rounding and normalisation
 if(a_fp.m != 0){
-int lza = 25;
+int lzd = 25;
 int found = 0;
 int err;
 while(!found){
-err = extractBits(lza,lza,a_fp.m);
-//cout<<"lza: "<<dec<<lza<<endl;
+err = extractBits(lzd,lzd,a_fp.m);
+//cout<<"lzd: "<<dec<<lzd<<endl;
 //cout<<"err: "<<dec<<err<<endl;
 if(err == 1){
 found = 1;
 }else{
-lza--;
+lzd--;
 }
 }
 
-lza = lza - 23;
-a_fp.m >>= lza;
-a_fp.e += lza;
+lzd = lzd - 23;
+if(lzd > 0){
+a_fp.m >>= lzd;
+}else{
+a_fp.m <<= -lzd;
 }
+a_fp.e += lzd;
 
 // Remove significand's leading 1 bit
 a_fp.m &= 0x007FFFFF;
+}
 cout<<"Result: "<<a_fp.s<<"-"<<dec<<a_fp.e<<"-"<<hex<<a_fp.m<<endl;	
 
 // Convert to float
@@ -249,28 +263,32 @@ return m;
 void round_norm(fp_t &z){
 // Rounding and normalisation
 if(z.m != 0){
-int lza = 25;
+int lzd = 25;
 int found = 0;
 int err;
 while(!found){
-err = extractBits(lza,lza,z.m);
-//cout<<"lza: "<<dec<<lza<<endl;
+err = extractBits(lzd,lzd,z.m);
+//cout<<"lzd: "<<dec<<lzd<<endl;
 //cout<<"err: "<<dec<<err<<endl;
 if(err == 1){
 found = 1;
 }else{
-lza--;
+lzd--;
 }
 }
 
-lza = lza - 23;
-z.m >>= lza;
-z.e += lza;
+lzd = lzd - 23;
+if(lzd > 0){
+z.m >>= lzd;
+}else{
+z.m <<= -lzd;
+}
+z.e += lzd;
 }
 }
 
 fp_t adder(fp_t x, fp_t y, bool IsSub){
-fp_t z, w;
+fp_t z;
 int i = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
@@ -279,34 +297,42 @@ z.s = 0; z.m = 0; z.e = 0;
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
-// Put the bigger number in x
-if((x.e < y.e)|((x.e == y.e)&(x.m < y.m))){
-w = x;
-x = y;
-y = w;
-}	
-
 // Difference of exponents
 int d;
 d = x.e-y.e;
 //cout<<"Difference of exponents: "<<dec<<d<<endl;
 
 // Align significands
-for(i = 0; i<d; i++){
+if(d>0){
+for(int j = 0; j<d; j++){
 y.m >>= 1;
 }
 z.e = x.e;
+}else if(d<0){
+for(int j = 0; j>d; j--){
+x.m >>= 1;
+}
+z.e = y.e;
+}else{
+z.e = x.e;
+}
 
 // decision: add or subtract?
+if(x.m >= y.m){
 z.s = x.s;
 if ((x.s == 1)^(y.s == 1)^IsSub){
 y.m = ~y.m;
 z.m = 1;
 }
-
-//cout<<dec<<x.s<<"-"<<z.e<<"-"<<hex<<x.m<<endl
-// <<dec<<y.s<<"-"<<z.e<<"-"<<hex<<y.m<<endl
-// <<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+}else if(x.m < y.m){
+if((y.s == 1)^IsSub){
+z.s = 1;
+}
+if ((x.s == 1)^(y.s == 1)^IsSub){
+x.m = ~x.m;
+z.m = 1;
+}
+}
 
 // add
 z.m += x.m + y.m;
@@ -398,230 +424,270 @@ z.m += x.m; // this takes account of the leading 1
 
 z.m <<= 1;
 
+// Full number (with significand)
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
 return z;
 }
 
-float fma(float a_f, float b_f, float c_f){
-fp_t x, y, z;
-float d_f;
+fp_t fma(fp_t x, fp_t y, fp_t w){
+fp_t z;
 
-//unpack
-x = unpack_f(a_f);
-y = unpack_f(b_f);
 z.s = 0; z.m = 0; z.e = 0;
+
+// Full numbers (with significands)
+//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
 // Calculate sign
 if(x.s != y.s){
 z.s = 1;
 }
 
-cout<<endl;
-cout<<a_f<<": "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-<<b_f<<": "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
-
-//Create significand
-x.m |= 0x00800000;
-y.m |= 0x00800000;
-
-//cout<<a_f<<": "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-// <<b_f<<": "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
-
-//calculate new exponent
+// New exponent
+if(x.e != 0 & y.e != 0){
 z.e = x.e + y.e - 127;
-
+}
 //cout<<"New exponent: "<<dec<<z.e<<endl;
 
-//Booth encode
-int beys; // booth encoded y.m segment
-y.m = y.m<<1;
-
-int negxm = ~x.m;
-negxm++;
-int twoxm = x.m<<1;
-int negtwoxm = negxm<<1;	
-
-//cout<<hex<<"x: "<<x.m<<endl
-// <<"-x: "<<negxm<<endl
-// <<"2x: "<<twoxm<<endl
-// <<"-2x: "<<negtwoxm<<endl<<endl;
-
-for(int i = 0; i<=11; i++){
-beys = extractBits(2*i,(2*i)+2,y.m);
-//cout<<dec<<2*i<<" to "<<(2*i)+2<<" is "<<hex<<beys<<endl;
-//cout<<hex<<z.m<<" ";
-z.m = z.m>>2;
-if(z.m>>30 == 1){
-z.m |= 0x60000000;
-}
-//cout<<hex<<z.m<<" ";
-switch(beys){
-case 0: NULL; break;
-case 1: z.m += x.m; break;
-case 2: z.m += x.m; break;
-case 3: z.m += twoxm; break;
-case 4: z.m += negtwoxm; break;
-case 5: z.m += negxm; break;
-case 6: z.m += negxm; break;
-case 7: NULL; break;
-}
-//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<endl;
+return z;
 }
 
-z.m = z.m>>2;
-z.m += x.m; // this takes account of the leading 1
+fp_t gold_divider(fp_t x, fp_t y){
+fp_t z;
 
-//Rounding and normalisation
-int err = extractBits(23,31,z.m);
-z.m = z.m<<1;
-z.m = z.m>>err;
-z.e += err;
-//cout<<z.m<<endl;
-
-//unpack
-x = z;
-y = unpack_f(c_f);
 z.s = 0; z.m = 0; z.e = 0;
 
-//Create significand
-y.m |= 0x00800000;
-
-//difference of exponents
-int d;
-d = x.e-y.e;
-
-//cout<<"Difference in exponents: "<<dec<<d<<endl;
-
-//align significand
-if(d>0){
-y.m >>= d;
-z.e = x.e;
-}	
-else if(d<0){
-x.m >>= -d;
-z.e = y.e;
-}
-else z.e = x.e;
-
-//cout<<dec<<x.s<<"-"<<z.e<<"-"<<hex<<x.m<<endl
-// <<dec<<y.s<<"-"<<z.e<<"-"<<hex<<y.m<<endl<<endl;
-
-
-//decision: add or subtract?
-if(x.m > y.m){
-z.s = x.s;
-if ((x.s == 1)^(y.s == 1)){
-y.m = ~y.m;
-z.m = 1;
-}
-}else if(x.m < y.m){
-z.s = y.s;
-if ((x.s == 1)^(y.s == 1)){
-x.m = ~x.m;
-z.m = 1;
-}
-}
-
-//cout<<dec<<x.s<<"-"<<z.e<<"-"<<hex<<x.m<<endl
-// <<dec<<y.s<<"-"<<z.e<<"-"<<hex<<y.m<<endl
-// <<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
-
-// add
-z.m += x.m + y.m;
-//cout<<"Significand Sum: "<<hex<<z.m<<endl;
-
-//Rounding and normalisation
-err = extractBits(24,31,z.m);
-z.m = z.m>>err;
-z.e += err;
-//cout<<z.m<<endl;
-
-//Turn significand into mantissa
-z.m &= 0x7FFFFF;
-cout<<"Result: "<<z.s<<"-"<<dec<<z.e<<"-"<<hex<<z.m<<endl;
-
-d_f = pack_f(z);
-//cout<<dec<<c_f<<endl<<endl;
-
-return d_f;
-
-}
-
-float reciprocal(float b_f){
-fp_t x, y, z;
-float c_f;
-
-//unpack
-y = unpack_f(b_f);
-z.s = 0; z.m = 0; z.e = 0;
+// Full number (with significand)
+//cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
 // Calculate sign
-z.s = y.s;
-
-cout<<endl;
-cout<<b_f<<": "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
-
-//Create significand
-y.m |= 0x00800000;
-
-//calculate new exponent
-//z.e = x.e + y.e - 127; <-------------- ????????????????????????????????????????????
-
-// Reciprocate
-int x0 = 0.0000001;
-
-
-int beys; // booth encoded y.m segment
-y.m = y.m<<1;
-
-int negxm = ~x.m;
-negxm++;
-int twoxm = x.m<<1;
-int negtwoxm = negxm<<1;	
-
-//cout<<hex<<"x: "<<x.m<<endl
-// <<"-x: "<<negxm<<endl
-// <<"2x: "<<twoxm<<endl
-// <<"-2x: "<<negtwoxm<<endl<<endl;
-
-for(int i = 0; i<=11; i++){
-beys = extractBits(2*i,(2*i)+2,y.m);
-//cout<<dec<<2*i<<" to "<<(2*i)+2<<" is "<<hex<<beys<<endl;
-//cout<<hex<<z.m<<" ";
-z.m = z.m>>2;
-if(z.m>>30 == 1){
-z.m |= 0x60000000;
-}
-//cout<<hex<<z.m<<" ";
-switch(beys){
-case 0: NULL; break;
-case 1: z.m += x.m; break;
-case 2: z.m += x.m; break;
-case 3: z.m += twoxm; break;
-case 4: z.m += negtwoxm; break;
-case 5: z.m += negxm; break;
-case 6: z.m += negxm; break;
-case 7: NULL; break;
-}
-//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<endl;
+if(x.s != y.s){
+z.s = 1;
 }
 
-z.m = z.m>>2;
-z.m += x.m; // this takes account of the leading 1
+// Divide by power of 2, base case
+if(y.m == 0x800000){
+z.e = x.e - y.e + 127;
+z.m = x.m;
+return z;
+}
 
-//Rounding and normalisation
-int err = extractBits(23,31,z.m);
-z.m = z.m<<1;
-z.m = z.m>>err;
-z.e += err;
-//cout<<z.m<<endl;
+// Goldschmidt's Algorithm
+int sign;
+fp_t f, n, two;
 
-z.m &= 0x7FFFFF;
-cout<<"Result: "<<z.s<<"-"<<dec<<z.e<<"-"<<hex<<z.m<<endl;
+sign = z.s; // preserves sign bit, to be reused later
+x.s = 0; y.s = 0; // Goldschmidt's Algorithm works with positive numbers
+two.s = 0; two.e = 128; two.m = 0x800000; // define 2.0 in floating point to used in subtraction
+f.s = 0; f.e = 254 - y.e; f.m = 0x800000; // initial guess is highest power of 2 below divisor
 
-c_f = pack_f(z);
-//cout<<dec<<c_f<<endl<<endl;
+z = x;
 
-return c_f;
+int i = 0;
+while( i < 5 ){
+
+if(z.m == 0){	// if the exact answer is found, break, otherwise iterate
+break;
+}else{
+i++;
+}
+
+y = multiplier(f,y);	round_norm(y);	// calculate new value for denominator
+z = multiplier(f,z);	round_norm(z);	// calculate new value for numerator
+f = adder(two,y,true);
+}
+
+z.s = sign;
+
+// Full number (with significand)
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
+}
+
+fp_t newton_divider(fp_t x, fp_t y){
+fp_t z;
+
+z.s = 0; z.m = 0; z.e = 0;
+
+// Full number (with significand)
+//cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+// Calculate sign
+if(x.s != y.s){
+z.s = 1;
+}
+
+// Divide by power of 2, base case
+if(y.m == 0x800000){
+z.e = x.e - y.e + 127;
+z.m = x.m;
+return z;
+}
+
+// Newton-Raphson Method
+int sign;
+fp_t two, x0;
+
+sign = z.s; // preserves sign bit, to be reused later
+x.s = 0; y.s = 0; // Use algorithm with positive numbers
+two.s = 0; two.e = 128; two.m = 0x800000; // define 2.0 in floating point to be used in subtraction
+z.s = 0; z.e = 254 - y.e; z.m = 0x800000; // initial guess is the reciprocal of the highest power of 2 below divisor
+
+int i = 0;
+while( i < 5 ){
+
+x0 = z;
+z = multiplier(y,x0);	round_norm(z);
+z = adder(two,z,true);
+z = multiplier(z,x0);	round_norm(z);
+
+i++;
+
+}
+
+z = multiplier(z,x);	round_norm(z);
+z.s = sign;
+
+// Full number (with significand)
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
+}
+
+fp_t newton_rooter(fp_t x){
+fp_t z;
+
+z.s = 0; z.m = 0; z.e = 0;
+
+// Full number (with significand)
+//cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+// Check if positive
+if(x.s != 0){
+if(x.e == 0 & x.m == 0){
+return x;	// if the input is -0, return -0
+}else{
+z.e = 0xFF;
+z.m = 0x1;
+return z;	// otherwise return a NaN
+}
+}else if(x.e == 0 & x.m == 0){
+return x;
+}
+
+// Newton-Raphson Method
+fp_t x0;
+float x0_f, z_f, x_f;
+
+// initial guess is the root of the highest rootable power of 2 below radicand
+z.s = 0; z.e = 127 + x.e; z.e >>= 1; z.m = 0x800000;
+x0 = z;
+
+int i = 0;
+while( i < 5 ){
+
+z = newton_divider(x,x0);	round_norm(z);
+z = adder(z,x0,false);	round_norm(z);
+z.e--;
+
+i++;
+
+x0 = z;
+}
+
+// Full number (with significand)
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
+}
+
+fp_t newton_inverse_rooter(fp_t x){
+fp_t z;
+
+z.s = 0; z.m = 0; z.e = 0;
+
+// Full number (with significand)
+//cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+// Check if positive
+if(x.s != 0){
+if(x.e == 0 & x.m == 0){
+return x;	// if the input is -0, return -0
+}else{
+z.e = 0xFF;
+z.m = 0x1;
+return z;	// otherwise return a NaN
+}
+}
+
+// Newton-Raphson Method
+fp_t three, x0;
+
+three.s = 0; three.e = 128; three.m = 0xC00000; // define 3.0 in floating point to be used in subtraction
+// initial guess is the reciprocal of the root of the highest rootable power of 2 below radicand
+z.s = 0; z.e = 381 - x.e; z.e >>= 1; z.m = 0x800000;
+
+int i = 0;
+while( i < 5 ){
+
+x0 = z;
+z = multiplier(x0,x0);	round_norm(z);
+z = multiplier(x,z);	round_norm(z);
+z = adder(three,z,true);
+z = multiplier(x0,z);	round_norm(z);
+z.e--;
+
+i++;
+
+}
+
+// Full number (with significand)
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
+}
+
+fp_t quake_inverse_rooter(fp_t x){
+fp_t z;
+
+z.s = 0; z.m = 0; z.e = 0;
+
+// Full number (with significand)
+//cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+// Check if positive
+if(x.s != 0){
+if(x.e == 0 & x.m == 0){
+return x;	// if the input is -0, return -0
+}else{
+z.e = 0xFF;
+z.m = 0x1;
+return z;	// otherwise return a NaN
+}
+}
+
+// Quake Algorithm
+fp_t halfno, threehalves, y, quake_const;
+
+threehalves.s = 0; threehalves.e = 127; threehalves.m = 0xC00000; // define 1.5 in floating point to be used in subtraction
+quake_const.s = 0; quake_const.e = 190; quake_const.m = 0xB759DF; // Quake constant used to find inverse root quickly
+
+halfno = x;
+halfno.e--;
+z = halfno;
+z = adder(quake_const,z,true);	// subtract the fp_t equivalent of 0x5f3759df
+y = z;
+z = multiplier(z,z);	round_norm(z);
+z = multiplier(halfno,z);	round_norm(z);
+z = adder(threehalves,z,true);
+z = multiplier(y,z);	round_norm(z);
+
+// Full number (with significand)
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
 }
 //-------------------------------------------------------------------------------------------------------------------
 
@@ -685,6 +751,7 @@ int testCodeAddition () {
 	//return 0 if no errors
 	return 0;
 }
+//-------------------------------------------------------------------------------------------------------------------
 
 //test for the multiplication function
 int testCodeMultiplication () {
@@ -746,9 +813,14 @@ int testCodeMultiplication () {
 	//return 0 if no errors
 	return 0;
 }
+//-------------------------------------------------------------------------------------------------------------------
 
 //test division
 int testCodeDivision(){
+
+
+
+
 
 
 
