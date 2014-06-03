@@ -23,8 +23,8 @@ float multiplier(float, float);
 //////////////////////main function//////////////////////////
 int main(){
 	fp_t z_fp;
-	int z_i;
-	float a, b, c, d, e, f, z;
+	float a, b, c, d, e, f;
+	float x, y, z;
 	int opcode;
 	
 	//arbitrary input numbers
@@ -63,6 +63,8 @@ int main(){
 		case 4: cout << "Input three numbers to be MACed" << endl;
 				cin>>a; cin>>b; cin>>c;
 				z = (a*b)+c;
+				// z = multiplier(a,b);
+				// z = adder(z,c, false);
 				cout<<"("<<a<<"*"<<b<<")+"<<c<<"="<<z; break;
 		
 		case 5: cout << "Input two numbers to be divided" << endl;
@@ -73,11 +75,19 @@ int main(){
 		case 6: cout << "Input two 2-vectors to be dotted" << endl;
 				cin>>a; cin>>b; cin>>c; cin>>d;
 				z = (a*c)+(b*d);
+				// y = multiplier(a,c);
+				// z = multiplier(b,d);
+				// z = adder(y,z, false);
 				cout<<"("<<a<<","<<b<<").("<<c<<","<<d<<")="<<z; break;
 
 		case 7: cout << "Input two 3-vectors to be dotted" << endl;
 				cin>>a; cin>>b; cin>>c; cin>>d; cin>>e; cin>>f;
 				z = (a*d)+(b*e)+(c*f);
+				// x = multiplier(a,d);
+				// y = multiplier(b,e);
+				// z = multiplier(c,f);
+				// z = adder(y,z, false);
+				// z = adder(x,z, false);
 				cout<<"("<<a<<","<<b<<","<<c<<").("<<d<<","<<e<<","<<f<<")="<<z; break;
 
 		case 8: cout << "Input number to be square-rooted" << endl;
@@ -322,9 +332,10 @@ float multiplier(float a_f, float b_f){
 	z.m += x.m; // this takes account of the leading 1
 
 	//Rounding and normalisation
-	int err = extractBits(24,31,z.m);
+	int err = extractBits(23,31,z.m);
+	z.m = z.m<<1;
 	z.m = z.m>>err;
-	z.e += err+1;
+	z.e += err;
 	//cout<<z.m<<endl;
 
 	z.m &= 0x7FFFFF;
