@@ -7,7 +7,7 @@ use work.types.all;
 
 entity sqrt is
   generic(lookup_bits : integer := 7;
-          iterations : integer := 16);
+          iterations : integer := 4);
   port(
     sqrt_in1 : in std_logic_vector(31 downto 0);
     sqrt_out : out std_logic_vector(31 downto 0)
@@ -45,7 +45,7 @@ begin
   input <= slv2float(sqrt_in1);
   sqrt_out <= float2slv(output);
   
-  s_initial_guess(24 downto 2) <= initial_guess_lut(to_integer(s_sig_in(24 downto 24-lookup_bits)));
+  s_initial_guess(24 downto 2) <= initial_guess_lut(to_integer(s_sig_in(24 downto 25-lookup_bits)));
   s_initial_guess(1 downto 0) <= "00";
   
   ------------------------------------------------
@@ -107,10 +107,11 @@ begin
     elsif input.sign = '1' then
       output <= nan;
     else
-      shift_amount := leading_one(s_final_approx);
+      shift_amount := leading_one(s_final_approx) - 1;
+      report "Shifting by " & integer'image(shift_amount) severity note;
       output.sign <= '0';
       output.exponent <= slv(usg(s_half_exp) - to_unsigned(shift_amount, s_half_exp'length));
-      output.significand <= slv(shift_left(usg(s_final_approx), shift_amount)(24 downto 2));
+      output.significand <= slv(shift_left(usg(s_final_approx), shift_amount)(23 downto 1));
     end if;
   end process encode_output;
   
