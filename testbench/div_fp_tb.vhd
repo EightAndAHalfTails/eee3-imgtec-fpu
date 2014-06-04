@@ -26,16 +26,31 @@ ARCHITECTURE tb OF div_tb IS
 
 	ALIAS slv IS std_logic_vector;
 	
-	CONSTANT INFINITY: slv := "01111111100000000000000000000000";
+	--------------------------------------------------------------
+	--TODO: switch to package constants
+	CONSTANT PINFINITY	: slv := "01111111100000000000000000000000";
+	CONSTANT NINFINITY	: slv := "11111111100000000000000000000000";
+	CONSTANT PZERO		: slv := "00000000000000000000000000000000";
+	CONSTANT NZERO		: slv := "10000000000000000000000000000000";
 	
-	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER IS
+	FUNCTION v2i(x:STD_LOGIC_VECTOR) RETURN INTEGER IS
 	BEGIN
 		RETURN to_integer(SIGNED(x));
 	END;
    
- 	FUNCTION i2v( x : INTEGER) RETURN STD_LOGIC_VECTOR IS
+ 	FUNCTION i2v(x:INTEGER) RETURN STD_LOGIC_VECTOR IS
 	BEGIN
 		RETURN slv(to_signed(x, 32));
+	END;
+	
+	FUNCTION iszero(x:FLOAT32) RETURN BOOLEAN IS
+	BEGIN
+		RETURN (x=zerofp or x = neg_zerofp);
+	END;
+	
+	FUNCTION isfinite(x:FLOAT32) RETURN BOOLEAN IS
+	BEGIN
+		RETURN (x/=pos_inffp or x/=neg_inffp);
 	END;
 	
 BEGIN
@@ -65,14 +80,13 @@ BEGIN
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
-		VARIABLE x, y, z    : FLOAT32;
-		VARIABLE four_ulps	: FLOAT32;
-		VARIABLE max_z		: slv(31 DOWNTO 0);
-		VARIABLE exponent	: unsigned(8 DOWNTO 0);
-		VARIABLE mantissa	: unsigned(24 DOWNTO 0); --25 bits for overflow
+		VARIABLE x, y, z    : FLOAT32;	-- z = x/y
+		VARIABLE z_l, z_r	: slv(31 DOWNTO 0);	--left and right bound of z
+		VARIABLE exponent_l, exponent_r	: unsigned(8 DOWNTO 0);
+		VARIABLE mantissa_l, mantissa_r	: unsigned(24 DOWNTO 0); --25 bits for overflow, left and right bound for z error interval
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
-		VARIABLE temp   :unsigned(22 DOWNTO 0);
+		VARIABLE temp   :unsigned(22 DOWNTO 0); --temp mantissa of z
 
 	BEGIN
 		reset <= '1';
@@ -97,40 +111,99 @@ BEGIN
 				B<=to_slv(y);
 				
 				z := x/y;
-				
+
 				----------------------------------------------------------------------
-				-- TODO: check z for infinity, NaNs
-				----------------------------------------------------------------------
-				exponent := '0'& unsigned(z(7 DOWNTO 0));
-        temp:=unsigned(z(-1 DOWNTO -23));
-        mantissa := unsigned("01" & temp) + to_unsigned(4, 25);
-				--mantissa := unsigned("01" & z(-1 DOWNTO -23)) + to_unsigned(4, 25);
-				
-				--if mantissa overflow, increment exponent
-				IF mantissa(24) = '1' THEN
-					exponent := exponent + to_unsigned(1, 9);
-					max_z := slv(z(8)&exponent(7 DOWNTO 0)&mantissa(22 DOWNTO 0));
-					
-					--if exp overflow then max is infinity
-					IF exponent(8) = '1' THEN
-						max_z := INFINITY;
-					END IF;
+				-- check z for zeros, infinities or NaNs
+				-- else find left and right boundaries of z (4 ulps)
+				IF (not(isfinite(z))) or iszero(z) or isnan(z) THEN
+					REPORT "z is not normal";
+					z_l := to_slv(z);
+					z_r := to_slv(z);
 				ELSE
-					max_z := slv(z(8)&exponent(7 DOWNTO 0)&mantissa(22 DOWNTO 0));
+					exponent_r := '0'& unsigned(z(7 DOWNTO 0));
+					exponent_l := '0'& unsigned(z(7 DOWNTO 0));				
+					temp:=unsigned(z(-1 DOWNTO -23));
+					
+					-- if z is positive, then z_r is greater than z and z_l is smaller than z
+					IF z(8) = '0' THEN  
+						mantissa_r := unsigned("01" & temp) + to_unsigned(4, 25);
+						mantissa_l := unsigned("01" & temp) - to_unsigned(4, 25);
+						
+						-- find z_r
+						-- if mantissa overflow, increment exp
+						-- check if exponent overflow
+						IF mantissa_r(24) = '1' THEN
+							exponent_r := exponent_r + to_unsigned(1, 9);
+							
+							IF exponent_r(8) = '1' THEN
+								z_r := PINFINITY;
+							ELSE
+								z_r := slv('0'&exponent_r(7 DOWNTO 0) & mantissa_r(23 DOWNTO 1));
+							END IF;
+						ELSE
+							z_r := slv('0'&exponent_r(7 DOWNTO 0) &  mantissa_r(22 DOWNTO 0));
+						END IF;
+						
+						-- find z_l
+						-- if mantissa underflow, decrement exponent
+						-- if z is denormal and mantissa underflow, z_l will be set to positive zero
+						IF mantissa_l(23) = '0' THEN
+							IF exponent_l = "00000000" THEN
+								z_l := PZERO;
+							ELSE
+								exponent_l := exponent_l - to_unsigned(1,9);
+								z_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(21 DOWNTO 0) & '0');
+							END IF;
+						ELSE
+							z_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(22 DOWNTO 0));
+						END IF;	
+						
+					ELSE 
+					-- if z is negative, then z_r is less negative than z and z_l is more negative than z
+						mantissa_r := unsigned("01" & temp) - to_unsigned(4, 25);
+						mantissa_l := unsigned("01" & temp) + to_unsigned(4, 25);
+						
+						-- find z_r
+						IF mantissa_r(23) = '0' THEN
+							IF exponent_r = "00000000" THEN
+								z_r := NZERO;
+							ELSE
+								exponent_r := exponent_r - to_unsigned(1,9);
+								z_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(21 DOWNTO 0) & '0');
+							END IF;
+						ELSE 
+							z_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(22 DOWNTO 0));
+						END IF;
+						
+						-- find z_l
+						IF mantissa_l(24) = '1' THEN
+							exponent_l := exponent_l + to_unsigned(1, 9);
+							
+							IF exponent_l(8) = '1' THEN
+								z_l := NINFINITY;
+							ELSE
+								z_l := slv('1'&exponent_l(7 DOWNTO 0) & mantissa_l(23 DOWNTO 1));
+							END IF;
+						ELSE
+							z_l := slv('1'&exponent_l(7 DOWNTO 0) &  mantissa_l(22 DOWNTO 0));
+						END IF;
+						
+					END IF;
 				END IF;
 				
-				--magnitude of 4 ulps
-				four_ulps := to_float(max_z) - z;
+				REPORT "z_l = " & to_string(z_l);
+				REPORT "z_r = " & to_string(z_r);
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
-
-				IF (z-to_float(result)) > four_ulps OR (to_float(result)-z) > four_ulps THEN
+				--REPORT "z = " & to_string(z) & " and result = " & to_string(to_float(result));
+				
+				IF (to_float(result) > to_float(z_r)) OR (to_float(result) < to_float(z_l)) THEN
 					incorrect_result := incorrect_result+1;
 					REPORT to_string(x) & "/" & to_string(y) & "is " & to_string(to_float(result)) &
 						". Correct answer should be " & to_string(z) SEVERITY warning;
 				ELSIF result /= to_slv(z) THEN
-					REPORT "Result ok(?)" & to_string(x) & "/" & to_string(y) & "is " & to_string(to_float(result)) &
-						". Correct answer should be " & to_string(z) SEVERITY note;
+					REPORT to_string(x) & "/" & to_string(y) & "is " & to_string(to_float(result)) &
+						". Correct answer should be " & to_string(z) & "...Result ok(?)" SEVERITY note;
 				END IF;
 				
 			END IF;	
