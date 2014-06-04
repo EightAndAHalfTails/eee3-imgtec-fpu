@@ -78,6 +78,7 @@ div_opB_is_infinity<='1' WHEN div_IN2(30 downto 0)="1111111100000000000000000000
 div_opA_is_normal<='0' WHEN usg(div_IN1(30 downto 23))=0 AND usg(div_IN1(22 DOWNTO 0))/=0 ELSE '1'; 
 div_opB_is_normal<='0' WHEN usg(div_IN2(30 downto 23))=0 AND usg(div_IN2(22 DOWNTO 0))/=0 ELSE '1'; 
 div_input_is_nan<='1' WHEN (usg(div_IN1(30 downto 23))=255 AND usg(div_IN1(22 DOWNTO 0))/=0) OR (usg(div_IN2(30 downto 23))=255 AND usg(div_IN2(22 DOWNTO 0))/=0) ELSE '0';
+
 prenorm_result_exception<='1' WHEN prenorm_e_s(8)='1' OR usg(prenorm_e_s)=0 ELSE '0';
 
 ------------------------------------------------------
@@ -265,7 +266,12 @@ BEGIN
         postnorm_man_s(0)<=prenorm_significand_s(1) OR prenorm_significand_s(0);
       ELSE
         postnorm_e_s<=slv(usg(prenorm_e_s(7 downto 0))-1);
-        postnorm_man_s<=prenorm_significand_s(24 downto 0);
+        IF usg(prenorm_e_s)=1 THEN
+          postnorm_man_s(24 downto 1)<=prenorm_significand_s(25 downto 2);
+          postnorm_man_s(0)<=prenorm_significand_s(1) OR prenorm_significand_s(0);
+        ELSE
+          postnorm_man_s<=prenorm_significand_s(24 downto 0);
+        END IF;
       END IF;
   END IF;
   
@@ -311,7 +317,7 @@ BEGIN
   ELSE
 	    IF prenorm_result_exception ='1' THEN                      --overflow or underflow
 	       IF  A_e_s(7) ='1' THEN                                  --overflow
-                  finalised_e_s<= (OTHERS=>'1');
+            finalised_e_s<= (OTHERS=>'1');
 	          finalised_man_s<=(OTHERS=>'0');
 	       ELSE                                                    --underflow
 	          finalised_e_s<= (OTHERS=>'0'); 
