@@ -1,13 +1,12 @@
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <cmath>
 #include <fstream>
 #include <string>
+
 #include <bitset>
-#include <sstream>
-#include <bitset>		/* used to read/write from/to the text files */
-#include <stdio.h>		/* printf */
-#include <assert.h>		/* assert */
-#include <stdlib.h>		/* std */
-#include <cmath>
+
 using namespace std;
 
 ////////////global variables/////////////////////////////////
@@ -32,9 +31,9 @@ string testfile_fma_output = "test1_fma_output.txt";
 
 //////////////////floating point struct//////////////////////
 struct fp_t{
-	int s;	//sign
-	int e;	//exponent
-	int m;	//mantissa
+int s;	//sign
+int e;	//exponent
+int m;	//mantissa
 };
 
 //////////////////////function prototypes////////////////////
@@ -42,61 +41,55 @@ fp_t unpack_f(float a_f);
 fp_t header(float a_f);
 float pack_f(fp_t a_fp);
 float footer(fp_t a_fp);
-int footer_i(fp_t a_fp);
+
 int extractBits(int, int, int);
 void round_norm(fp_t &z, int, int);
 
-fp_t adder(fp_t, fp_t, bool);	//takes in 32-bit floating point numbers and return sum
+fp_t adder(fp_t, fp_t, bool);
 fp_t multiplier(fp_t, fp_t);
-
-fp_t fma(float, float, float);
-
 fp_t gold_divider(fp_t, fp_t);
+fp_t gold2_divider(fp_t, fp_t);
 fp_t newton_divider(fp_t, fp_t);
-
+fp_t newton_divider_by_parts(fp_t, fp_t);
+fp_t fractioning_rooter(fp_t);
 fp_t newton_rooter(fp_t);
-
-fp_t newton_inverse_rooter(fp_t);
-fp_t quake_inverse_rooter(fp_t);
+fp_t newton_reciprocal_rooter(fp_t);
+fp_t quake_reciprocal_rooter(fp_t);
+fp_t dual_rooter(fp_t, bool);
 
 //functions for testing
-int testCodeAddition();
-int testCodeMultiplication();
+void read_in(string name, string name2);
 
-int testCodeDivision();				//gold
-int testCodeDivision2();			//newton
-int testCodeSquareRoot();			//newton square root
-int testCodeInverseSquareRoot();	//newton inverse square root
-int testCodeInverseSquareRoot2();	//quake inverse square root
 
-int testFMA();						//test the FMA
+
+
+
+
 
 //////////////////////main function//////////////////////////
 int main(){
-	//call the function for testing addition
-	int add_test = testCodeAddition();
+	//test addition/subtraction unit
+	read_in(testfile, testfile_add_output);
 	
-	//call function for testing multiplication
-	int mul_test = testCodeMultiplication();
 
-	//call function for testing division
-	int div_test = testCodeDivision();
-	int div_test2 = testCodeDivision2();
 
-	//call function for testing the square root 
-	int sqrt_test = testCodeSquareRoot();
 
-	//call function for testing the inverse square root
-	int invSqrt_test = testCodeInverseSquareRoot();
-	int invSqrt2_test = testCodeInverseSquareRoot2();
 
-	//check the return value of the functions
-	if (add_test != 0 || mul_test != 0 || div_test != 0 || div_test2 != 0 || sqrt_test != 0 || invSqrt_test != 0 || invSqrt2_test != 0)
-		cout << "error";
+
+
+
+
+
+
+
+
+
+
+
 	return 0;
 }
 
-/////////////////////functions////////////////////////////
+///////////////////// auxiliary functions////////////////////////////
 fp_t unpack_f(float a_f){
 fp_t a_fp;
 int index;
@@ -262,24 +255,12 @@ a_fp.e += lzd;
 // Remove significand's leading 1 bit
 a_fp.m &= 0x007FFFFF;
 }
-//cout<<"Result: "<<a_fp.s<<"-"<<dec<<a_fp.e<<"-"<<hex<<a_fp.m<<endl;
+cout<<"Result: "<<a_fp.s<<"-"<<dec<<a_fp.e<<"-"<<hex<<a_fp.m<<endl;	
 
 // Convert to float
 a_i = (a_fp.s << 31)+((a_fp.e<<23)&0x7F800000)+(a_fp.m&0x007FFFFF);
 a_f = *(float*)&a_i;
 return a_f;
-}
-
-int footer_i(fp_t a_fp){
-int a_i;
-
-// Remove significand's leading 1 bit
-a_fp.m &= 0x007FFFFF;
-cout<<"Result: "<<dec<<a_fp.s<<"-"<<a_fp.e<<"-"<<hex<<a_fp.m<<endl;	
-
-// Convert to int
-a_i = (a_fp.s << 31)+((a_fp.e<<23)&0x7F800000)+(a_fp.m&0x007FFFFF);
-return a_i;
 }
 
 int extractBits(int a, int b, int z){
@@ -342,6 +323,8 @@ z.m += 1;
 }
 }
 
+
+///////////////////// arithmetic functions////////////////////////////
 fp_t adder(fp_t x, fp_t y, bool IsSub){
 fp_t z;
 int lostbit_high = 0, lostbit_low = 0;
@@ -503,29 +486,6 @@ z.m <<= 1;
 return z;
 }
 
-fp_t fma(fp_t x, fp_t y, fp_t w){
-fp_t z;
-
-z.s = 0; z.m = 0; z.e = 0;
-
-// Full numbers (with significands)
-//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
-
-// Calculate sign
-if(x.s != y.s){
-z.s = 1;
-}
-
-// New exponent
-if(x.e != 0 & y.e != 0){
-z.e = x.e + y.e - 0x7F;
-}
-//cout<<"New exponent: "<<dec<<z.e<<endl;
-
-return z;
-}
-
 fp_t gold_divider(fp_t x, fp_t y){
 fp_t z;
 
@@ -579,6 +539,66 @@ z.s = sign;
 return z;
 }
 
+fp_t gold2_divider(fp_t x, fp_t y){
+fp_t z;
+
+z.s = 0; z.m = 0; z.e = 0;
+
+// Full number (with significand)
+//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+// Divide by power of 2, base case
+if(y.m == 0x800000){
+z.m = x.m;
+return z;
+}else{
+z.e--;
+}
+
+// Calculate sign
+if(x.s != y.s){
+z.s = 1;
+}
+
+// New exponent
+z.e = x.e - y.e + 127;
+//cout<<"New exponent: "<<dec<<z.e<<endl;
+
+// Goldschmidt's Algorithm
+int firstbits = 0;
+long long d = 0, f = 0, n = 0;
+
+d = y.m;
+n = x.m;
+f = 0x1000000 - d; f <<= 1;
+
+cout<<endl<<"f: "<<f<<" "
+<<"n: "<<n<<" "
+<<"d: "<<d<<" "<<endl;
+
+int i = 0;
+while( i < 5 ){
+
+d = d*f*2; d >>= 24;	// calculate new value for denominator
+n = n*f*2; n >>= 24;	// calculate new value for numerator
+f = 0x1000000 - d; f <<= 1;	// calculate "error"
+
+cout<<endl<<"f: "<<f<<" "
+<<"n: "<<n<<" "
+<<"d: "<<d<<" "<<endl;
+
+i++;
+}
+
+z.m = n>>39;
+
+// Full number (with significand)
+cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
+}
+
 fp_t newton_divider(fp_t x, fp_t y){
 fp_t z;
 
@@ -587,16 +607,16 @@ z.s = 0; z.m = 0; z.e = 0;
 // Full number (with significand)
 //cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
-// Calculate sign
-if(x.s != y.s){
-z.s = 1;
-}
-
 // Divide by power of 2, base case
 if(y.m == 0x800000){
 z.e = x.e - y.e + 0x7F;
 z.m = x.m;
 return z;
+}
+
+// Calculate sign
+if(x.s != y.s){
+z.s = 1;
 }
 
 // Newton-Raphson Method
@@ -629,6 +649,61 @@ z.s = sign;
 return z;
 }
 
+
+fp_t fractioning_rooter(fp_t x){
+fp_t z;
+
+z.s = 0; z.m = 0; z.e = 0;
+
+// Full number (with significand)
+//cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+// Check if positive
+if(x.s != 0){
+if(x.e == 0 & x.m == 0){
+return x;	// if the input is -0, return -0
+}else{
+z.e = 0xFF;
+z.m = 0x1;
+return z;	// otherwise return a NaN
+}
+}else if(x.e == 0 & x.m == 0){
+return x;
+}
+
+// Fractioning Method
+
+/* f(0) = 1
+g(0) = 1
+f(i+1) = f(i) + g(i)*S
+g(i+1) = f(i)+g(i)
+sqrt(S) = f(x)/g(x)
+*/
+
+fp_t f,g,h;
+f.s = 0; f.e = 127; f.m = 0x800000;
+g = f;
+
+int i = 0;
+while( i < 5 ){
+
+h = multiplier(f,g);	round_norm(z,0,0);
+z = multiplier(g,x);	round_norm(z,0,0);
+f = adder(f,z,false);
+g = h;
+
+i++;
+}
+
+z = newton_divider(f,g); round_norm(z,0,0);
+
+// Full number (with significand)
+cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
+}
+
+
 fp_t newton_rooter(fp_t x){
 fp_t z;
 
@@ -652,11 +727,9 @@ return x;
 
 // Newton-Raphson Method
 fp_t x0;
-float x0_f, z_f, x_f;
 
 // initial guess is the root of the highest rootable power of 2 below radicand
-z.s = 0; z.e = 0x7F + x.e; z.e >>= 1; z.m = 0x800000;
-x0 = z;
+x0.s = 0; x0.e = 127 + x.e; x0.e >>= 1; x0.m = 0x800000;
 
 int i = 0;
 while( i < 5 ){
@@ -676,7 +749,7 @@ x0 = z;
 return z;
 }
 
-fp_t newton_inverse_rooter(fp_t x){
+fp_t newton_reciprocal_rooter(fp_t x){
 fp_t z;
 
 z.s = 0; z.m = 0; z.e = 0;
@@ -722,7 +795,7 @@ i++;
 return z;
 }
 
-fp_t quake_inverse_rooter(fp_t x){
+fp_t quake_reciprocal_rooter(fp_t x){
 fp_t z;
 
 z.s = 0; z.m = 0; z.e = 0;
@@ -745,7 +818,7 @@ return z;	// otherwise return a NaN
 fp_t halfno, threehalves, y, quake_const;
 
 threehalves.s = 0; threehalves.e = 0x7F; threehalves.m = 0xC00000; // define 1.5 in floating point to be used in subtraction
-quake_const.s = 0; quake_const.e = 190; quake_const.m = 0xB759DF; // Quake constant used to find inverse root quickly
+quake_const.s = 0; quake_const.e = 190; quake_const.m = 0xB759DF; // Quake constant used to find reciprocal root quickly
 
 halfno = x;
 halfno.e--;
@@ -762,479 +835,159 @@ z = multiplier(y,z);	round_norm(z,0,0);
 
 return z;
 }
-//-------------------------------------------------------------------------------------------------------------------
 
-//test for the addition function
-int testCodeAddition () {
-	//declare the data types for the 2 numbers that will be added
-	bitset<32> b1, b2;		//read from the text file
-	float float1, float2;	//built in c++ float type
-	fp_t add_test1A_fp, add_test1B_fp;
+fp_t dual_rooter(fp_t x, bool IsReciprocal){
+fp_t z;
 
-	//declare the name of the input text file	
-	ifstream inFile (testfile);
-    
+z.s = 0; z.m = 0; z.e = 0;
+
+// Full number (with significand)
+//cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+// Check if positive
+if(x.s != 0){
+if(x.e == 0 & x.m == 0){
+return x;	// if the input is -0, return -0
+}else{
+z.e = 0xFF;
+z.m = 0x1;
+return z;	// otherwise return a NaN
+}
+}
+
+// Newton-Raphson Method
+fp_t three, x0;
+
+three.s = 0; three.e = 128; three.m = 0xC00000; // define 3.0 in floating point to be used in subtraction
+// initial guess is the reciprocal of the root of the highest rootable power of 2 below radicand
+z.s = 0; z.e = 381 - x.e; z.e >>= 1; z.m = 0x800000;
+
+int i = 0;
+while( i < 5 ){
+
+x0 = z;
+z = multiplier(x0,x0);	round_norm(z,0,0);
+z = multiplier(x,z);	round_norm(z,0,0);
+z = adder(three,z,true);
+z = multiplier(x0,z);	round_norm(z,0,0);
+z.e--;
+
+i++;
+
+}
+
+// If we are looking for the normal square root,
+// we multiply the reciprocal root we just calculated
+// by the original number
+if(!IsReciprocal){
+z = multiplier(x,z);	round_norm(z,0,0);
+}
+
+// Full number (with significand)
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+return z;
+}
+//------------------------------------------------------------------------------------------------------------------
+
+void read_in(string name, string name2){
+	string line, reline;
+	int size;
+	
+	//declare variables for the inputs
+	fp_t a_fp, b_fp; 
+		
 	//declare the name of the output file
 	ofstream outFile;
-	outFile.open (testfile_add_output);
+	outFile.open(name2);
+
+	ifstream myfile(name);
+
+	//declare variables for the output value
+	float test_float;
+	int itest_float;
 	
-	//declare variable for the output value
-	fp_t test1_add_fp;
-	//initialize the output variable
-	test1_add_fp.s=0; test1_add_fp.e=0; test1_add_fp.m=0;
+	//decalre variables for the output
+	fp_t out;
+	out.s=0; out.m=0; out.e=0;
 
-	//declare variables for the output	
-	float test1_add_float;
-	int itest1_add_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1 >> b2;
-
-		//changing the int to float
-		float1 = *(float*)&b1;	
-		float2 = *(float*)&b2;
-
-		//unpack into fp_t type
-		add_test1A_fp = unpack_f(float1);	
-		add_test1B_fp = unpack_f(float2);
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//addition function: use add_test1A and add_test1B
-		//the result is test1_add_fp, the result is in fp_t
-		test1_add_fp = adder((add_test1A_fp), (add_test1B_fp), 0);
+	if (myfile.is_open()){
+		while (myfile.good()){
+			a_fp.s=0; a_fp.m=0; a_fp.e=0;
+			b_fp.s=0; b_fp.m=0; b_fp.e=0;
 
 
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+			getline (myfile,line);
+
+			a_fp.s = atoi(line.substr(0,1).c_str());
+
+			reline = line.substr(1,8);
+			for(int i = 0; i<8; i++){
+				a_fp.e <<= 1;
+				a_fp.e += atoi(reline.substr(i,1).c_str());
+			}
+
+			reline = line.substr(9,23);
+
+
+			for(int i = 0; i<23; i++){
+				a_fp.m <<= 1;
+				a_fp.m += atoi(reline.substr(i,1).c_str());
+			}
+
+			b_fp.s = atoi(line.substr(33,1).c_str());
+
+			reline = line.substr(34,8);
+
+			for(int i = 0; i<8; i++){
+				b_fp.e <<= 1;
+				b_fp.e += atoi(reline.substr(i,1).c_str());
+			}
+
+			reline = line.substr(42,23);
+
+			for(int i = 0; i<23; i++){
+				b_fp.m <<= 1;
+				b_fp.m += atoi(reline.substr(i,1).c_str());
+			}
+
+		if(a_fp.e != 0){
+			a_fp.m |= 0x00800000;
+		}
+		if(b_fp.e != 0){
+			b_fp.m |= 0x00800000;
+		}
+	
+
+		out = adder(a_fp, b_fp, 0);
+
 		//use the "pack_f" function, the result is now in a float data type
-		test1_add_float = pack_f(test1_add_fp);
-		
-		//convert to 32 bits
-		itest1_add_float = *(int*)&test1_add_float;	
+		test_float = pack_f(out);
 
+		//convert to 32 bits
+		itest_float = *(int*)&test_float;	
+	
 		//write the output to the text file
-		outFile << (bitset<32>)itest1_add_float << "\n";
+		outFile << (bitset<32>)itest_float << "\n";
+	
+
+
+		}
+
+		//close the output file
+		outFile.close();
+
+		myfile.close();
+
+	}
+	else{
+		cout<<"Unable to open file";
 	}
 
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
 
-	//return 0 if no errors
-	return 0;
 }
-//-------------------------------------------------------------------------------------------------------------------
-
-//test for the multiplication function
-int testCodeMultiplication () {
-	//declare the data types for the 2 numbers that will be multiplied
-	bitset<32> b1, b2;		//read from the text file
-	float float1, float2;	//built in c++ float type
-	fp_t mul_test1A_fp, mul_test1B_fp;
-
-	//declare the name of the input text file	
-	ifstream inFile (testfile);
-    
-	//declare the name of the output file
-	ofstream outFile;
-	outFile.open (testfile_mul_output);
-	
-	//declare variable for the output value
-	fp_t test1_mul_fp;
-	//initialize the output variable
-	test1_mul_fp.s=0; test1_mul_fp.e=0; test1_mul_fp.m=0;
-
-	//declare variables for the output	
-	float test1_mul_float;
-	int itest1_mul_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1 >> b2;
-
-		//changing the int to float
-		float1 = *(float*)&b1;	
-		float2 = *(float*)&b2;
-
-		//unpack into fp_t type
-		mul_test1A_fp = unpack_f(float1);	
-		mul_test1B_fp = unpack_f(float2);
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//multiplication function
-		//the result is test1_mul_fp, the result is in fp_t
-		test1_mul_fp = multiplier((mul_test1A_fp), (mul_test1B_fp));
 
 
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//use the "pack_f" function, the result is now in a float data type
-		test1_mul_float = pack_f(test1_mul_fp);
-		
-		//convert to 32 bits
-		itest1_mul_float = *(int*)&test1_mul_float;	
 
-		//write the output to the text file
-		outFile << (bitset<32>)itest1_mul_float << "\n";
-	}
-
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
-
-	//return 0 if no errors
-	return 0;
-}
-//-------------------------------------------------------------------------------------------------------------------
-
-//test division, Goldschmidt's algorithm 
-int testCodeDivision(){
-	//declare the data types for the 2 numbers that will be divided
-	bitset<32> b1, b2;		//read from the text file
-	float float1, float2;	//built in c++ float type
-	fp_t div_test1A_fp, div_test1B_fp;
-
-	//declare the name of the input text file	
-	ifstream inFile (testfile);
-    
-	//declare the name of the output file
-	ofstream outFile;
-	outFile.open (testfile_div_output);
-	
-	//declare variable for the output value
-	fp_t test1_div_fp;
-	//initialize the output variable
-	test1_div_fp.s=0; test1_div_fp.e=0; test1_div_fp.m=0;
-
-	//declare variables for the output	
-	float test1_div_float;
-	int itest1_div_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1 >> b2;
-
-		//changing the int to float
-		float1 = *(float*)&b1;	
-		float2 = *(float*)&b2;
-
-		//unpack into fp_t type
-		div_test1A_fp = unpack_f(float1);	
-		div_test1B_fp = unpack_f(float2);
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//division function
-		//the result is test1_div_fp, the result is in fp_t
-		test1_div_fp = gold_divider((div_test1A_fp), (div_test1B_fp));
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//use the "pack_f" function, the result is now in a float data type
-		test1_div_float = pack_f(test1_div_fp);
-		
-		//convert to 32 bits
-		itest1_div_float = *(int*)&test1_div_float;	
-
-		//write the output to the text file
-		outFile << (bitset<32>)itest1_div_float << "\n";
-	}
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
-
-	//return 0 if no errors
-	return 0;
-}
-//-------------------------------------------------------------------------------------------------------------------
-
-//test division, Newton-Raphson algorithm 
-int testCodeDivision2(){
-	//declare the data types for the 2 numbers that will be divided
-	bitset<32> b1, b2;		//read from the text file
-	float float1, float2;	//built in c++ float type
-	fp_t div_test1A_fp, div_test1B_fp;
-
-	//declare the name of the input text file	
-	ifstream inFile (testfile);
-    
-	//declare the name of the output file
-	ofstream outFile;
-	outFile.open (testfile_div_output2);
-	
-	//declare variable for the output value
-	fp_t test1_div_fp;
-	//initialize the output variable
-	test1_div_fp.s=0; test1_div_fp.e=0; test1_div_fp.m=0;
-
-	//declare variables for the output	
-	float test1_div_float;
-	int itest1_div_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1 >> b2;
-
-		//changing the int to float
-		float1 = *(float*)&b1;	
-		float2 = *(float*)&b2;
-
-		//unpack into fp_t type
-		div_test1A_fp = unpack_f(float1);	
-		div_test1B_fp = unpack_f(float2);
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//division function
-		//the result is test1_div_fp, the result is in fp_t
-		test1_div_fp = newton_divider((div_test1A_fp), (div_test1B_fp));
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//use the "pack_f" function, the result is now in a float data type
-		test1_div_float = pack_f(test1_div_fp);
-		
-		//convert to 32 bits
-		itest1_div_float = *(int*)&test1_div_float;	
-
-		//write the output to the text file
-		outFile << (bitset<32>)itest1_div_float << "\n";
-	}
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
-
-	//return 0 if no errors
-	return 0;
-}
-//-------------------------------------------------------------------------------------------------------------------
-
-//test square root, use of Newton method
-int testCodeSquareRoot(){
-	//declare the data type for the 1 number that will be used as input
-	bitset<32> b1;			//read from the text file
-	float float1;			//built in c++ float type
-	fp_t sqrt_test1A_fp;
-
-	//declare the name of the input text file	
-	ifstream inFile (testfile_oneInput);
-    
-	//declare the name of the output file
-	ofstream outFile;
-	outFile.open (testfile_sqrt_output);
-	
-	//declare variable for the output value
-	fp_t test1_sqrt_fp;
-	//initialize the output variable
-	test1_sqrt_fp.s=0; test1_sqrt_fp.e=0; test1_sqrt_fp.m=0;
-
-	//declare variables for the output	
-	float test1_sqrt_float;
-	int itest1_sqrt_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1;
-		//changing the int to float
-		float1 = *(float*)&b1;	
-
-		//unpack into fp_t type
-		sqrt_test1A_fp = unpack_f(float1);	
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//square root function
-		//the result is test1_sqrt_fp, the result is in fp_t
-		test1_sqrt_fp = newton_rooter(sqrt_test1A_fp);
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//use the "pack_f" function, the result is now in a float data type
-		test1_sqrt_float = pack_f(test1_sqrt_fp);
-		
-		//convert to 32 bits
-		itest1_sqrt_float = *(int*)&test1_sqrt_float;	
-
-		//write the output to the text file
-		outFile << (bitset<32>)itest1_sqrt_float << "\n";
-	}
-
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
-
-	//return 0 if no errors
-	return 0;
-}
-//-------------------------------------------------------------------------------------------------------------------
-
-//test the inverse square root, Newton method
-int testCodeInverseSquareRoot(){
-	//declare the data type for the 1 number that will be used as input
-	bitset<32> b1;			//read from the text file
-	float float1;			//built in c++ float type
-	fp_t invSqrt_test1A_fp;
-
-	//declare the name of the input text file	
-	ifstream inFile (testfile_oneInput);
-    
-	//declare the name of the output file
-	ofstream outFile;
-	outFile.open (testfile_invSqrt_output);
-	
-	//declare variable for the output value
-	fp_t test1_invSqrt_fp;
-	//initialize the output variable
-	test1_invSqrt_fp.s=0; test1_invSqrt_fp.e=0; test1_invSqrt_fp.m=0;
-
-	//declare variables for the output	
-	float test1_invSqrt_float;
-	int itest1_invSqrt_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1;
-		//changing the int to float
-		float1 = *(float*)&b1;	
-
-		//unpack into fp_t type
-		invSqrt_test1A_fp = unpack_f(float1);	
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//inverse square root function
-		//the result is test1_sqrt_fp, the result is in fp_t
-		test1_invSqrt_fp = newton_inverse_rooter(invSqrt_test1A_fp);
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//use the "pack_f" function, the result is now in a float data type
-		test1_invSqrt_float = pack_f(test1_invSqrt_fp);
-		
-		//convert to 32 bits
-		itest1_invSqrt_float = *(int*)&test1_invSqrt_float;	
-
-		//write the output to the text file
-		outFile << (bitset<32>)itest1_invSqrt_float << "\n";
-	}
-
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
-
-	//return 0 if no errors
-	return 0;
-}
-//-------------------------------------------------------------------------------------------------------------------
-
-//test the inverse square root, Quake method
-int testCodeInverseSquareRoot2(){
-	//declare the data type for the 1 number that will be used as input
-	bitset<32> b1;			//read from the text file
-	float float1;			//built in c++ float type
-	fp_t invSqrt_test1A_fp;
-
-	//declare the name of the input text file	
-	ifstream inFile (testfile_oneInput);
-    
-	//declare the name of the output file
-	ofstream outFile;
-	outFile.open (testfile_invSqrt_output2);
-	
-	//declare variable for the output value
-	fp_t test1_invSqrt_fp;
-	//initialize the output variable
-	test1_invSqrt_fp.s=0; test1_invSqrt_fp.e=0; test1_invSqrt_fp.m=0;
-
-	//declare variables for the output	
-	float test1_invSqrt_float;
-	int itest1_invSqrt_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1;
-		//changing the int to float
-		float1 = *(float*)&b1;	
-
-		//unpack into fp_t type
-		invSqrt_test1A_fp = unpack_f(float1);	
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//inverse square root function
-		//the result is test1_sqrt_fp, the result is in fp_t
-		test1_invSqrt_fp = quake_inverse_rooter(invSqrt_test1A_fp);
-		
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		//use the "pack_f" function, the result is now in a float data type
-		test1_invSqrt_float = pack_f(test1_invSqrt_fp);
-		
-		//convert to 32 bits
-		itest1_invSqrt_float = *(int*)&test1_invSqrt_float;	
-
-		//write the output to the text file
-		outFile << (bitset<32>)itest1_invSqrt_float << "\n";
-	}
-
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
-
-	//return 0 if no errors
-	return 0;
-}
-//-------------------------------------------------------------------------------------------------------------------
-
-//test the FMA, use of 3 inputs
-int testFMA(){
-	//declare the data types for the 3 input numbers
-	bitset<32> b1, b2, b3;		//read from the text file
-	float float1, float2, float3;	//built in c++ float type
-
-	//declare the name of the input text file	
-	ifstream inFile (testfile_threeInputs);
-    
-	//declare the name of the output file
-	ofstream outFile;
-	outFile.open (testfile_fma_output);
-	
-	//declare variable for the output value
-	fp_t test1_fma_fp;
-	//initialize the output variable
-	test1_fma_fp.s=0; test1_fma_fp.e=0; test1_fma_fp.m=0;
-
-	//declare variables for the output	
-	float test1_fma_float;
-	int itest1_fma_float;
-		
-	while (!inFile.eof()) {
-		//read the 2 numbers from the text file
-		inFile >> b1 >> b2 >> b3;
-
-		//changing the int to float
-		float1 = *(float*)&b1;	
-		float2 = *(float*)&b2;
-		float3 = *(float*)&b3;
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-		//FMA function
-		//the result is test1_fma_fp, the result is in float
-		//test1_fma_fp = fma(float1, float2, float3);
-		//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-		
-		//use the "pack_f" function, the result is now in a float data type
-		test1_fma_float = pack_f(test1_fma_fp);
-		
-		//convert to 32 bits
-		itest1_fma_float = *(int*)&test1_fma_float;	
-
-		//write the output to the text file
-		outFile << (bitset<32>)itest1_fma_float << "\n";
-	}
-	//close the input file
-	inFile.close();
-	//close the output file	
-	outFile.close();
-
-	//return 0 if no errors
-	return 0;
-}
 
 
