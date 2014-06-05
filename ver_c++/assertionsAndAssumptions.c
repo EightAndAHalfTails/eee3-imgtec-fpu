@@ -12,18 +12,26 @@ using namespace std;
 ////////////global variables/////////////////////////////////
 //the test file names are changed manually for all the test files
 string testfile = "test1.txt";
+//this is for addition, we use tests: 1 - 11
 string testfile_add_output = "test1_add_output.txt";
+//this is for multiplication, we use tests: 1 - 8
 string testfile_mul_output = "test1_mul_output.txt";
 
+//this is for division, we use tests: 1 - 8
 string testfile_div_output = "test1_gold_div_output.txt";
-string testfile_div_output2 = "test1_newton_div_output.txt";
+string testfile_div_output2 = "test1_newton_div_output2.txt";
+string testfile_div_output3 = "test1_newton_div_output3.txt";
+string testfile_div_output4 = "test1_newton_div_output4.txt";
 
 //testing of functions with 1 input
 string testfile_oneInput = "test1_oneInput.txt";
 string testfile_sqrt_output = "test1_sqrt_output.txt";
+string testfile_sqrt_output2 = "test1_sqrt_output2.txt";
 
 string testfile_invSqrt_output = "test1_invSqrt_output.txt";
 string testfile_invSqrt_output2 = "test1_invSqrt2_output.txt";
+
+string testfile_dual_rooter = "test1_dual_rooter_output.txt";
 
 //testing of function with 3 inputs
 string testfile_threeInputs = "test1_threeInputs.txt";
@@ -51,14 +59,28 @@ fp_t gold_divider(fp_t, fp_t);
 fp_t gold2_divider(fp_t, fp_t);
 fp_t newton_divider(fp_t, fp_t);
 fp_t newton_divider_by_parts(fp_t, fp_t);
+
 fp_t fractioning_rooter(fp_t);
 fp_t newton_rooter(fp_t);
+
 fp_t newton_reciprocal_rooter(fp_t);
 fp_t quake_reciprocal_rooter(fp_t);
+
 fp_t dual_rooter(fp_t, bool);
 
 //functions for testing
-void read_in(string name, string name2);
+void testAddition(string name, string name2);
+void testMultiplication(string testfile, string testfile_mul_output);
+
+//void testDivision1_gold(string testfile, string testfile_div_output);
+//void testDivision2_gold(string testfile, string testfile_div_output2);
+//void testDivision3_newton(string testfile, string testfile_div_output3);
+//void testDivision4_newton(string testfile, string testfile_div_output4);
+//void testSqrt1_fractioning(string testfile, string testfile_sqrt_output);
+//void testSqrt2_newton(string testfile, string testfile_sqrt_output2);
+//void test1_iSqrt_newton(string testfile, string testfile_invSqrt_output);
+//void test2_iSqrt_quake(string testfile, string testfile_invSqrt_output2);
+//void test_dual_rooter(string testfile, string testfile_dual_rooter);
 
 
 
@@ -69,11 +91,37 @@ void read_in(string name, string name2);
 //////////////////////main function//////////////////////////
 int main(){
 	//test addition/subtraction unit
-	read_in(testfile, testfile_add_output);
+	testAddition(testfile, testfile_add_output);
 	
+	//test multiplication
+//	testMultiplication(testfile, testfile_mul_output);
 
+	//test division
+	//testDivision1_gold(testfile, testfile_div_output);
 
+	//test division
+	//testDivision2_gold(testfile, testfile_div_output2);
 
+	//test division
+	//testDivision3_newton(testfile, testfile_div_output3);
+
+	//test division
+	//testDivision4_newton(testfile, testfile_div_output4);
+
+	//test square root
+	//testSqrt1_fractioning(testfile, testfile_sqrt_output);
+
+	//test square root
+	//testSqrt2_newton(testfile, testfile_sqrt_output2);
+
+	//test inverse square root
+	//test1_iSqrt_newton(testfile, testfile_invSqrt_output);
+
+	//test inverse square root
+	//test2_iSqrt_quake(testfile, testfile_invSqrt_output2);
+
+	//test dual rooter
+	//test_dual_rooter(testfile, testfile_dual_rooter);
 
 
 
@@ -889,68 +937,79 @@ z = multiplier(x,z);	round_norm(z,0,0);
 return z;
 }
 //------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------
 
-void read_in(string name, string name2){
+//test addition
+void testAddition(string name, string name2){
+	//declare the variables needed to read a line from the text file
 	string line, reline;
 	int size;
 	
 	//declare variables for the inputs
 	fp_t a_fp, b_fp; 
+
+	//declare the input file
+	ifstream myfile(testfile);
 		
 	//declare the name of the output file
 	ofstream outFile;
-	outFile.open(name2);
-
-	ifstream myfile(name);
+	outFile.open(testfile_add_output);
 
 	//declare variables for the output value
 	float test_float;
 	int itest_float;
 	
-	//decalre variables for the output
+	//declare variables for the output
 	fp_t out;
+	//initialize the output variables
 	out.s=0; out.m=0; out.e=0;
 
 	if (myfile.is_open()){
 		while (myfile.good()){
+			//initialize the input variables
 			a_fp.s=0; a_fp.m=0; a_fp.e=0;
 			b_fp.s=0; b_fp.m=0; b_fp.e=0;
 
-
+			//read the line from the text file
 			getline (myfile,line);
-
+			
+			//first number
+			//convert the sign bit from string to integer
 			a_fp.s = atoi(line.substr(0,1).c_str());
 
+			//convert the exponent bits from string to integer
 			reline = line.substr(1,8);
 			for(int i = 0; i<8; i++){
 				a_fp.e <<= 1;
 				a_fp.e += atoi(reline.substr(i,1).c_str());
 			}
 
+			//convert the mantissa bits from string to integer
 			reline = line.substr(9,23);
-
-
 			for(int i = 0; i<23; i++){
 				a_fp.m <<= 1;
 				a_fp.m += atoi(reline.substr(i,1).c_str());
 			}
 
+			//second number
+			//convert the sign bit from string to integer
 			b_fp.s = atoi(line.substr(33,1).c_str());
 
+			//convert the exponent bits from string to integer
 			reline = line.substr(34,8);
-
 			for(int i = 0; i<8; i++){
 				b_fp.e <<= 1;
 				b_fp.e += atoi(reline.substr(i,1).c_str());
 			}
 
+			//convert the mantissa bits from string to integer
 			reline = line.substr(42,23);
-
 			for(int i = 0; i<23; i++){
 				b_fp.m <<= 1;
 				b_fp.m += atoi(reline.substr(i,1).c_str());
 			}
 
+		//denormal mantissa manipulations			
 		if(a_fp.e != 0){
 			a_fp.m |= 0x00800000;
 		}
@@ -958,36 +1017,126 @@ void read_in(string name, string name2){
 			b_fp.m |= 0x00800000;
 		}
 	
-
+		//do the addition
 		out = adder(a_fp, b_fp, 0);
 
 		//use the "pack_f" function, the result is now in a float data type
 		test_float = pack_f(out);
-
 		//convert to 32 bits
 		itest_float = *(int*)&test_float;	
 	
 		//write the output to the text file
 		outFile << (bitset<32>)itest_float << "\n";
-	
-
-
 		}
 
 		//close the output file
 		outFile.close();
-
+		//close the input file
 		myfile.close();
+	}
+	else{
+		cout<<"Unable to open file";
+	}
+}
 
+
+//test multiplication
+void testMultiplication(string name, string name2){
+	//declare the variables needed to read a line from the text file
+	string line, reline;
+	int size;
+	
+	//declare variables for the inputs
+	fp_t a_fp, b_fp; 
+
+	//declare the input file
+	ifstream myfile(testfile);
+		
+	//declare the name of the output file
+	ofstream outFile;
+	outFile.open(testfile_add_output);
+
+	//declare variables for the output value
+	float test_float;
+	int itest_float;
+	
+	//declare variables for the output
+	fp_t out;
+	//initialize the output variables
+	out.s=0; out.m=0; out.e=0;
+
+	if (myfile.is_open()){
+		while (myfile.good()){
+			//initialize the input variables
+			a_fp.s=0; a_fp.m=0; a_fp.e=0;
+			b_fp.s=0; b_fp.m=0; b_fp.e=0;
+
+			//read the line from the text file
+			getline (myfile,line);
+			
+			//first number
+			//convert the sign bit from string to integer
+			a_fp.s = atoi(line.substr(0,1).c_str());
+
+			//convert the exponent bits from string to integer
+			reline = line.substr(1,8);
+			for(int i = 0; i<8; i++){
+				a_fp.e <<= 1;
+				a_fp.e += atoi(reline.substr(i,1).c_str());
+			}
+
+			//convert the mantissa bits from string to integer
+			reline = line.substr(9,23);
+			for(int i = 0; i<23; i++){
+				a_fp.m <<= 1;
+				a_fp.m += atoi(reline.substr(i,1).c_str());
+			}
+
+			//second number
+			//convert the sign bit from string to integer
+			b_fp.s = atoi(line.substr(33,1).c_str());
+
+			//convert the exponent bits from string to integer
+			reline = line.substr(34,8);
+			for(int i = 0; i<8; i++){
+				b_fp.e <<= 1;
+				b_fp.e += atoi(reline.substr(i,1).c_str());
+			}
+
+			//convert the mantissa bits from string to integer
+			reline = line.substr(42,23);
+			for(int i = 0; i<23; i++){
+				b_fp.m <<= 1;
+				b_fp.m += atoi(reline.substr(i,1).c_str());
+			}
+
+			//denormal mantissa manipulations			
+			if(a_fp.e != 0){
+				a_fp.m |= 0x00800000;
+			}
+			if(b_fp.e != 0){
+				b_fp.m |= 0x00800000;
+			}
+	
+			//do the multiplication
+			out = multiplier(a_fp, b_fp);
+
+			//use the "pack_f" function, the result is now in a float data type
+			test_float = pack_f(out);
+			//convert to 32 bits
+			itest_float = *(int*)&test_float;	
+	
+			//write the output to the text file
+			outFile << (bitset<32>)itest_float << "\n";
+		}
+
+		//close the output file
+		outFile.close();
+		//close the input file
+		myfile.close();
 	}
 	else{
 		cout<<"Unable to open file";
 	}
 
-
 }
-
-
-
-
-
