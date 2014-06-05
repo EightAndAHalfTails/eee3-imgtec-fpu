@@ -11,7 +11,7 @@ ENTITY addsub IS
 	PORT 
 	( add_in1		: IN  std_logic_vector(31 downto 0);
 	  add_in2		: IN  std_logic_vector(31 downto 0);
-	  operation_i		: IN  std_logic;
+	  operation_i		: IN  std_logic; -- 0:add, 1:sub
 	  add_out		: OUT std_logic_vector(31 downto 0)
 	);
 END ENTITY addsub;
