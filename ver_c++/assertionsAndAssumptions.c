@@ -14,6 +14,7 @@ using namespace std;
 string testfile = "test1.txt";
 //this is for addition, we use tests: 1 - 11
 string testfile_add_output = "test1_add_output.txt";
+
 //this is for multiplication, we use tests: 1 - 8
 string testfile_mul_output = "test1_mul_output.txt";
 
@@ -94,7 +95,7 @@ int main(){
 	testAddition(testfile, testfile_add_output);
 	
 	//test multiplication
-//	testMultiplication(testfile, testfile_mul_output);
+	//testMultiplication(testfile, testfile_mul_output);
 
 	//test division
 	//testDivision1_gold(testfile, testfile_div_output);
@@ -949,11 +950,11 @@ void testAddition(string name, string name2){
 	fp_t a_fp, b_fp; 
 
 	//declare the input file
-	ifstream myfile(testfile);
+	ifstream myfile(name);
 		
 	//declare the name of the output file
 	ofstream outFile;
-	outFile.open(testfile_add_output);
+	outFile.open(name2);
 
 	//declare variables for the output value
 	float test_float;
@@ -1050,11 +1051,11 @@ void testMultiplication(string name, string name2){
 	fp_t a_fp, b_fp; 
 
 	//declare the input file
-	ifstream myfile(testfile);
+	ifstream myfile(name);
 		
 	//declare the name of the output file
 	ofstream outFile;
-	outFile.open(testfile_add_output);
+	outFile.open(name2);
 
 	//declare variables for the output value
 	float test_float;
