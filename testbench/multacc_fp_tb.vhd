@@ -108,7 +108,9 @@ BEGIN
 				tb_result := (x*y)+z;
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
+
 				IF result /= to_slv(tb_result) THEN
+
 					incorrect_result := incorrect_result+1;
 					REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
 						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result) SEVERITY warning;
@@ -146,4 +148,5 @@ BEGIN
 
 	END PROCESS main;
 	
-END tb;
+END tb; 
+

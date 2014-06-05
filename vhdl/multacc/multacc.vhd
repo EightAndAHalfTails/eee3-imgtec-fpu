@@ -55,9 +55,9 @@ architecture fused of multacc is
   signal a,b,c,result : float32_t;
   
   signal pre_norm_signifcand : usg(47 downto 0);
-  signal pre_norm_exponent : usg(8 downto 0);
+  signal pre_norm_exponent : usg(9 downto 0);
   signal post_norm_significand : usg(25 downto 0);
-  signal post_norm_exponent : usg(7 downto 0);
+  signal post_norm_exponent : usg(9 downto 0);
   signal rightshift : std_logic;
   signal leadingzeros: integer range 0 to 48;
 begin
@@ -120,13 +120,14 @@ begin
   b<=slv2float(multacc_in2);
   c<=slv2float(multacc_in3);
   multacc_out<=float2slv(result);
-  expo_diff<=sgn(Resize(post_mult_exp,10)-Resize(usg(c.exponent),10));
+  
+  expo_diff<=sgn(Resize(post_mult_exp,10)-Resize(usg(c.exponent),10)-127);
   --computes the exponent difference
   
   adder_c_align : process(c,expo_diff)
 
     variable sig_c: unsigned(23 downto 0);
-    variable shift_unit : integer range -256 to 255;
+    variable shift_unit : integer range -512 to 511;
     constant zeros : exponent_t := (others => '0');
   begin
    shift_unit:=to_integer(expo_diff);
@@ -159,8 +160,8 @@ begin
      aligned_c(47 downto 0)<=(others=>'0');
    else
      for i in 0 to 71 loop
-       if i+shift_unit<46 and i+shift_unit>21 then
-         aligned_c(i)<=sig_c(i-22+shift_unit);         
+       if i+shift_unit<=46 and i+shift_unit>=23 then
+         aligned_c(i)<=sig_c(i-23+shift_unit);         
        else
          aligned_c(i)<='0';
        end if;
@@ -179,7 +180,8 @@ begin
   --result of multiplication. Then the result is truncated to 48 bits based on
   --where the valid bits are. 
   -----------------------------------------------------------------------------
-
+  --*******need to add if post_add_lsresult overflows****************!!!!!!!!!
+  -----------------------------------------------------------------------------
   adder:process(aligned_c,post_mult_significand,post_mult_exp)
     variable result : unsigned(48 downto 0);
     variable post_add_lsresult:unsigned(24 downto 0);
@@ -200,11 +202,12 @@ begin
   ------------------------------------------------
     if post_add_lsresult=0 then
       pre_norm_signifcand<=post_add_rsresult;
-      pre_norm_exponent<=post_mult_exp;
+      pre_norm_exponent<='0'&post_mult_exp;
       rightshift<='1';
     else
       pre_norm_signifcand<=post_add_lsresult(23 downto 0)&post_add_rsresult(47 downto 24);
-      pre_norm_exponent<=post_mult_exp+25;
+      pre_norm_exponent<=resize(post_mult_exp-127,10)+25;  
+      --**********!!!if overflows******
       rightshift<='0';
     end if;
     
@@ -222,7 +225,7 @@ begin
     for i in pre_norm_signifcand'high downto pre_norm_signifcand'low loop
       if pre_norm_signifcand(i)='0' then
         leadingzeros:=leadingzeros+1;
-        sft_result_significand:=sft_result_significand sll 1;
+        sft_result_significand:=sft_result_significand sll 1;--left shift until left aligned
       else
         exit; 
       end if;
@@ -230,10 +233,11 @@ begin
 
     if expo_diff<-25 then
       post_norm_significand<=aligned_c(71 downto 48)&"00";
-      post_norm_exponent<=usg(c.exponent);
+      post_norm_exponent<="00"&usg(c.exponent);
     else
       post_norm_significand<=sft_result_significand(47 downto 22);
-      post_norm_exponent<=usg(pre_norm_exponent(7 downto 0))-leadingzeros;
+      post_norm_exponent<=pre_norm_exponent-leadingzeros;
+      --************!!!consider result is denormal*********
     end if;
 
   end process normalise;
@@ -256,9 +260,9 @@ begin
     END CASE;
   
     IF rounded_result_man_s(23)='1' THEN
-      rounded_result_e_s:=usg(post_norm_exponent)+1;
+      rounded_result_e_s:=usg(post_norm_exponent(7 downto 0))+1;
     ELSE
-      rounded_result_e_s		:=post_norm_exponent;
+      rounded_result_e_s		:=post_norm_exponent(7 downto 0);
     END IF;
 	
     result.exponent	<=	slv(rounded_result_e_s);
