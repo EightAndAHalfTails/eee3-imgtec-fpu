@@ -61,8 +61,6 @@ BEGIN
 	-- test entity
 	add: ENTITY work.addsub
 	PORT MAP(
-		clk			=>clk,
-		reset		=>reset,
 		add_in1		=>A,
 		add_in2		=>B,
 		operation_i => operation,
