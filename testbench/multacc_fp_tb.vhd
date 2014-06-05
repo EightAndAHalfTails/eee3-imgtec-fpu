@@ -1,9 +1,11 @@
 ------------------------------------------------------------------
---Testbench for floating point adder
---reads twoInput_datapak.txt for input data
+--Testbench for floating point multiply-accumulate
+--reads threeInput_datapak.txt for input data
 --use IEEE floating point package to calculate reference result
 
---vhdl test entity: addsub
+--This testbench may have to be modify to improve accuracy of "correct" result
+
+--vhdl test entity: multacc
 --author: Weng Lio
 --version: 05/06/2014
 ------------------------------------------------------------------
@@ -16,13 +18,13 @@ use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 USE std.textio.ALL;
 
-ENTITY add_tb IS
-END add_tb;
+ENTITY multacc_tb IS
+END multacc_tb;
 
-ARCHITECTURE tb OF add_tb IS
+ARCHITECTURE tb OF multacc_tb IS
 
-	SIGNAL clk, reset, operation: STD_LOGIC;   --operation 0 for add, 1 for sub
-	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
+	SIGNAL clk, reset: STD_LOGIC; 
+	SIGNAL A, B, C, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=ab+c
 
 	ALIAS slv IS std_logic_vector;
 	
@@ -36,13 +38,10 @@ ARCHITECTURE tb OF add_tb IS
 		RETURN slv(to_signed(x, 32));
 	END;
 	
-	FUNCTION b2l(b : BIT) return std_logic is	--read in operation_i
+	FUNCTION isfinite(x:FLOAT32) RETURN BOOLEAN IS
 	BEGIN
-		IF b = '0' THEN
-			RETURN '0';
-		END IF;
-		RETURN '1';
-	END FUNCTION;
+		RETURN (x/=pos_inffp or x/=neg_inffp);
+	END;
 	
 BEGIN
   
@@ -56,24 +55,23 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	add: ENTITY work.addsub
+	multacc: ENTITY work.multacc
 	PORT MAP(
-		add_in1		=>A,
-		add_in2		=>B,
-		operation_i => operation,
-		add_out		=>result
+		multacc_in1		=>A,
+		multacc_in2		=>B,
+		multacc_in3 	=> C,
+		multacc_out		=>result
 	);
 
 	------------------------------------------------------------
-	-- main process reads lines from "twoInput_datapak.txt"
-	-- each line consists of 2 fp numbers to be added
-	-- check sum of these numbers with output of test entity
+	-- main process reads lines from "threeInput_datapak.txt"
+	-- each line consists of 2 fp numbers to be multiplied and a third to be added to
 	------------------------------------------------------------
 	main: PROCESS
-		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
+		FILE f				: TEXT OPEN read_mode IS "threeInput_datapak.txt";
 		VARIABLE buf		: LINE;
-		VARIABLE x, y       : FLOAT32;
-		VARIABLE op			: BIT;
+		VARIABLE x, y, z    : FLOAT32;
+		VARIABLE tb_result	: FLOAT32;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 		VARIABLE nan_lines : INTEGER;
@@ -90,28 +88,6 @@ BEGIN
 		inf_lines := 0;
 		
 		---------------------------------------------------------------------
-		-- read first line of file
-		-- the first line should contain the operation code
-		-- 0 for addition and 1 for subtraction
-		-- testbench default to addition if none is supplied 
-		-- and first line of data file will be ignored
-		readline(f,buf);
-		If buf'LENGTH = 0 THEN
-			REPORT "skipping line: " & INTEGER'IMAGE(n) SEVERITY note;
-		ELSE
-			REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
-				
-			IF buf'LENGTH > 1 THEN
-				REPORT "Undefined operation option, default to 0. Skipping line 1" SEVERITY warning;
-				operation <= '0';
-			ELSE
-				read(buf, op);			
-				operation <= b2l(op);
-				REPORT " ***************** Operation = " & BIT'IMAGE(op) & " ***************** " SEVERITY note;
-			END IF;
-		END IF;
-		
-		---------------------------------------------------------------------
 		-- read data file until eof
 		WHILE NOT endfile(f) LOOP
 			WAIT UNTIL clk'EVENT and clk = '1';
@@ -121,29 +97,23 @@ BEGIN
 			ELSE
 				REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
 				
-				-------------------------------------------------------------
-				-- note: x and y from file must be in binary
-				-------------------------------------------------------------
 				read(buf, x);
 				read(buf, y);
+				read(buf, z);
 				
 				A<=to_slv(x);
 				B<=to_slv(y);
+				C<=to_slv(z);
+				
+				tb_result := (x*y)+z;
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF op = '0' THEN
-					IF result /= (to_slv(x+y)) THEN
-						incorrect_result := incorrect_result+1;
-						REPORT to_string(x) & "+" & to_string(y) & "is " & to_string(to_float(result)) &
-							". Correct answer should be " & to_string(x+y) SEVERITY warning;
-					END IF;
-				ELSE
-					IF result /= (to_slv(x-y)) THEN
-						incorrect_result := incorrect_result+1;
-						REPORT to_string(x) & "-" & to_string(y) & "is " & to_string(to_float(result)) &
-							". Correct answer should be " & to_string(x-y) SEVERITY warning;
-					END IF;
+				IF result /= (to_slv(tb_result) THEN
+					incorrect_result := incorrect_result+1;
+					REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result) SEVERITY warning;
 				END IF;
+
 				--------------------------------------------------------------
 				-- if either input or output is NaN
 				IF unordered(x,y) = true THEN
@@ -153,9 +123,9 @@ BEGIN
 				--------------------------------------------------------------
 				-- there's something wrong with this ELSIF condition 
 				-- but whatever I will change it later
-				ELSIF finite(x) = false or finite(y)=false or finite(to_float(result))=false THEN
+				ELSIF isfinite(x) = false or isfinite(y)=false or isfinite(z)=false or isfinite(to_float(result))=false THEN
 					inf_lines := inf_lines + 1;
-					REPORT "infinite: " & to_string(x) & " and " & to_string(y) & ". Result is " & 
+					REPORT "infinite: " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & ". Result is " & 
 						to_string(to_float(result)) SEVERITY note;
 				END IF;
 				
@@ -172,11 +142,8 @@ BEGIN
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
 	END IF;
 	
-	IF op = '0' THEN
-		REPORT "Addition test finished normally." SEVERITY failure;
-	ELSE
-		REPORT "Subtraction test finished normally." SEVERITY failure;
-	END IF;
+	REPORT "Multiply-accumulate test finished normally." SEVERITY failure;
+
 	END PROCESS main;
 	
-END tb; 
+END tb; #
