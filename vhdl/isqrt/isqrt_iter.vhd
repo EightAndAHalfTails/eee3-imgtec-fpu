@@ -10,9 +10,9 @@ use ieee.fixed_pkg.all;
 
 entity isqrt_iter is
   port(
-    init : in std_logic_vector(24 downto 0);
-    prev : in std_logic_vector(24 downto 0);
-    curr : out std_logic_vector(24 downto 0)
+    init : in ufixed(0 downto -24);
+    prev : in ufixed(0 downto -24);
+    curr : out ufixed(0 downto -24)
   );
 end entity isqrt_iter;
 
@@ -28,10 +28,7 @@ begin
   -- Halley's method
   -- yn = S * xn^2
   -- xn+1 = xn/8 * (15 - yn(10 - 3yn))
-  s_init <= to_ufixed(init, 0, -24); -- S
-  s_prev <= to_ufixed(prev, 0, -24); -- xn
-  curr <= to_slv(s_curr); -- xn+1
   
-  y <= resize(s_init * s_prev * s_prev, y'left, y'right);
-  s_curr <= resize(s_prev * eighth * (fifteen - y*(ten - 3*y)), s_curr'left, s_curr'right);
+  y <= resize(init * prev * prev, y'left, y'right);
+  curr <= resize(prev * eighth * (fifteen - y*(ten - 3*y)), curr'left, curr'right);
 end architecture halley;
