@@ -100,9 +100,11 @@ begin
     variable shift_amount : integer;
   begin
     if input = neg_zero then
-      output <= neg_zero;
-    elsif input.sign = '1' then
+      output <= neg_inf;
+    elsif input.sign = '1' or isNan(input) then
       output <= nan;
+    elsif input = pos_inf then
+      output <= pos_zero;
     else
       shift_amount := leading_one(to_slv(s_final_approx)) - 1;
       report "Shifting by " & integer'image(shift_amount) severity note;
