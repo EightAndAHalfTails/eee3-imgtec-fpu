@@ -27,7 +27,6 @@ begin
   -- same signs result in a positive sign (0 sign bit)
   -- different signs result in a negative sign (1 sign bit)
   -----------------------------------------------------------
-  product.sign <= a.sign xor b.sign;
   -----------------------------------------------------------
 
   -----------------------------------------------------------
@@ -210,14 +209,17 @@ begin
       product <= nan;
     elsif final_exponent = to_signed(-127, 9) then
       -- denormal
+      product.sign <= a.sign xor b.sign;
       product.exponent <= (others => '0');
       product.significand <= std_logic_vector(final_significand(22 downto 0));
     elsif final_exponent > to_signed(127, 9) then
       --for now, round to inf
+      product.sign <= a.sign xor b.sign;
       product.exponent <= (others => '1');
       product.significand <= (others =>'0');
     else
       --normal
+      product.sign <= a.sign xor b.sign;
       product.exponent <= std_logic_vector(resize(unsigned(final_exponent + to_signed(127, 9)), 8));
       product.significand <= std_logic_vector(final_significand(22 downto 0));
     end if;
