@@ -120,10 +120,9 @@ BEGIN
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				IF to_float(result) /= to_float(tb_result_real) THEN
 				--IF result /= to_slv(tb_result) THEN
-
 					incorrect_result := incorrect_result+1;
 					REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result) SEVERITY warning;
+						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_real) SEVERITY warning;
 				END IF;
 
 				--------------------------------------------------------------
