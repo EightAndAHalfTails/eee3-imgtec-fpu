@@ -95,10 +95,10 @@ void testMultiplication(string testfile, string testfile_mul_output);
 //////////////////////main function//////////////////////////
 int main(){
 	//test addition unit
-	//testAddition(testfile, testfile_add_output, 1);
+	testAddition(testfile, testfile_add_output, 1);
 	
 	//test subtraction
-	testAddition(testfile, testfile_sub_output, 0);
+	//testAddition(testfile, testfile_sub_output, 0);
 	
 	//test multiplication
 	//testMultiplication(testfile, testfile_mul_output);
@@ -283,31 +283,8 @@ float footer(fp_t a_fp){
 int a_i;
 float a_f;
 
-// Rounding and normalisation
-if(a_fp.m != 0){
-int lzd = 25;
-int found = 0;
-int err;
-while(!found){
-err = extractBits(lzd,lzd,a_fp.m);
-//cout<<"lzd: "<<dec<<lzd<<endl;
-//cout<<"err: "<<dec<<err<<endl;
-if(err == 1){
-found = 1;
-}else{
-lzd--;
-}
-}
-
-lzd = lzd - 23;
-if(lzd > 0){
-a_fp.m >>= lzd;
-}else{
-a_fp.m <<= -lzd;
-}
-a_fp.e += lzd;
-
 // Remove significand's leading 1 bit
+if(a_fp.e != 0){
 a_fp.m &= 0x007FFFFF;
 }
 cout<<"Result: "<<a_fp.s<<"-"<<dec<<a_fp.e<<"-"<<hex<<a_fp.m<<endl;	
@@ -338,8 +315,16 @@ cout<<hex<<n<<endl
 return m;
 }
 
-void round_norm(fp_t &z, int lostbit_high, int lostbit_low){
+void round_norm(fp_t &z, int lostbit_high, int lostbit_low, bool IsUp){
 int LSB;
+
+if(z.e == 0){	// denormals cannot be rounded normally as the exponent cannot be scaled down
+if(z.m > 0x7FFFFF){
+z.e++;
+z.m--;
+}
+return;
+}
 
 // Normalisation
 if(z.m != 0){
@@ -362,7 +347,7 @@ if(lzd > 0){
 if(lostbit_low == 0){
 lostbit_low = lostbit_high;
 }
-lostbit_high = extractBits(0,1,z.m);
+lostbit_high = extractBits(0,0,z.m);
 z.m >>= lzd;
 }else{
 z.m <<= -lzd;
@@ -374,7 +359,11 @@ z.e += lzd;
 LSB = extractBits(0,0,z.m);
 //cout<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
 if(lostbit_high == 1 & (LSB | lostbit_low)){
+if(IsUp){
 z.m += 1;
+}else{
+z.m -= 1;
+}
 }
 }
 
@@ -422,12 +411,14 @@ z.e = y.e;
 z.e = x.e;
 }
 
-//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
 // decision: add or subtract?
 if(x.m >= y.m){
+if(x.e != 0 | x.m != 0){	// temporary fix to get around -0 + +0 = +0 error
 z.s = x.s;
+}
 if ((x.s == 1)^(y.s == 1)^IsSub){
 y.m = ~y.m;
 z.m = 1;
@@ -442,12 +433,21 @@ z.m = 1;
 }
 }
 
+cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl
+<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
 // add
 z.m += x.m + y.m;
 //cout<<"Significand Sum: "<<hex<<z.m<<endl;
+cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 // Rounding and normalisation
-round_norm(z, lostbit_high, lostbit_low);
+bool RoundUp = true;
+if ((x.s != y.s)&(!IsSub)){
+RoundUp = false;
+}
+round_norm(z, lostbit_high, lostbit_low, RoundUp);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 if(z.m == 0){
@@ -499,7 +499,7 @@ beys = extractBits(2*i,(2*i)+2,y.m);
 //cout<<dec<<2*i<<" to "<<(2*i)+2<<" is "<<hex<<beys<<endl;
 //cout<<hex<<z.m<<" ";
 if(lostone == 0){
-lostbits = extractBits(0,1,z.m);
+lostbits = extractBits(0,0,z.m);
 if(lostbits != 0){
 lostone = 1;
 }
@@ -524,7 +524,7 @@ case 7: NULL; break;
 
 if(y.e != 0){
 if(lostone == 0){
-lostbits = extractBits(0,1,z.m);
+lostbits = extractBits(0,0,z.m);
 if(lostbits != 0){
 lostone = 1;
 }
@@ -581,8 +581,8 @@ break;
 i++;
 }
 
-y = multiplier(f,y);	round_norm(y,0,0);	// calculate new value for denominator
-z = multiplier(f,z);	round_norm(z,0,0);	// calculate new value for numerator
+y = multiplier(f,y);	round_norm(y,0,0,1);	// calculate new value for denominator
+z = multiplier(f,z);	round_norm(z,0,0,1);	// calculate new value for numerator
 f = adder(two,y,true);
 }
 
@@ -687,15 +687,15 @@ int i = 0;
 while( i < 5 ){
 
 x0 = z;
-z = multiplier(y,x0);	round_norm(z,0,0);
+z = multiplier(y,x0);	round_norm(z,0,0,1);
 z = adder(two,z,true);
-z = multiplier(z,x0);	round_norm(z,0,0);
+z = multiplier(z,x0);	round_norm(z,0,0,1);
 
 i++;
 
 }
 
-z = multiplier(z,x);	round_norm(z,0,0);
+z = multiplier(z,x);	round_norm(z,0,0,1);
 z.s = sign;
 
 // Full number (with significand)
@@ -742,15 +742,15 @@ g = f;
 int i = 0;
 while( i < 5 ){
 
-h = multiplier(f,g);	round_norm(z,0,0);
-z = multiplier(g,x);	round_norm(z,0,0);
+h = multiplier(f,g);	round_norm(z,0,0,1);
+z = multiplier(g,x);	round_norm(z,0,0,1);
 f = adder(f,z,false);
 g = h;
 
 i++;
 }
 
-z = newton_divider(f,g); round_norm(z,0,0);
+z = newton_divider(f,g); round_norm(z,0,0,1);
 
 // Full number (with significand)
 cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -789,8 +789,8 @@ x0.s = 0; x0.e = 127 + x.e; x0.e >>= 1; x0.m = 0x800000;
 int i = 0;
 while( i < 5 ){
 
-z = newton_divider(x,x0);	round_norm(z,0,0);
-z = adder(z,x0,false);	round_norm(z,0,0);
+z = newton_divider(x,x0);	round_norm(z,0,0,1);
+z = adder(z,x0,false);	round_norm(z,0,0,1);
 z.e--;
 
 i++;
@@ -834,10 +834,10 @@ int i = 0;
 while( i < 5 ){
 
 x0 = z;
-z = multiplier(x0,x0);	round_norm(z,0,0);
-z = multiplier(x,z);	round_norm(z,0,0);
+z = multiplier(x0,x0);	round_norm(z,0,0,1);
+z = multiplier(x,z);	round_norm(z,0,0,1);
 z = adder(three,z,true);
-z = multiplier(x0,z);	round_norm(z,0,0);
+z = multiplier(x0,z);	round_norm(z,0,0,1);
 z.e--;
 
 i++;
@@ -880,10 +880,10 @@ halfno.e--;
 z = halfno;
 z = adder(quake_const,z,true);	// subtract the fp_t equivalent of 0x5f3759df
 y = z;
-z = multiplier(z,z);	round_norm(z,0,0);
-z = multiplier(halfno,z);	round_norm(z,0,0);
+z = multiplier(z,z);	round_norm(z,0,0,1);
+z = multiplier(halfno,z);	round_norm(z,0,0,1);
 z = adder(threehalves,z,true);
-z = multiplier(y,z);	round_norm(z,0,0);
+z = multiplier(y,z);	round_norm(z,0,0,1);
 
 // Full number (with significand)
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -921,10 +921,10 @@ int i = 0;
 while( i < 5 ){
 
 x0 = z;
-z = multiplier(x0,x0);	round_norm(z,0,0);
-z = multiplier(x,z);	round_norm(z,0,0);
+z = multiplier(x0,x0);	round_norm(z,0,0,1);
+z = multiplier(x,z);	round_norm(z,0,0,1);
 z = adder(three,z,true);
-z = multiplier(x0,z);	round_norm(z,0,0);
+z = multiplier(x0,z);	round_norm(z,0,0,1);
 z.e--;
 
 i++;
@@ -935,13 +935,93 @@ i++;
 // we multiply the reciprocal root we just calculated
 // by the original number
 if(!IsReciprocal){
-z = multiplier(x,z);	round_norm(z,0,0);
+z = multiplier(x,z);	round_norm(z,0,0,1);
 }
 
 // Full number (with significand)
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 return z;
+}
+
+
+
+void read_in(fp_t &a_fp, fp_t &b_fp){
+string line, reline;
+int size;
+ifstream myfile("input.txt");
+if (myfile.is_open()){
+while (myfile.good()){
+getline (myfile,line);
+
+a_fp.s = atoi(line.substr(0,1).c_str());
+
+reline = line.substr(1,8);
+for(int i = 0; i<8; i++){
+a_fp.e <<= 1;
+a_fp.e += atoi(reline.substr(i,1).c_str());
+}
+
+reline = line.substr(9,23);
+for(int i = 0; i<23; i++){
+a_fp.m <<= 1;
+a_fp.m += atoi(reline.substr(i,1).c_str());
+}
+
+b_fp.s = atoi(line.substr(33,1).c_str());
+
+reline = line.substr(34,8);
+for(int i = 0; i<8; i++){
+b_fp.e <<= 1;
+b_fp.e += atoi(reline.substr(i,1).c_str());
+}
+
+reline = line.substr(42,23);
+for(int i = 0; i<23; i++){
+b_fp.m <<= 1;
+b_fp.m += atoi(reline.substr(i,1).c_str());
+}
+}
+myfile.close();
+}else{
+cout<<"Unable to open file";
+}
+
+cout<<endl;
+if(a_fp.e != 0){
+a_fp.m |= 0x00800000;
+}
+if(b_fp.e != 0){
+b_fp.m |= 0x00800000;
+}
+}
+
+void output(fp_t &a_fp){
+string line, reline;
+int size;
+ifstream myfile("output.txt");
+if (myfile.is_open()){
+while (myfile.good()){
+getline (myfile,line);
+
+a_fp.s = atoi(line.substr(0,1).c_str());
+
+reline = line.substr(1,8);
+for(int i = 0; i<8; i++){
+a_fp.e <<= 1;
+a_fp.e += atoi(reline.substr(i,1).c_str());
+}
+
+reline = line.substr(9,23);
+for(int i = 0; i<23; i++){
+a_fp.m <<= 1;
+a_fp.m += atoi(reline.substr(i,1).c_str());
+}
+}
+myfile.close();
+}else{
+cout<<"Unable to open file";
+}
 }
 //------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------------------------
