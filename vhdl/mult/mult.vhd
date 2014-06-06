@@ -21,13 +21,6 @@ begin
   a <= slv2float(mult_in1);
   b <= slv2float(mult_in2);
   mult_out <= float2slv(product);
-  
-  -----------------------------------------------------------
-  -- compute sign
-  -- same signs result in a positive sign (0 sign bit)
-  -- different signs result in a negative sign (1 sign bit)
-  -----------------------------------------------------------
-  -----------------------------------------------------------
 
   -----------------------------------------------------------
   -- compute exponent
