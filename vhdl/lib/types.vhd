@@ -25,6 +25,9 @@ package types is
   constant neg_inf : float32_t := (sign => '1', exponent => (others => '1'), significand => (others => '0'));
   constant nan : float32_t := (sign => '1', exponent => (others => '1'), significand => (others => '1'));
   
+  function isInf(inp: float32_t) return boolean;
+  function isZero(inp: float32_t) return boolean;
+  function isNan(inp: float32_t) return boolean;
   function float2slv(inp: float32_t) return slv;
   function slv2float(inp: slv) return float32_t;
   function leading_one(inp: std_logic_vector) return integer;
@@ -32,6 +35,23 @@ package types is
 end package types;
 
 package body types is
+  function isInf(inp: float32_t) return boolean is
+  begin
+    return inp = pos_inf or inp = neg_inf;
+  end function isInf;
+  
+  function isZero(inp: float32_t) return boolean is
+  begin
+    return inp = pos_zero or inp = neg_zero;
+  end function isZero;
+  
+  function isNan(inp: float32_t) return boolean is
+    constant exp_ones : exponent_t := (others => '1');
+    constant sig_zeros : significand_t := (others => '0');    
+  begin
+    return inp.exponent = exp_ones and inp.significand /= sig_zeros;
+  end function isNan;
+  
   function float2slv(inp: float32_t) return slv is
   begin
     return inp.sign & inp.exponent & inp.significand;
