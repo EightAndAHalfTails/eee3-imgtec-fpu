@@ -16,7 +16,9 @@ USE ieee.numeric_std.ALL;
 USE ieee.float_pkg.ALL;		--ieee floating point package
 use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
+use ieee.math_real.all; --real data type
 USE std.textio.ALL;
+USE work.all;
 
 ENTITY multacc_tb IS
 END multacc_tb;
@@ -72,10 +74,12 @@ BEGIN
 		VARIABLE buf		: LINE;
 		VARIABLE x, y, z    : FLOAT32;
 		VARIABLE tb_result	: FLOAT32;
+		VARIABLE tb_result_real	: REAL;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 		VARIABLE nan_lines : INTEGER;
 		VARIABLE inf_lines : INTEGER;
+		VARIABLE inaccurate_lines : INTEGER;	--where using float pkg does not match real result
 	
 	BEGIN
 		reset <= '1';
@@ -86,6 +90,7 @@ BEGIN
 		incorrect_result := 0;
 		nan_lines := 0;
 		inf_lines := 0;
+		inaccurate_lines := 0;
 		
 		---------------------------------------------------------------------
 		-- read data file until eof
@@ -106,10 +111,15 @@ BEGIN
 				C<=to_slv(z);
 				
 				tb_result := (x*y)+z;
+				tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+				
+				IF tb_result /= to_float(tb_result_real) THEN
+					inaccurate_lines := inaccurate_lines + 1;
+				END IF;
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
-
-				IF result /= to_slv(tb_result) THEN
+				IF to_float(result) /= to_float(tb_result_real) THEN
+				--IF result /= to_slv(tb_result) THEN
 
 					incorrect_result := incorrect_result+1;
 					REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
@@ -140,8 +150,10 @@ BEGIN
 		REPORT "***************** TEST PASSED *****************";
 		REPORT "Number of NaN lines: " & INTEGER'IMAGE(nan_lines) SEVERITY note;
 		REPORT "Number of Inf lines: " & INTEGER'IMAGE(inf_lines) SEVERITY note;
+		REPORT "Number of inaccurate lines: " & INTEGER'IMAGE(inaccurate_lines) SEVERITY note;
 	ELSE
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
+		REPORT "Float pkg and Real pkg mismatch (number of lines): " & INTEGER'IMAGE(inaccurate_lines) SEVERITY note;
 	END IF;
 	
 	REPORT "Multiply-accumulate test finished normally." SEVERITY failure;
