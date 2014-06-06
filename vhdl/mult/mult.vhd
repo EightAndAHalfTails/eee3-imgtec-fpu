@@ -94,7 +94,7 @@ begin
   -- exponent to shift the significand up. If this can not be
   -- done, we can encode it as a denormal number.
   -----------------------------------------------------------
-  fp_normalise_round: process(computed_significand, computed_exponent)
+  fp_normalise_round: process(computed_significand, computed_exponent, a, b)
     variable final_significand : unsigned(23 downto 0); -- includes implied top bit
     variable final_exponent : signed(8 downto 0);
     constant one_half : unsigned(23 downto 0) := (23 => '1', others => '0');
