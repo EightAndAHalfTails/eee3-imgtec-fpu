@@ -203,7 +203,12 @@ begin
     -- which makes the range of final_exponent [-126, 127]
     report "final_exponent is " & integer'image(to_integer(final_exponent));
     report "final_significand is " & v2s(std_logic_vector(final_significand)) severity note;
-    if final_exponent = to_signed(-127, 9) then
+    if   (isInf(a) and isZero(b))
+      or (isInf(b) and isZero(a))
+      or isNan(a)
+      or isNan(b) then
+      product <= nan;
+    elsif final_exponent = to_signed(-127, 9) then
       -- denormal
       product.exponent <= (others => '0');
       product.significand <= std_logic_vector(final_significand(22 downto 0));
