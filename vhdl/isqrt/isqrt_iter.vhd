@@ -10,25 +10,45 @@ use ieee.fixed_pkg.all;
 
 entity isqrt_iter is
   port(
-    init : in ufixed(0 downto -24);
-    prev : in ufixed(0 downto -24);
-    curr : out ufixed(0 downto -24)
+    init : in float32_t;
+    prev : in float32_t;
+    curr : out float32_t
   );
 end entity isqrt_iter;
 
-architecture halley of isqrt_iter is
-  signal s_init, s_prev, s_curr : ufixed(0 downto -24);
-  signal y : ufixed(0 downto -24);
-  constant eighth : ufixed(0 downto -3) := to_ufixed(1/8, 0, -3);
-  constant three : ufixed(1 downto 0) := to_ufixed(3, 1, 0);
-  constant ten : ufixed (3 downto 0) := to_ufixed(10, 3, 0);
-  constant fifteen : ufixed (3 downto 0) := to_ufixed(15, 3, 0);
+architecture newton of isqrt_iter is
+  signal s_init, s_prev, s_curr : float32_t;
+  signal a, b, c, d : slv(31 downto 0);
+  constant threehalves : slv(31 downto 0) := x"3fc00000";
 begin
   --------------------------------
-  -- Halley's method
-  -- yn = S * xn^2
-  -- xn+1 = xn/8 * (15 - yn(10 - 3yn))
+  -- Newton's method
+  -- xn+1 = xn * (3/2 - (S/2 * xn * xn))
   
-  y <= resize(init * prev * prev, y'left, y'right);
-  curr <= resize(prev * eighth * (fifteen - y*(ten - 3*y)), curr'left, curr'right);
-end architecture halley;
+  m1: entity mult port map(
+    mult_in1 => float2slv(prev),
+    mult_in2 => float2slv(prev),
+    mult_out => a
+  );
+  
+  m2: entity mult port map(
+    mult_in1 => a,
+    mult_in2 => float2slv(init),
+    mult_out => b
+  );
+  
+  s1: entity addsub port map(
+    add_in1 => b,
+    add_in2 => threehalves,
+    operation_i => '1',
+    add_out => c
+  );
+  
+  m3: entity mult port map(
+    mult_in1 => c,
+    mult_in2 => float2slv(prev),
+    mult_out => d
+  );
+  
+  curr <= slv2float(d);
+end architecture newton;

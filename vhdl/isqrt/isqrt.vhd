@@ -16,87 +16,32 @@ entity isqrt is
     );
 end entity isqrt;
 
-architecture lut_halley of isqrt is
-  signal input, output : float32_t;
-  signal s_neg_half_exp : unsigned(7 downto 0);
-  signal s_sig_in, s_initial_guess, s_final_approx : ufixed(0 downto -24);
-  
-  type intermed_t is array (1 to iterations-1) of ufixed(0 downto -24);
-  signal intermediate_values : intermed_t;
-  
-  type lut_t is array (integer range <>) of ufixed(0 downto -23);
-  function build_lut(keysize: integer) return lut_t is
-    variable lut_size : integer := 2**keysize;
-    variable result : lut_t(0 to lut_size-1);
-    variable radicand_bits : ufixed(0 downto -23);
-    variable radicand_real : real;
-  begin
-    for i in result'left to result'right loop
-      radicand_bits := (others => '0');
-      radicand_bits(radicand_bits'high downto radicand_bits'high+1-keysize) := to_ufixed(i, radicand_bits'high, radicand_bits'high+1-keysize);
-      radicand_real := to_real(radicand_bits);
-      result(i) := to_ufixed(1.0 / math_real.sqrt(radicand_real), 0, -23);
-    end loop;
-    return result;
-  end function build_lut;  
-  constant initial_guess_lut : lut_t := build_lut(lookup_bits);
+architecture fast_newton of isqrt is
+  signal input, half_input, initial_guess, improved, output : float32_t;
 begin
   input <= slv2float(isqrt_in1);
   isqrt_out <= float2slv(output);
   
-  ------------------------------------------------
-  -- get_sig_exp
-  -- square rooting involves halving the exponent,
-  -- but if the exponent is odd then we must make
-  -- it even first by halving the significand and
-  -- incrementing the exponent.
-  ------------------------------------------------
-  -- if the unbiased exponent is even, we simply
-  -- shift it down and add 64.
-  -- if the unbiased exponent is odd, we decrease
-  -- the exponent by one and shift the significand
-  -- down one, before shifting the exponent. (this
-  -- corresponds to truncating the exponent)
-  get_sig_exp: process(input)
+  guess: process(input)
+    constant magic: slv(31 downto 0) := x"5f3759df";
   begin
-    s_neg_half_exp <= to_unsigned(63, 8) - unsigned(input.exponent(7 downto 1));
-    
-    if input.exponent(0) = '0' then -- exponent even -> exponent-127 odd -> sig needs shifting
-      s_sig_in <= resize(to_ufixed(0.5, 0, -1) + to_ufixed(input.significand, -2, -24), 0, -24);
-    else
-      s_sig_in <= resize(to_ufixed(1, 0, 0) + to_ufixed(input.significand, -1, -23), 0, -24);
-    end if;
-  end process get_sig_exp;
+    initial_guess <= slv2float(slv(signed(magic) - signed(shift_right(unsigned(float2slv(input)), 1))));
+  end process guess;
   
-  s_initial_guess <= initial_guess_lut(to_integer(unsigned(to_slv(s_sig_in)))) & '0';
+  half: process(input)
+  begin
+    half_input.sign <= input.sign;
+    half_input.exponent <= slv(unsigned(input.exponent) - to_unsigned(1, input.exponent'length));
+    half_input.significand <= input.significand;
+  end process half;
   
-  gen_iter: for i in 0 to iterations-1 generate
-    first: if i = 0 generate
-      iter0: entity isqrt_iter port map(
-        init => s_sig_in,
-        prev => s_initial_guess,
-        curr => intermediate_values(1)
-      );
-    end generate first;
-      
-    middle: if I > 0 and I < iterations-1 generate
-      iterx: entity isqrt_iter port map(
-        init => s_sig_in,
-        prev => intermediate_values(I),
-        curr => intermediate_values(I+1)
-      );
-    end generate middle;
-    
-    last: if I = iterations-1 generate
-      itern: entity isqrt_iter port map(
-        init => s_sig_in,
-        prev => intermediate_values(iterations-1),
-        curr => s_final_approx
-      );
-    end generate last;
-  end generate gen_iter;
+  improve: entity isqrt_iter(newton) port map(
+    init => half_input,
+    prev => initial_guess,
+    curr => improved
+  );
   
-  encode_output: process(input, s_final_approx, s_neg_half_exp)
+  encode_output: process(improved)
     variable shift_amount : integer;
   begin
     if input = neg_zero then
@@ -106,12 +51,8 @@ begin
     elsif input = pos_inf then
       output <= pos_zero;
     else
-      shift_amount := leading_one(to_slv(s_final_approx)) - 1;
-      report "Shifting by " & integer'image(shift_amount) severity note;
-      output.sign <= '0';
-      output.exponent <= slv(usg(s_neg_half_exp) - to_unsigned(shift_amount, s_neg_half_exp'length));
-      output.significand <= to_slv(scalb(s_final_approx, shift_amount)(0 downto -23));
+      output <= improved;
     end if;
   end process encode_output;
   
-end architecture lut_halley;
+end architecture fast_newton;
