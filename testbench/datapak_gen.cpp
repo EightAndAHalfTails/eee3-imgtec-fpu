@@ -9,7 +9,7 @@
 //			-DINF_PROB=x, percentage of +/- infinity, between 1 and 0 (default=0)	//
 //			-DNAN_PROB=x, percentage of NaNs, between 1 and 0 (default=0)			//
 //			-DZEROS_PROB=x, percentage of zeros, between 1 and 0 (default=0)		//
-//																					//
+//			-DPRINT_OPTIONS=x, print declared options (default=1)																		//
 // To compile: g++ -o datapak_gen.exe datapak_gen.cpp datapak_config.h <options>	//
 //																					//
 // author: Weng Lio										   							//
@@ -38,6 +38,15 @@ int main(){
 	int inum[NUM_INPUTS];
 	int i, j;
 
+	if(PRINT_OPTIONS){
+		cout << "num_inputs = " << NUM_INPUTS << endl;
+		cout << "numlines = " << NUMLINES << endl;
+		cout << "gen_neg = " << GEN_NEG << endl;
+		cout << "denorm_prob = " << DENORM_PROB << endl;
+		cout << "inf_prob = " << INF_PROB << endl;
+		cout << "nan_prob = " << NAN_PROB << endl;
+		cout << "zeros_prob = " << ZEROS_PROB << endl;
+	}
 	if(f.is_open()){
 		srand(static_cast<unsigned>(time(0)));	//generate random seed
 

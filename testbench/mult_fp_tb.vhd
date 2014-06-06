@@ -64,6 +64,7 @@ BEGIN
 		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
+		VARIABLE result_tb	: FLOAT32;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 	
@@ -83,22 +84,28 @@ BEGIN
 			ELSE
 				REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
 				
-				-------------------------------------------------------------
-				-- note: x and y from file must be in binary
-				-------------------------------------------------------------
 				read(buf, x);
 				read(buf, y);
 				
 				A<=to_slv(x);
 				B<=to_slv(y);
 				
-				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF result /= (to_slv(x*y)) THEN
-					incorrect_result := incorrect_result+1;
-					REPORT to_string(x) & "*" & to_string(y) & "is " & to_string(to_float(result)) &
-						". Correct answer should be " & to_string(x*y) SEVERITY warning;
-				END IF;
+				result_tb := x*y;
 				
+				WAIT UNTIL clk'EVENT AND clk = '1';
+				IF isnan(result_tb) THEN
+					IF not(isnan(to_float(result))) THEN
+						incorrect_result := incorrect_result+1;
+						REPORT to_string(x) & "*" & to_string(y) & " is " & to_string(to_float(result)) &
+							". Correct answer should be " & to_string(x*y) SEVERITY warning;	
+					END IF;				
+				ELSE
+					IF result /= (to_slv(x*y)) THEN
+						incorrect_result := incorrect_result+1;
+						REPORT to_string(x) & "*" & to_string(y) & " is " & to_string(to_float(result)) &
+							". Correct answer should be " & to_string(x*y) SEVERITY warning;
+					END IF;
+				END IF;
 			END IF;	
 			
 			n := n+1;

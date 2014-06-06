@@ -63,3 +63,8 @@
 #ifndef NO_ZEROES
 	#define NO_ZEROES 0
 #endif
+
+//print options in console
+#ifndef PRINT_OPTIONS
+	#define PRINT_OPTIONS 1
+#endif
