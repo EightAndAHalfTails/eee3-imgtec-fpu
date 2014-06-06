@@ -15,6 +15,9 @@ string testfile = "test1.txt";
 //this is for addition, we use tests: 1 - 11
 string testfile_add_output = "test1_add_output.txt";
 
+//this is for subtraction, we use tests: 1 - 11
+string testfile_sub_output = "test1_sub_output.txt";
+
 //this is for multiplication, we use tests: 1 - 8
 string testfile_mul_output = "test1_mul_output.txt";
 
@@ -70,7 +73,7 @@ fp_t quake_reciprocal_rooter(fp_t);
 fp_t dual_rooter(fp_t, bool);
 
 //functions for testing
-void testAddition(string name, string name2);
+void testAddition(string name, string name2, bool isAddition);
 void testMultiplication(string testfile, string testfile_mul_output);
 
 //void testDivision1_gold(string testfile, string testfile_div_output);
@@ -91,8 +94,11 @@ void testMultiplication(string testfile, string testfile_mul_output);
 
 //////////////////////main function//////////////////////////
 int main(){
-	//test addition/subtraction unit
-	testAddition(testfile, testfile_add_output);
+	//test addition unit
+	//testAddition(testfile, testfile_add_output, 1);
+	
+	//test subtraction
+	testAddition(testfile, testfile_sub_output, 0);
 	
 	//test multiplication
 	//testMultiplication(testfile, testfile_mul_output);
@@ -941,7 +947,7 @@ return z;
 //------------------------------------------------------------------------------------------------------------------
 
 //test addition
-void testAddition(string name, string name2){
+void testAddition(string name, string name2, bool isAddition){
 	//declare the variables needed to read a line from the text file
 	string line, reline;
 	int size;
@@ -1018,8 +1024,15 @@ void testAddition(string name, string name2){
 			b_fp.m |= 0x00800000;
 		}
 	
-		//do the addition
-		out = adder(a_fp, b_fp, 0);
+		//do addition or do subtraction
+		if (isAddition == 1) {
+			//do the addition
+			out = adder(a_fp, b_fp, 0);
+		}
+		else {
+			//do the subtraction
+			out = adder(a_fp, b_fp, 1);
+		}
 
 		//use the "pack_f" function, the result is now in a float data type
 		test_float = pack_f(out);
