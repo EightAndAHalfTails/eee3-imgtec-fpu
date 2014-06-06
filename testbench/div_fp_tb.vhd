@@ -50,7 +50,7 @@ ARCHITECTURE tb OF div_tb IS
 	
 	FUNCTION isfinite(x:FLOAT32) RETURN BOOLEAN IS
 	BEGIN
-		RETURN (x/=pos_inffp or x/=neg_inffp);
+		RETURN (x/=pos_inffp and x/=neg_inffp);
 	END;
 	
 BEGIN
@@ -110,7 +110,17 @@ BEGIN
 				A<=to_slv(x);
 				B<=to_slv(y);
 				
-				z := x/y;
+				----------------------------------------------------------------------
+				-- check if divide by zero and numerator is not NaN
+				IF iszero(y) and (not(isnan(x))) THEN
+					IF (x(8) xor y(8)) = '0' THEN
+						z := pos_inffp;
+					ELSE
+						z := neg_inffp;
+					END IF;
+				ELSE
+					z := x/y;
+				END IF;
 
 				----------------------------------------------------------------------
 				-- check z for zeros, infinities or NaNs

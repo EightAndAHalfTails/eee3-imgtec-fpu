@@ -36,7 +36,7 @@ for file in os.listdir("."):
 					for n in range(0,2):
 
 						if num[n][1:] == "Zero":
-							num[n] = num[n][0]+"1.000000P0"
+							num[n] = num[n][0]+"1.000000P-127"
 						elif num[n][1:] == "Inf":
 							num[n] = num[n][0]+"1.000000P+128"
 						elif num[n][:] == "Q" or num[n][:] == "S":
