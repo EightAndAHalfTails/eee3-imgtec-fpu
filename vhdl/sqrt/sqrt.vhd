@@ -104,8 +104,10 @@ begin
   begin
     if input = neg_zero then
       output <= neg_zero;
-    elsif input.sign = '1' then
+    elsif input.sign = '1' or isNan(input) then
       output <= nan;
+    elsif input = pos_inf then
+      output <= pos_inf;
     else
       shift_amount := leading_one(s_final_approx) - 1;
       report "Shifting by " & integer'image(shift_amount) severity note;
