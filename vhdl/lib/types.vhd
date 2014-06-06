@@ -83,9 +83,11 @@ package body types is
     
   function v2s(inp: std_logic_vector) return string is
     variable result: string(1 to inp'length);
+    variable bit: string(1 to 3);
   begin
     for i in inp'left downto inp'right loop
-      result(1+inp'left-i) := std_logic'image(inp(i))(2);
+      bit := std_logic'image(inp(i));
+      result(1+inp'left-i) := bit(2);
     end loop;
     return result;
   end function v2s;
