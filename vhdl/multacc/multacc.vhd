@@ -131,7 +131,7 @@ begin
   eff_sub<='1' when c.sign/= post_mult_sign else '0';
   comp_ab<=post_mult_significand(47 downto 23);
   comp_c<="01"&usg(c.significand);
-  ab_st_c<='1' when expo_diff < -0 or (expo_diff = 0 and comp_ab<comp_c) else '0';
+  ab_st_c<='1' when expo_diff < 0 or (expo_diff = 0 and comp_ab<comp_c) else '0';
   
   
   adder_c_align : process(c,expo_diff,eff_sub)
