@@ -2,6 +2,7 @@
 --Testbench for floating point multiplier
 --reads twoInput_datapak.txt for input data (IEEE 754 format)
 --use IEEE floating point package to calculate reference result
+--print results to mult_output.txt
 
 --vhdl test entity: mult
 --author: Weng Lio
@@ -15,6 +16,7 @@ USE ieee.float_pkg.ALL;		--ieee floating point package
 use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 USE std.textio.ALL;
+USE work.txt_util.ALL;
 
 ENTITY mult_tb IS
 END mult_tb;
@@ -62,6 +64,7 @@ BEGIN
 	------------------------------------------------------------
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
+		FILE fout			: TEXT OPEN write_mode IS "mult_output.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
 		VARIABLE result_tb	: FLOAT32;
@@ -93,6 +96,7 @@ BEGIN
 				result_tb := x*y;
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
+				print (fout, str(result));
 				IF isnan(result_tb) THEN
 					IF not(isnan(to_float(result))) THEN
 						incorrect_result := incorrect_result+1;
