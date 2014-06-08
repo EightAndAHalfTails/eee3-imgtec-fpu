@@ -280,7 +280,7 @@ END PROCESS normalise;
 ------------------------------------------------------
 --rounding
 ------------------------------------------------------
-rounding: PROCESS(postnorm_man_s,postnorm_e_s,A_e_s,prenorm_result_exception,div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity,div_input_is_nan)
+rounding: PROCESS(postnorm_man_s,postnorm_e_s,A_e_s,prenorm_result_exception,div_opA_is_zero,div_opB_is_zero,div_opA_is_infinity,div_opB_is_infinity,div_input_is_nan,div_opB_is_normal)
   VARIABLE rounded_result_man_s :slv(23 downto 0);
   VARIABLE rounded_result_e_s   :slv(7 downto 0);
   
@@ -316,7 +316,7 @@ BEGIN
          finalised_man_s<= (OTHERS=>'0');
   ELSE
 	    IF prenorm_result_exception ='1' THEN                      --overflow or underflow
-	       IF  A_e_s(7) ='1' THEN                                  --overflow
+	       IF  A_e_s(7) ='1' OR div_opB_is_normal='0'THEN                                  --overflow
             finalised_e_s<= (OTHERS=>'1');
 	          finalised_man_s<=(OTHERS=>'0');
 	       ELSE                                                    --underflow
