@@ -1,13 +1,12 @@
 ------------------------------------------------------------------
 --Testbench for floating point multiply-accumulate
 --reads threeInput_datapak.txt for input data
---use IEEE floating point package to calculate reference result
+--use ieee.math_real package to calculate reference result
 
---This testbench may have to be modify to improve accuracy of "correct" result
 
 --vhdl test entity: multacc
 --author: Weng Lio
---version: 05/06/2014
+--version: 09/06/2014
 ------------------------------------------------------------------
 
 LIBRARY ieee;
@@ -29,6 +28,14 @@ ARCHITECTURE tb OF multacc_tb IS
 	SIGNAL A, B, C, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=ab+c
 
 	ALIAS slv IS std_logic_vector;
+	
+	--------------------------------------------------------------
+	--TODO: switch to package constants
+	CONSTANT PMAXNORMAL_F	: FLOAT32 := "01111111011111111111111111111111";
+	CONSTANT NMAXNORMAL_F	: FLOAT32 := "11111111011111111111111111111111";
+	CONSTANT PINFINITY_F	: FLOAT32 := "01111111100000000000000000000000";
+	CONSTANT NINFINITY_F	: FLOAT32 := "11111111100000000000000000000000";
+
 	
 	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER IS
 	BEGIN
@@ -74,6 +81,7 @@ BEGIN
 		VARIABLE buf		: LINE;
 		VARIABLE x, y, z    : FLOAT32;
 		VARIABLE tb_result	: FLOAT32;
+		VARIABLE tb_result_float : FLOAT32;
 		VARIABLE tb_result_real	: REAL;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
@@ -110,20 +118,43 @@ BEGIN
 				B<=to_slv(y);
 				C<=to_slv(z);
 				
-				tb_result := (x*y)+z;
+				tb_result := mac(x,y,z);
 				tb_result_real := (to_real(x)*to_real(y))+to_real(z);
 				
-				IF tb_result /= to_float(tb_result_real) THEN
+				--------------------------------------------------------------
+				-- check if overflow
+				-- testbench may fail for near overflow occasions
+				IF tb_result_real > to_real(PMAXNORMAL_F) THEN
+					tb_result_float := PINFINITY_F;
+				ELSIF tb_result_real < to_real(NMAXNORMAL_F) THEN
+					tb_result_float := NINFINITY_F;
+				ELSE
+					tb_result_float := to_float(tb_result_real);
+				END IF;
+				
+				-- compare result obtained from float_pkg and math.real
+				IF tb_result /= tb_result_float THEN
 					inaccurate_lines := inaccurate_lines + 1;
 				END IF;
 				
+				--------------------------------------------------------------
+				-- check result from design
 				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF to_float(result) /= to_float(tb_result_real) THEN
+				IF to_float(result) /= tb_result THEN
 				--IF result /= to_slv(tb_result) THEN
 					incorrect_result := incorrect_result+1;
 					REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_real) SEVERITY warning;
+						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result) SEVERITY warning;
 				END IF;
+				--------------------------------------------------------------
+				-- check result from design
+				-- WAIT UNTIL clk'EVENT AND clk = '1';
+				-- IF to_float(result) /= tb_result_float THEN
+				-- --IF result /= to_slv(tb_result) THEN
+					-- incorrect_result := incorrect_result+1;
+					-- REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+						-- to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
+				-- END IF;
 
 				--------------------------------------------------------------
 				-- if either input or output is NaN
@@ -149,7 +180,7 @@ BEGIN
 		REPORT "***************** TEST PASSED *****************";
 		REPORT "Number of NaN lines: " & INTEGER'IMAGE(nan_lines) SEVERITY note;
 		REPORT "Number of Inf lines: " & INTEGER'IMAGE(inf_lines) SEVERITY note;
-		REPORT "Number of inaccurate lines: " & INTEGER'IMAGE(inaccurate_lines) SEVERITY note;
+		REPORT "Float pkg and Real pkg mismatch (number of lines): " & INTEGER'IMAGE(inaccurate_lines) SEVERITY note;
 	ELSE
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
 		REPORT "Float pkg and Real pkg mismatch (number of lines): " & INTEGER'IMAGE(inaccurate_lines) SEVERITY note;
