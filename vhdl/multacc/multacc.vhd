@@ -208,7 +208,7 @@ begin
   -----------------------------------------------------------------------------
   --*******need to add if post_add_lsresult overflows****************!!!!!!!!!
   -----------------------------------------------------------------------------
-  adder:process(aligned_c,post_mult_significand,post_mult_exp,sticky_b1,eff_sub,expo_diff)
+  adder:process(aligned_c,post_mult_significand,post_mult_exp,sticky_b1,eff_sub)
     variable result : unsigned(48 downto 0);
     variable post_add_lsresult:unsigned(23 downto 0);
     variable post_add_rsresult:unsigned(47 downto 0);
@@ -217,12 +217,8 @@ begin
     constant zeros :unsigned(23 downto 0):=(others=>'0');
   begin
     s_bit:=sticky_b1;
-    
-    if expo_diff>25 then
-      result:=resize(post_mult_significand,49)+usg(resize(sgn(aligned_c(47 downto 0)),49));
-    else
+
       result:=resize(post_mult_significand,49)+resize(usg(aligned_c(47 downto 0)),49);
-    end if;
     
     if result(48)='1' then                                              --overflow
       post_add_lsresult:=aligned_c(71 downto 48)+1;
@@ -261,7 +257,7 @@ sign_logic:PROCESS(post_mult_sign,c,expo_diff)
 -------------------------------------------------------------------------------  
   --normalization and rounding
   -----------------------------------------------------------------------------
-  normalise:process(expo_diff,pre_norm_signifcand,aligned_c,c,pre_norm_exponent,sticky_b2,eff_sub,ab_st_c)
+  normalise:process(expo_diff,pre_norm_signifcand,aligned_c,c,pre_norm_exponent,sticky_b2,eff_sub,ab_st_c)--,
     variable leadingzeros,leadingones: integer range 0 to 48;
     variable sft_result_significand : usg(47 downto 0);
     variable s_bit:std_logic;
@@ -301,33 +297,26 @@ end if;
       s_bit:=s_bit OR sft_result_significand(i);
     end loop; 
     
-    if eff_sub='1' and ab_st_c='1' then
-      if expo_diff<-25 then
-      post_norm_significand<=(not (aligned_c(71 downto 47)))&'0'+4;
-      post_norm_exponent<="00"&sgn(c.exponent);
-      else
-      post_norm_significand<=(not sft_result_significand(47 downto 23))&s_bit+2;
-      post_norm_exponent<=pre_norm_exponent-leadingzeros-leadingones;
-      end if;
-    else
-      
+  --  if eff_sub='1' and ab_st_c='1' then
+	--post_norm_significand<=sft_result_significand(47 downto 23)&s_bit;
+  --  else
+	post_norm_significand<=sft_result_significand(47 downto 23)&s_bit;
+  --  end if;
     
       if expo_diff<-25 then
-      post_norm_significand<=sft_result_significand(47 downto 22);
       post_norm_exponent<="00"&sgn(c.exponent);
       else
-      post_norm_significand<=sft_result_significand(47 downto 23)&s_bit;
       post_norm_exponent<=pre_norm_exponent-leadingzeros-leadingones;
       --************!!!consider result is denormal*********
       end if;
-    end if;
+ 	
   end process normalise;
 
   --------------------------------------------------------------------------------------
   --rounder
   --The process round the result to be to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_norm_significand,post_norm_exponent,temp_sign)--,eff_sub,ab_st_c
+  rounder:PROCESS(post_norm_significand,post_norm_exponent,temp_sign,eff_sub,ab_st_c)--,
 
     VARIABLE rounded_result_e_s		:sgn(9 downto 0);
     VARIABLE rounded_result_man_s	:usg(23 downto 0);
@@ -353,7 +342,12 @@ end if;
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'0');
     else
+      if eff_sub='1' and ab_st_c='1' then
+      result.significand	<=	slv(not rounded_result_man_s(22 downto 0)+1);
+      else
       result.significand	<=	slv(rounded_result_man_s(22 downto 0));
+      end if;
+      
       result.exponent	<=	slv(rounded_result_e_s(7 downto 0));
     end if;
     result.sign	<=	temp_sign;
