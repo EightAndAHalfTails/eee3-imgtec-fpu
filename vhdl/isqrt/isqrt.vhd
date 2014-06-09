@@ -41,7 +41,7 @@ begin
     curr => improved
   );
   
-  encode_output: process(improved)
+  encode_output: process(improved, input)
     variable shift_amount : integer;
   begin
     if input = neg_zero then
