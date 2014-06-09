@@ -112,7 +112,7 @@ BEGIN
 				
 				----------------------------------------------------------------------
 				-- check if divide by zero and numerator is not NaN
-				IF iszero(y) and (not(isnan(x))) THEN
+				IF iszero(y) and (not(isnan(x))) and (not(iszero(x))) THEN
 					IF (x(8) xor y(8)) = '0' THEN
 						z := pos_inffp;
 					ELSE
@@ -201,8 +201,8 @@ BEGIN
 					END IF;
 				END IF;
 				
-				REPORT "z_l = " & to_string(z_l);
-				REPORT "z_r = " & to_string(z_r);
+				--REPORT "z_l = " & to_string(z_l);
+				--REPORT "z_r = " & to_string(z_r);
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				--REPORT "z = " & to_string(z) & " and result = " & to_string(to_float(result));
