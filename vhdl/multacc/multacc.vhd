@@ -54,7 +54,6 @@ architecture fused of multacc is
   signal sticky_b1,sticky_b2 : std_logic; 
   
   signal eff_sub ,ab_st_c: std_logic;
-  signal comp_ab,comp_c : usg(24 downto 0);
   
   signal a,b,c,result : float32_t;
   
@@ -128,9 +127,7 @@ begin
   expo_diff<=sgn(Resize(post_mult_exp,10)-Resize(usg(c.exponent),10)-127);
   --computes the exponent difference
   eff_sub<='1' when c.sign/= post_mult_sign else '0';
-  comp_ab<=post_mult_significand(47 downto 23);
-  comp_c<="01"&usg(c.significand);
-  ab_st_c<='1' when expo_diff < 0 or (expo_diff = 0 and comp_ab<comp_c) else '0';
+  ab_st_c<='1' when expo_diff < -1 or (expo_diff = -1 and post_mult_significand(47 downto 24)<'1'&usg(c.significand)) or (expo_diff=0 and post_mult_significand(47 downto 23)<"01"&usg(c.significand)) else '0';
   
   
   adder_c_align : process(c,expo_diff,eff_sub)
@@ -246,9 +243,9 @@ begin
     sticky_b2<=s_bit;
   end process adder;
   
-sign_logic:PROCESS(post_mult_sign,c,expo_diff)
+sign_logic:PROCESS(post_mult_sign,c,eff_sub,ab_st_c)
 	BEGIN
-		IF expo_diff<0 THEN			
+		IF eff_sub='1' and ab_st_c='1' THEN			
 			temp_sign<=c.sign;	
 		ELSE	
 			temp_sign<=post_mult_sign;	
@@ -316,7 +313,7 @@ end if;
   --rounder
   --The process round the result to be to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_norm_significand,post_norm_exponent,temp_sign,eff_sub,ab_st_c)--,
+  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,eff_sub,ab_st_c,c)--,
 
     VARIABLE rounded_result_e_s		:sgn(9 downto 0);
     VARIABLE rounded_result_man_s	:usg(23 downto 0);
@@ -335,6 +332,9 @@ end if;
       rounded_result_e_s:=post_norm_exponent(9 downto 0);
     END IF;
     
+  if post_mult_significand =0 then
+      result<=c;
+  else  
     if	rounded_result_e_s(9)='1' then
       result.exponent	<=(others=>'0');
       result.significand<=(others=>'0');
@@ -346,10 +346,10 @@ end if;
       result.significand	<=	slv(not rounded_result_man_s(22 downto 0)+1);
       else
       result.significand	<=	slv(rounded_result_man_s(22 downto 0));
-      end if;
-      
+      end if;      
       result.exponent	<=	slv(rounded_result_e_s(7 downto 0));
     end if;
+  end if;
     result.sign	<=	temp_sign;
   END PROCESS rounder;
 
