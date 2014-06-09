@@ -97,6 +97,7 @@ BEGIN
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				print (fout, str(result));
+				REPORT "result_tb is " & to_string(result_tb);
 				IF isnan(result_tb) THEN
 					IF not(isnan(to_float(result))) THEN
 						incorrect_result := incorrect_result+1;

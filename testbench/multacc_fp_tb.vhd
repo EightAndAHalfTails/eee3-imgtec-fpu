@@ -29,14 +29,6 @@ ARCHITECTURE tb OF multacc_tb IS
 
 	ALIAS slv IS std_logic_vector;
 	
-	--------------------------------------------------------------
-	--TODO: switch to package constants
-	CONSTANT PMAXNORMAL_F	: FLOAT32 := "01111111011111111111111111111111";
-	CONSTANT NMAXNORMAL_F	: FLOAT32 := "11111111011111111111111111111111";
-	CONSTANT PINFINITY_F	: FLOAT32 := "01111111100000000000000000000000";
-	CONSTANT NINFINITY_F	: FLOAT32 := "11111111100000000000000000000000";
-
-	
 	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER IS
 	BEGIN
 		RETURN to_integer(SIGNED(x));
@@ -120,18 +112,14 @@ BEGIN
 				
 				tb_result := mac(x,y,z);
 				tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+				tb_result_float := to_float(tb_result_real);
 				
 				--------------------------------------------------------------
 				-- check if overflow
-				-- testbench may fail for near overflow occasions
-				IF tb_result_real > to_real(PMAXNORMAL_F) THEN
-					tb_result_float := PINFINITY_F;
-				ELSIF tb_result_real < to_real(NMAXNORMAL_F) THEN
-					tb_result_float := NINFINITY_F;
-				ELSE
-					tb_result_float := to_float(tb_result_real);
+				IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
+					tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
 				END IF;
-				
+
 				-- compare result obtained from float_pkg and math.real
 				IF tb_result /= tb_result_float THEN
 					inaccurate_lines := inaccurate_lines + 1;
@@ -140,21 +128,11 @@ BEGIN
 				--------------------------------------------------------------
 				-- check result from design
 				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF to_float(result) /= tb_result THEN
-				--IF result /= to_slv(tb_result) THEN
+				IF to_float(result) /= tb_result_float THEN
 					incorrect_result := incorrect_result+1;
 					REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result) SEVERITY warning;
+						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
 				END IF;
-				--------------------------------------------------------------
-				-- check result from design
-				-- WAIT UNTIL clk'EVENT AND clk = '1';
-				-- IF to_float(result) /= tb_result_float THEN
-				-- --IF result /= to_slv(tb_result) THEN
-					-- incorrect_result := incorrect_result+1;
-					-- REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-						-- to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
-				-- END IF;
 
 				--------------------------------------------------------------
 				-- if either input or output is NaN
