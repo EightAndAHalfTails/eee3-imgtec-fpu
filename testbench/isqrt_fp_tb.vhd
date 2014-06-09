@@ -201,9 +201,12 @@ BEGIN
 					END IF;
 				END IF;
 				
+
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------
 				--check result
+				REPORT "isqrt_l = " & to_string(isqrt_l);
+				REPORT "isqrt_r = " & to_string(isqrt_r);
 				IF (to_float(result) > to_float(isqrt_r)) OR (to_float(result) < to_float(isqrt_l)) THEN
 					incorrect_result := incorrect_result+1;
 					REPORT "Inverse square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
