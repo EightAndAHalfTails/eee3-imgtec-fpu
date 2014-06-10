@@ -19,7 +19,7 @@ architecture naive of mult is
   signal computed_exponent : integer range -254 to 256;
   signal computed_significand : ufixed(1 downto -46);
   
-  signal norm_exp : integer range -300 to 257;
+  signal norm_exp : integer range -300 to 258;
   signal norm_sig : ufixed(0 downto -23);
     
 begin
@@ -79,8 +79,9 @@ begin
     variable shift_amount: integer range -128 to 46;
     variable shifted_sig : ufixed(1 downto -47);
     variable rounded_sig : ufixed(0 downto -23);
-    variable shifted_exp : integer range -300 to 257;
+    variable shifted_exp : integer range -300 to 258;
     variable roundup : boolean;
+    variable round : ufixed(1 downto -23);
     
     constant ulp : ufixed(rounded_sig'high downto rounded_sig'low) := (rounded_sig'low => '1', others => '0');
   begin
@@ -105,7 +106,11 @@ begin
     roundup := scalb(shifted_sig(-24 downto -47), 23) > to_ufixed(0.5, 0, -1)
             or (scalb(shifted_sig(-24 downto -47), 23) = to_ufixed(0.5, 0, -1) and rounded_sig(rounded_sig'low) = '1');
     if roundup then
-      rounded_sig := resize(rounded_sig + ulp, 0, -23);
+      round := rounded_sig + ulp;
+      rounded_sig := round(0 downto -23);
+      if round(1) = '1' then -- overflow while rounding
+        shifted_exp := shifted_exp + 1;
+      end if;
     end if;
     
     norm_exp <= shifted_exp;
