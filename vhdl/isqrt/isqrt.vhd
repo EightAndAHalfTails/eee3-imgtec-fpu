@@ -17,13 +17,14 @@ entity isqrt is
 end entity isqrt;
 
 architecture fast_newton of isqrt is
-  signal input, half_input, initial_guess, improved, output : float32_t;
+  signal input, half_input, initial_guess, improved, improveder, improvedest, output : float32_t;
 begin
   input <= slv2float(isqrt_in1);
   isqrt_out <= float2slv(output);
   
   guess: process(input)
-    constant magic: slv(31 downto 0) := x"5f3759df";
+    --constant magic: slv(31 downto 0) := x"5f3759df";
+    constant magic: slv(31 downto 0) := x"5f375a86";
   begin
     initial_guess <= slv2float(slv(signed(magic) - signed(shift_right(unsigned(float2slv(input)), 1))));
   end process guess;
@@ -41,7 +42,19 @@ begin
     curr => improved
   );
   
-  encode_output: process(improved, input)
+  improve2: entity isqrt_iter(newton) port map(
+    init => half_input,
+    prev => improved,
+    curr => improveder
+  );
+  
+  improve3: entity isqrt_iter(newton) port map(
+    init => half_input,
+    prev => improveder,
+    curr => improvedest
+  );
+  
+  encode_output: process(improvedest, input)
     variable shift_amount : integer;
   begin
     if input = neg_zero then
@@ -51,7 +64,7 @@ begin
     elsif input = pos_inf then
       output <= pos_zero;
     else
-      output <= improved;
+      output <= improvedest;
     end if;
   end process encode_output;
   

@@ -132,7 +132,7 @@ BEGIN
 				ELSE
 					exponent_r := '0'& unsigned(isqrt_x(7 DOWNTO 0));
 					exponent_l := '0'& unsigned(isqrt_x(7 DOWNTO 0));				
-					temp:=unsigned(isqrt_x(-1 DOWNTO -23));
+					temp:=unsigned(to_slv(isqrt_x(-1 DOWNTO -23)));
 					
 					-- if isqrt_x is positive, then isqrt_r is greater than isqrt_x and isqrt_l is smaller than isqrt_x
 					IF isqrt_x(8) = '0' THEN  

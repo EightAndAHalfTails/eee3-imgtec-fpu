@@ -38,8 +38,8 @@ begin
   );
   
   s1: entity addsub port map(
-    add_in1 => b,
-    add_in2 => threehalves,
+    add_in1 => threehalves,
+    add_in2 => b,
     operation_i => '1',
     add_out => c
   );
