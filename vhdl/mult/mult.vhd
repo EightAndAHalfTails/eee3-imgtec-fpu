@@ -97,7 +97,7 @@ begin
     -- assure that do not shift below 2^-126
     if computed_exponent - shift_amount < -126 then
       shift_amount := computed_exponent + 126;
-      shifted_exp := -127;
+      shifted_exp := -126;
     end if;
     
     report "shift_amount is " & integer'image(shift_amount);
@@ -142,7 +142,7 @@ begin
       else
         product <= pos_zero;
       end if;
-    elsif norm_exp < -126 then
+    elsif norm_exp = -126 and norm_sig(0) = '0' then
       -- denormal
       product.sign <= a.sign xor b.sign;
       product.exponent <= (others => '0');
