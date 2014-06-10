@@ -71,6 +71,9 @@ BEGIN
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "threeInput_datapak.txt";
 		VARIABLE buf		: LINE;
+		VARIABLE cmd		: STRING(1 TO 4);
+		VARIABLE header		: STRING(1 TO 3);
+		VARIABLE ibmvectors	: BOOLEAN;
 		VARIABLE x, y, z    : FLOAT32;
 		VARIABLE tb_result	: FLOAT32;
 		VARIABLE tb_result_float : FLOAT32;
@@ -94,6 +97,14 @@ BEGIN
 		
 		---------------------------------------------------------------------
 		-- read data file until eof
+		readline(f, buf);
+		read(buf, header);
+		IF header = "ibm" THEN
+			ibmvectors := true;
+		ELSE
+			ibmvectors := false;
+		END IF;
+		
 		WHILE NOT endfile(f) LOOP
 			WAIT UNTIL clk'EVENT and clk = '1';
 			readline(f, buf);
@@ -102,53 +113,60 @@ BEGIN
 			ELSE
 				REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
 				
-				read(buf, x);
-				read(buf, y);
-				read(buf, z);
-				
-				A<=to_slv(x);
-				B<=to_slv(y);
-				C<=to_slv(z);
-				
-				tb_result := mac(x,y,z);
-				tb_result_real := (to_real(x)*to_real(y))+to_real(z);
-				tb_result_float := to_float(tb_result_real);
-				
-				--------------------------------------------------------------
-				-- check if overflow
-				IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
-					tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
+				IF ibmvectors = true THEN
+					read(buf, cmd);
+				ELSE
+					cmd := "0100";
 				END IF;
+				
+				IF cmd = "0100" THEN
+					read(buf, x);
+					read(buf, y);
+					read(buf, z);
+					
+					A<=to_slv(x);
+					B<=to_slv(y);
+					C<=to_slv(z);
+					
+					tb_result := mac(x,y,z);
+					tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+					tb_result_float := to_float(tb_result_real);
+					
+					--------------------------------------------------------------
+					-- check if overflow
+					IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
+						tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
+					END IF;
 
-				-- compare result obtained from float_pkg and math.real
-				IF tb_result /= tb_result_float THEN
-					inaccurate_lines := inaccurate_lines + 1;
-				END IF;
-				
-				--------------------------------------------------------------
-				-- check result from design
-				WAIT UNTIL clk'EVENT AND clk = '1';
-				IF to_float(result) /= tb_result_float THEN
-					incorrect_result := incorrect_result+1;
-					REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-						to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
-				END IF;
+					-- compare result obtained from float_pkg and math.real
+					IF tb_result /= tb_result_float THEN
+						inaccurate_lines := inaccurate_lines + 1;
+					END IF;
+					
+					--------------------------------------------------------------
+					-- check result from design
+					WAIT UNTIL clk'EVENT AND clk = '1';
+					IF to_float(result) /= tb_result_float THEN
+						incorrect_result := incorrect_result+1;
+						REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+							to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
+					END IF;
 
-				--------------------------------------------------------------
-				-- if either input or output is NaN
-				IF unordered(x,y) = true THEN
-					nan_lines := nan_lines + 1;
-					REPORT "NaN input(s): " & to_string(x) & " and " & to_string(y) & ". Result is " & 
-						to_string(to_float(result)) SEVERITY note;			
-				--------------------------------------------------------------
-				-- there's something wrong with this ELSIF condition 
-				-- but whatever I will change it later
-				ELSIF isfinite(x) = false or isfinite(y)=false or isfinite(z)=false or isfinite(to_float(result))=false THEN
-					inf_lines := inf_lines + 1;
-					REPORT "infinite: " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & ". Result is " & 
-						to_string(to_float(result)) SEVERITY note;
-				END IF;
-				
+					--------------------------------------------------------------
+					-- if either input or output is NaN
+					IF unordered(x,y) = true THEN
+						nan_lines := nan_lines + 1;
+						REPORT "NaN input(s): " & to_string(x) & " and " & to_string(y) & ". Result is " & 
+							to_string(to_float(result)) SEVERITY note;			
+					--------------------------------------------------------------
+					-- there's something wrong with this ELSIF condition 
+					-- but whatever I will change it later
+					ELSIF isfinite(x) = false or isfinite(y)=false or isfinite(z)=false or isfinite(to_float(result))=false THEN
+						inf_lines := inf_lines + 1;
+						REPORT "infinite: " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & ". Result is " & 
+							to_string(to_float(result)) SEVERITY note;
+					END IF;
+				END IF;				
 			END IF;	
 			
 			n := n+1;
