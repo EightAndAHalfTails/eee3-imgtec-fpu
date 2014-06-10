@@ -8,19 +8,30 @@ use work.all;
 use work.types.all;
 
 entity isqrt is
-  generic(lookup_bits : integer := 4;
-          iterations : integer := 8);
+  generic(iterations : natural := 3);
   port(
+    clk, reset, start : in std_logic;
+    done : out std_logic;
     isqrt_in1 : in std_logic_vector(31 downto 0);
     isqrt_out : out std_logic_vector(31 downto 0)
     );
 end entity isqrt;
 
 architecture fast_newton of isqrt is
-  signal input, half_input, initial_guess, improved, improveder, improvedest, output : float32_t;
+  signal input, held_input, half_input, initial_guess, improve_in, improve_out, last_ans, output : float32_t;
+
+  signal cycle, ncycle : integer range 0 to iterations-1 := 0;
 begin
-  input <= slv2float(isqrt_in1);
-  isqrt_out <= float2slv(output);
+isqrt_out <= float2slv(output);
+  
+when_done: process(cycle)
+  begin
+    if cycle = iterations-1 then
+      done <= '1';
+    else
+      done <= '0';
+    end if;
+  end process when_done;
   
   guess: process(input)
     --constant magic: slv(31 downto 0) := x"5f3759df";
@@ -38,23 +49,59 @@ begin
   
   improve: entity isqrt_iter(newton) port map(
     init => half_input,
-    prev => initial_guess,
-    curr => improved
+    prev => improve_in,
+    curr => improve_out
   );
   
-  improve2: entity isqrt_iter(newton) port map(
-    init => half_input,
-    prev => improved,
-    curr => improveder
-  );
+  hold_input: process
+  begin
+    wait until clk'event and clk='1';
+    if reset = '1' then
+      held_input <= pos_zero;
+    elsif start = '1' then
+      held_input <= slv2float(isqrt_in1);
+    end if;
+  end process hold_input;
   
-  improve3: entity isqrt_iter(newton) port map(
-    init => half_input,
-    prev => improveder,
-    curr => improvedest
-  );
+  get_input: process(isqrt_in1, held_input)
+  begin
+    if cycle = 0 then
+      input <= slv2float(isqrt_in1);
+    else
+      input <= held_input;
+    end if;
+  end process get_input;
   
-  encode_output: process(improvedest, input)
+  fsm: process
+  begin
+    wait until clk'event and clk='1';
+    if reset = '1' then
+      cycle <= 0;
+      last_ans <= pos_zero;
+    else
+      cycle <= ncycle;
+      last_ans <= improve_out;
+    end if;
+  end process fsm;
+  
+  fsm_comb: process(cycle, initial_guess, last_ans)
+  begin
+    if cycle = 0 and start = '0' then
+      improve_in <= initial_guess;
+      ncycle <= 0;
+    elsif cycle = 0 and start = '1' then
+      improve_in <= initial_guess;
+      ncycle <= 1;
+    elsif cycle = iterations-1 then
+      improve_in <= last_ans;
+      ncycle <= 0;
+    else
+      improve_in <= last_ans;
+      ncycle <= cycle + 1;
+    end if;
+  end process fsm_comb;
+  
+  encode_output: process(improve_out, input)
     variable shift_amount : integer;
   begin
     if input = neg_zero then
@@ -64,7 +111,7 @@ begin
     elsif input = pos_inf then
       output <= pos_zero;
     else
-      output <= improvedest;
+      output <= improve_out;
     end if;
   end process encode_output;
   
