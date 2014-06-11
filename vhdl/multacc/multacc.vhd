@@ -398,11 +398,7 @@ begin
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'0');
     else
-  --    if eff_sub='1' and ab_st_c='1' then
-  --    result.significand	<=	slv(not rounded_result_man_s(22 downto 0)+1);
-  --    else
       result.significand	<=	slv(rounded_result_man_s(22 downto 0));
- --     end if;      
       result.exponent	   <=	slv(rounded_result_e_s(7 downto 0));
     end if;
     result.sign	<=	temp_sign;
