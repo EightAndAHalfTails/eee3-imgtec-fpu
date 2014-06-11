@@ -58,7 +58,7 @@ when_done: process(cycle)
     wait until clk'event and clk='1';
     if reset = '1' then
       held_input <= pos_zero;
-    elsif start = '1' then
+    elsif cycle = 0 and start = '1' then
       held_input <= slv2float(isqrt_in1);
     end if;
   end process hold_input;
