@@ -1,6 +1,6 @@
 library ieee;
-use IEEE.std_logic_1164.all;
-use IEEE.numeric_std.all;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.all;
 use work.types.all;
 
@@ -12,12 +12,12 @@ use work.types.all;
 ---------------------------------------------------
 entity dot2 is
   port(
-    dot2_in1, dot2_in2, dot2_in3,dot2_in4 : in std_logic_vector(31 downto 0);
+    dot2_in1, dot2_in2, dot2_in3, dot2_in4 : in std_logic_vector(31 downto 0);
     dot2_out : out std_logic_vector(31 downto 0)
     );
 end entity dot2;
 
-architecture implementation of dot2 is
+architecture chained of dot2 is
 
   signal a,b,c,d,result : float32_t;
 
@@ -33,7 +33,7 @@ architecture implementation of dot2 is
   --flags
   signal ab_st_cd                           :std_logic;
   
-begin  -- implementation
+begin  -- chained
   -----------------------------------------------------------------------------
   --unpack and pack
   -----------------------------------------------------------------------------
@@ -46,84 +46,96 @@ begin  -- implementation
 -------------------------------------------------------------------------------
   --multply
   -----------------------------------------------------------------------------
-mult1: entity multiply 
-port map (
-  a=>a,
-  b=>b,
-  post_mult_sign=>post_mult_sign1,
-  post_mult_exp=>post_mult_exp1,
-  post_mult_significand=> post_mult_significand1
-  );
-mult2: entity multiply 
-port map (
-  a=>c,
-  b=>d,
-  post_mult_sign=>post_mult_sign2,
-  post_mult_exp=>post_mult_exp2,
-  post_mult_significand=> post_mult_significand2
-  );
-
-exp_diff<=sgn(resize(post_mult_exp1,10)-resize(post_mult_exp2,10));
-ab_st_cd<='1' when exp_diff <0 or (exp_diff=0 and post_mult_significand1<post_mult_significand2) else '0';
+  --This part compute the two products separately and result is returned with 1
+  --bit sign+9 bit exponent(with carry)+48 bit significand(two integer bits)
+  -----------------------------------------------------------------------------
+  mult1: entity multiply 
+    port map (
+      a=>a,
+      b=>b,
+      post_mult_sign=>post_mult_sign1,
+      post_mult_exp=>post_mult_exp1,
+      post_mult_significand=> post_mult_significand1
+      );
+  mult2: entity multiply
+    port map (
+      a=>c,
+      b=>d,
+      post_mult_sign=>post_mult_sign2,
+      post_mult_exp=>post_mult_exp2,
+      post_mult_significand=> post_mult_significand2
+      );
+  -----------------------------------------------------------------------------
+  --take difference of two exponents+ab smaller than c flag
+  -----------------------------------------------------------------------------
+  exp_diff<=sgn(resize(post_mult_exp1,10)-resize(post_mult_exp2,10));
+  ab_st_cd<='1' when exp_diff <0 or (exp_diff=0 and post_mult_significand1<post_mult_significand2) else '0';
 -------------------------------------------------------------------------------
   --adder
   -----------------------------------------------------------------------------
-  add:PROCESS(post_mult_significand1,post_mult_significand2,post_mult_exp1,post_mult_exp2,post_mult_sign1,post_mult_sign2,ab_st_cd,exp_diff)
-  variable opA,opB: usg(47 downto 0);
-  variable shift_unit: integer range 0 to 512; 
-  variable post_shift_opB:usg(47 downto 0);
-  variable eof   :std_logic; 
-	BEGIN
-	  shift_unit:=to_integer(abs(exp_diff));
-	  post_shift_opB:=(others=>'0');
-	  eof:=post_mult_sign1 xor post_mult_sign2;
-	----------------------------
-	--swap
-	----------------------------
-  if ab_st_cd = '1' then
-  opA:=post_mult_significand2;
-  opB:=post_mult_significand1;
-  pre_norm_exponent<=post_mult_exp2;
-  temp_sign<=post_mult_sign2;
-  else
-  opA:=post_mult_significand1;
-  opB:=post_mult_significand2;
-  pre_norm_exponent<=post_mult_exp1;
-  temp_sign<=post_mult_sign1;
-  end if;
-  ----------------------------
-  --shift
-  ----------------------------
-  for i IN 1 TO 47 LOOP
-				----------------------------------
-				--sticky bit
-				----------------------------------
-				IF i<shift_unit	THEN 
-					post_shift_opB(0):=post_shift_opB(0) OR opB(i);			--after shifting, sticky bit become bitwiseOR of shifted bits
-				END IF;
-				----------------------------------
-				--shift by shift_unit
-				----------------------------------
-				IF i+shift_unit<28	THEN 				
-					post_shift_opB(i):=opB(i+shift_unit);		--right shift
-				ELSE
-					post_shift_opB(i):='0';					--zero padding				
-				END IF;								
-	end loop;
-	----------------------------
-	--add
-	----------------------------
-	if eof='0' then
-	  pre_norm_significand <= resize(opA,49)+resize(post_shift_opB,49);
-	else
-	  pre_norm_significand <= resize(opA,49)-resize(post_shift_opB,49);
-	end if;
+  --This process swap and align the products from the multiply stage and
+  --calculate the sum of products. 
+  -----------------------------------------------------------------------------
+  add:process(post_mult_significand1,post_mult_significand2,post_mult_exp1,post_mult_exp2,post_mult_sign1,post_mult_sign2,ab_st_cd,exp_diff)
+  variable opA,opB              : usg(47 downto 0);
+  variable shift_unit           : integer range 0 to 512; 
+  variable post_shift_opB       : usg(47 downto 0);
+  variable eop                  : std_logic;  --effective operation:0=>add,1=>sub
+  BEGIN
+    shift_unit:=to_integer(abs(exp_diff));
+    post_shift_opB:=(others=>'0');
+    eop:=post_mult_sign1 xor post_mult_sign2;
+    ----------------------------
+    --swap
+    ----------------------------
+    if ab_st_cd = '1' then              -- swap order if a*b<c*d
+      opA:=post_mult_significand2;
+      opB:=post_mult_significand1;
+      pre_norm_exponent<=post_mult_exp2; 
+      temp_sign<=post_mult_sign2;       -- sign agree with the larger number
+    else
+      opA:=post_mult_significand1;
+      opB:=post_mult_significand2;
+      pre_norm_exponent<=post_mult_exp1;
+      temp_sign<=post_mult_sign1;
+    end if;
+    ----------------------------
+    --shift
+    ----------------------------
+    for i in 1 to 47 loop
+      ----------------------------------
+      --sticky bit
+      ----------------------------------
+      if i<shift_unit	then 
+        post_shift_opB(0):=post_shift_opB(0) OR opB(i);         --after shifting, sticky bit become bitwiseOR of shifted bits
+      end if;
+      ----------------------------------
+      --shift by shift_unit
+      ----------------------------------
+      if i+shift_unit<28 then 				
+        post_shift_opB(i):=opB(i+shift_unit);		        --right shift
+      else
+        post_shift_opB(i):='0';					--zero padding				
+      end if;								
+    end loop;
+
+    ----------------------------
+    --adder
+    ----------------------------
+    if eop='0' then
+      pre_norm_significand <= resize(opA,49)+resize(post_shift_opB,49);
+    else
+      pre_norm_significand <= resize(opA,49)-resize(post_shift_opB,49);
+    end if;
 	
-	end process add;
---------------------------------------------------------
+  end process add;
+-------------------------------------------------------------------------------
   --normalise
-  ------------------------------------------------------
-normalise:process(pre_norm_significand,pre_norm_exponent)
+  -----------------------------------------------------------------------------
+  --result from addition stage is normalised with 9 bit exponent and 26 bit
+  --significand (24+1+1) 
+  -----------------------------------------------------------------------------
+  normalise:process(pre_norm_significand,pre_norm_exponent)
     variable leadingzeros : integer range 0 to 49;
     variable sft_result_significand : usg(48 downto 0);
     variable sft_result_exponent: usg(8 downto 0);
@@ -131,34 +143,33 @@ normalise:process(pre_norm_significand,pre_norm_exponent)
     variable sft_unit:integer range -512 to 511;
   begin
     leadingzeros := 0;
-    
     -----------------------------------------------------------------------------
     --leading zero detector
     ---------------------------------------------------------------------------
-      for i in pre_norm_significand'high downto pre_norm_significand'low loop
-        if pre_norm_significand(i)='0' then
-          leadingzeros:=leadingzeros+1;
-          sft_result_significand:=sft_result_significand sll 1;--left shift until left aligned
-        else
-          exit; 
-        end if;
-      end loop;
+    for i in pre_norm_significand'high downto pre_norm_significand'low loop
+      if pre_norm_significand(i)='0' then
+        leadingzeros:=leadingzeros+1;
+        sft_result_significand:=sft_result_significand sll 1;--left shift until left aligned
+      else
+        exit; 
+      end if;
+    end loop;
       
-      sft_result_exponent:=pre_norm_exponent-leadingzeros-127;
+    sft_result_exponent:=pre_norm_exponent-leadingzeros-127;
       
-      post_norm_significand<=sft_result_significand(48 downto 24)&s_bit;
-      post_norm_exponent<=sft_result_exponent;
+    post_norm_significand<=sft_result_significand(48 downto 24)&s_bit;
+    post_norm_exponent<=sft_result_exponent;
       
   end process normalise;
   
-  --------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
   --rounder
-  --The process round the result to be to be 23 bit mantissa
+  --The process round the result to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_norm_significand,post_norm_exponent,temp_sign)
+  rounder:process(post_norm_significand,post_norm_exponent,temp_sign)
 
-    VARIABLE rounded_result_e_s		:usg(8 downto 0);
-    VARIABLE rounded_result_man_s	:usg(23 downto 0);
+    variable rounded_result_e_s		:usg(8 downto 0);
+    variable rounded_result_man_s	:usg(23 downto 0);
 
   begin
     case post_norm_significand(2 downto 0) IS						--rounding decoder(LSB+GUARD+STICKY)  RTE rounding mode
@@ -174,13 +185,13 @@ normalise:process(pre_norm_significand,pre_norm_exponent)
     end if;
     
     if rounded_result_e_s>=255 then     --overflows
-      result.exponent	<=(others=>'1');
-      result.significand<=(others=>'0');
+      result.exponent	 <=      (others=>'1');
+      result.significand <=      (others=>'0');
     else
-      result.significand	<=	slv(rounded_result_man_s(22 downto 0));
-      result.exponent	   <=	slv(rounded_result_e_s(7 downto 0));
+      result.significand <=	slv(rounded_result_man_s(22 downto 0));
+      result.exponent	 <=	slv(rounded_result_e_s(7 downto 0));
     end if;
     result.sign<=temp_sign;
   end process rounder;
   
-end implementation;
+end chained;
