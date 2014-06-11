@@ -45,9 +45,9 @@
 		#define OUTFILE_NAME "oneInput_datapak.txt"		
 	#elif NUM_INPUTS==3
 		#define OUTFILE_NAME "threeInput_datapak.txt"
-	#elif NUM_INPUT==4
+	#elif NUM_INPUTS==4
 		#define OUTFILE_NAME "fourInput_datapak.txt"
-	#elif NUM_INPUT==6
+	#elif NUM_INPUTS==6
 		#define OUTFILE_NAME "fiveInput_datapak.txt"
 	#else
 		#undef NUM_INPUTS
