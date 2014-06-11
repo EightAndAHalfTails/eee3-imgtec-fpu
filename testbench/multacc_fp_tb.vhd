@@ -103,6 +103,8 @@ BEGIN
 			ibmvectors := true;
 		ELSE
 			ibmvectors := false;
+			file_close(f);
+			file_open(f, "threeInput_datapak.txt", read_mode);
 		END IF;
 		
 		WHILE NOT endfile(f) LOOP
@@ -120,9 +122,11 @@ BEGIN
 				END IF;
 				
 				IF cmd = "0100" THEN
+
 					read(buf, x);
 					read(buf, y);
 					read(buf, z);
+
 					
 					A<=to_slv(x);
 					B<=to_slv(y);
