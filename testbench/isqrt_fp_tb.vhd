@@ -27,7 +27,7 @@ END isqrt_tb;
 
 ARCHITECTURE tb OF isqrt_tb IS
 
-	SIGNAL clk, reset: STD_LOGIC;
+	SIGNAL clk, reset, start, done: STD_LOGIC;
 	SIGNAL input, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
 
 	ALIAS slv IS std_logic_vector;
@@ -73,7 +73,11 @@ BEGIN
 	isqrt_test: ENTITY work.isqrt
 	PORT MAP(
 		isqrt_in1		=>input,
-		isqrt_out		=>result
+		isqrt_out		=>result,
+		clk				=>clk,
+		reset			=>reset,
+		start			=>start,
+		done			=>done
 	);
 
 	------------------------------------------------------------
@@ -112,7 +116,7 @@ BEGIN
 				read(buf, x);
 				
 				input<=to_slv(x);
-				
+				start<='1';
 				----------------------------------------------------------------------
 				-- calculate square root of x (exception with -1)
 				IF x = NEG_ONE THEN
@@ -201,10 +205,11 @@ BEGIN
 					END IF;
 				END IF;
 				
-
-				WAIT UNTIL clk'EVENT AND clk = '1';
+				WAIT UNTIL done = '1';
+				--WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------
 				--check result
+
 				REPORT "isqrt_l = " & to_string(isqrt_l);
 				REPORT "isqrt_r = " & to_string(isqrt_r);
 				IF (to_float(result) > to_float(isqrt_r)) OR (to_float(result) < to_float(isqrt_l)) THEN
