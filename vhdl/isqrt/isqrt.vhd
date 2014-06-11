@@ -63,7 +63,7 @@ when_done: process(cycle)
     end if;
   end process hold_input;
   
-  get_input: process(isqrt_in1, held_input)
+  get_input: process(isqrt_in1, held_input, cycle)
   begin
     if cycle = 0 then
       input <= slv2float(isqrt_in1);
@@ -84,7 +84,7 @@ when_done: process(cycle)
     end if;
   end process fsm;
   
-  fsm_comb: process(cycle, initial_guess, last_ans)
+  fsm_comb: process(cycle, initial_guess, last_ans, start)
   begin
     if cycle = 0 and start = '0' then
       improve_in <= initial_guess;
