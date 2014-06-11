@@ -106,8 +106,8 @@ BEGIN
 		n := 1;
 		incorrect_result := 0;
 		
+	  WAIT UNTIL clk'EVENT and clk = '1';		
 		WHILE NOT endfile(f) LOOP
-			WAIT UNTIL clk'EVENT and clk = '1';
 			readline(f, buf);
 			If buf'LENGTH = 0 THEN
 				REPORT "skipping line: " & INTEGER'IMAGE(n) SEVERITY note;
