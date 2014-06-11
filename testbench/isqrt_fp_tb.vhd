@@ -99,6 +99,7 @@ BEGIN
 	
 	BEGIN
 		reset <= '1';
+		start <= '0';
 		WAIT UNTIL clk'EVENT and clk = '1';
 		reset <= '0';
 		
