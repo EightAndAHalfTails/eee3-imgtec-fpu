@@ -274,7 +274,6 @@ begin
     s_bit:=sticky_b2;
     leadingzeros := 0;
     leadingones  := 0;
-    
     if expo_diff<-25 then            --special case:if shifted left by more
                                         --than 25
     sft_result_significand:=aligned_c(71 downto 24);
@@ -305,7 +304,7 @@ begin
 
     else
     -----------------------------------------------------------------------------
-    --leading one detector and shifter
+    --leading one detector
     -----------------------------------------------------------------------------
     if eff_sub='1' and ab_st_c='1' then  
       for i in pre_norm_significand'high downto pre_norm_significand'low loop
@@ -317,7 +316,7 @@ begin
           end if;
         end loop;  -- i
     -----------------------------------------------------------------------------
-    --leading zero detector and shifter
+    --leading zero detector
     ---------------------------------------------------------------------------
     else
       for i in pre_norm_significand'high downto pre_norm_significand'low loop
@@ -354,8 +353,18 @@ begin
       s_bit:=s_bit OR sft_result_significand(i);
     end loop; 
     
+    if eff_sub='1' and ab_st_c='1' then
+      if s_bit ='1' then
+      post_norm_significand<=(not sft_result_significand(47 downto 23))&s_bit;
+      post_norm_exponent<=sft_result_exponent;
+      else
+      post_norm_significand<=(not sft_result_significand(47 downto 23)+1)&s_bit;
+      post_norm_exponent<=sft_result_exponent;
+      end if;
+    else
       post_norm_significand<=sft_result_significand(47 downto 23)&s_bit;
       post_norm_exponent<=sft_result_exponent;
+    end if;
       
   end process normalise;
 
@@ -363,7 +372,7 @@ begin
   --rounder
   --The process round the result to be to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,eff_sub,ab_st_c,c,expo_diff)--,
+  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff)
 
     VARIABLE rounded_result_e_s		:usg(8 downto 0);
     VARIABLE rounded_result_man_s	:usg(23 downto 0);
@@ -389,11 +398,11 @@ begin
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'0');
     else
-      if eff_sub='1' and ab_st_c='1' then
-      result.significand	<=	slv(not rounded_result_man_s(22 downto 0)+1);
-      else
+  --    if eff_sub='1' and ab_st_c='1' then
+  --    result.significand	<=	slv(not rounded_result_man_s(22 downto 0)+1);
+  --    else
       result.significand	<=	slv(rounded_result_man_s(22 downto 0));
-      end if;      
+ --     end if;      
       result.exponent	   <=	slv(rounded_result_e_s(7 downto 0));
     end if;
     result.sign	<=	temp_sign;
