@@ -18,7 +18,7 @@ entity isqrt is
 end entity isqrt;
 
 architecture fast_newton of isqrt is
-  signal input, held_input, half_input, initial_guess, improve_in, improve_out, last_ans, output : float32_t;
+  signal input, held_input, half_input, initial_guess, improve_in, improve_out, result, output : float32_t;
 
   signal cycle, ncycle : integer range 0 to iterations-1 := 0;
 begin
@@ -26,7 +26,7 @@ isqrt_out <= float2slv(output);
   
 when_done: process(cycle)
   begin
-    if cycle = iterations-1 then
+    if cycle = 0 then
       done <= '1';
     else
       done <= '0';
@@ -77,14 +77,14 @@ when_done: process(cycle)
     wait until clk'event and clk='1';
     if reset = '1' then
       cycle <= 0;
-      last_ans <= pos_zero;
+      output <= pos_zero;
     else
       cycle <= ncycle;
-      last_ans <= improve_out;
+      output <= result;
     end if;
   end process fsm;
   
-  fsm_comb: process(cycle, initial_guess, last_ans, start)
+  fsm_comb: process(cycle, initial_guess, output, start)
   begin
     if cycle = 0 and start = '0' then
       improve_in <= initial_guess;
@@ -93,26 +93,25 @@ when_done: process(cycle)
       improve_in <= initial_guess;
       ncycle <= 1;
     elsif cycle = iterations-1 then
-      improve_in <= last_ans;
+      improve_in <= output;
       ncycle <= 0;
     else
-      improve_in <= last_ans;
+      improve_in <= output;
       ncycle <= cycle + 1;
     end if;
   end process fsm_comb;
   
-  encode_output: process(improve_out, input)
-    variable shift_amount : integer;
+  special_cases: process(improve_out, input)
   begin
     if input = neg_zero then
-      output <= neg_inf;
+      result <= neg_inf;
     elsif input.sign = '1' or isNan(input) then
-      output <= nan;
+      result <= nan;
     elsif input = pos_inf then
-      output <= pos_zero;
+      result <= pos_zero;
     else
-      output <= improve_out;
+      result <= improve_out;
     end if;
-  end process encode_output;
+  end process special_cases;
   
 end architecture fast_newton;
