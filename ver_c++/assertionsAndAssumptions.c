@@ -4,14 +4,13 @@
 #include <cmath>
 #include <fstream>
 #include <string>
-
 #include <bitset>
 
 using namespace std;
 
 ////////////global variables/////////////////////////////////
 //the test file names are changed manually for all the test files
-string testfile = "test2.txt";
+string testfile = "test1.txt";
 //this is for addition, we use tests: 1 - 11
 string testfile_add_output = "test1_add_output.txt";
 
@@ -22,8 +21,8 @@ string testfile_sub_output = "test1_sub_output.txt";
 string testfile_mul_output = "test1_mul_output.txt";
 
 //this is for division, we use tests: 1 - 8
-string testfile_div_output = "test2_gold_div_output.txt";
-string testfile_div_output2 = "test1_newton_div_output2.txt";
+string testfile_div_output = "test1_gold_div_output.txt";
+string testfile_div_output2 = "test1_gold2_div_output2.txt";
 string testfile_div_output3 = "test1_newton_div_output3.txt";
 
 //testing of functions with 1 input
@@ -42,9 +41,11 @@ string testfile_fma_output = "test1_fma_output.txt";
 
 //////////////////floating point struct//////////////////////
 struct fp_t{
-int s;	//sign
-int e;	//exponent
-int m;	//mantissa
+	int v; //value flag - 0 = zero, 1 = infinity, 2 = NaN
+	//3 = unset
+	int s;	//sign
+	int e;	//exponent
+	int m;	//mantissa
 };
 
 //////////////////////function prototypes////////////////////
@@ -53,22 +54,24 @@ fp_t header(float a_f);
 float pack_f(fp_t a_fp);
 float footer(fp_t a_fp);
 
+void setFlag(fp_t &z);
 int extractBits(int, int, int);
-void round_norm(fp_t &z, int, int);
+void round_norm(fp_t &z, int, bool);
 
 fp_t adder(fp_t, fp_t, bool);
 fp_t multiplier(fp_t, fp_t);
 fp_t gold_divider(fp_t, fp_t);
 fp_t gold2_divider(fp_t, fp_t);
 fp_t newton_divider(fp_t, fp_t);
-
+fp_t newton_divider_by_parts(fp_t, fp_t);
 fp_t fractioning_rooter(fp_t);
 fp_t newton_rooter(fp_t);
-
 fp_t newton_reciprocal_rooter(fp_t);
 fp_t quake_reciprocal_rooter(fp_t);
-
 fp_t dual_rooter(fp_t, bool);
+
+void read_in(fp_t &a_fp, fp_t &b_fp);
+void output(fp_t &a_fp);
 
 //functions for testing
 void testAddition(string name, string name2, bool isAddition);
@@ -93,7 +96,7 @@ void testDivision3_newton(string testfile, string testfile_div_output3);
 //////////////////////main function//////////////////////////
 int main(){
 	//test addition unit
-	//testAddition(testfile, testfile_add_output, 1);
+	testAddition(testfile, testfile_add_output, 1);
 	
 	//test subtraction
 	//testAddition(testfile, testfile_sub_output, 0);
@@ -102,16 +105,13 @@ int main(){
 	//testMultiplication(testfile, testfile_mul_output);
 
 	//test division
-	testDivision1_gold(testfile, testfile_div_output);
+	//testDivision1_gold(testfile, testfile_div_output);
 
 	//test division
 	//testDivision2_gold(testfile, testfile_div_output2);
 
 	//test division
 	//testDivision3_newton(testfile, testfile_div_output3);
-
-	//test division
-	//testDivision4_newton(testfile, testfile_div_output4);
 
 	//test square root
 	//testSqrt1_fractioning(testfile, testfile_sqrt_output);
@@ -293,6 +293,22 @@ a_f = *(float*)&a_i;
 return a_f;
 }
 
+void setFlag(fp_t &z){
+if((z.e < 0)|(z.e == 0 & z.m == 0)){
+z.v = 0;
+return;
+}
+if((z.e > 255)|(z.e == 255 & z.m == 0)){
+z.v = 1;
+return;
+}
+if(z.e == 255 & z.m == 1){
+z.v = 2;
+return;
+}
+z.v = 3;
+}
+
 int extractBits(int a, int b, int z){
 z = z>>a;
 //cout<<hex<<z<<endl;
@@ -313,13 +329,14 @@ cout<<hex<<n<<endl
 return m;
 }
 
-void round_norm(fp_t &z, int lostbit_high, int lostbit_low, bool IsUp){
+void round_norm(fp_t &z, int lostbits, bool IsUp){
 int LSB;
+int lostbit_high, lostbit_low;
 
 if(z.e == 0){	// denormals cannot be rounded normally as the exponent cannot be scaled down
 if(z.m > 0x7FFFFF){
 z.e++;
-z.m--;
+//z.m >>= 1;
 }
 return;
 }
@@ -341,21 +358,44 @@ lzd--;
 }
 
 lzd = lzd - 23;
-if(lzd > 0){
-if(lostbit_low == 0){
-lostbit_low = lostbit_high;
+if(lzd > 0){	
+for(int j = 0; j<lzd; j++){
+lostbits <<= 1;
+LSB = extractBits(0,0,z.m);
+lostbits += LSB;	
+z.m >>= 1;
+//z.m >>= lzd;
 }
-lostbit_high = extractBits(0,0,z.m);
-z.m >>= lzd;
 }else{
-z.m <<= -lzd;
+for(int j = 0; j>lzd; j--){
+z.m <<= 1;
+LSB = extractBits(0,0,lostbits);
+if(IsUp){
+z.m += LSB;
+}else{
+z.m -= LSB;
+}
+lostbits >>= 1;
+}
 }
 z.e += lzd;
+
+if(z.e < 0){
+z.e = 0; z.m = 0;
+return;
+}
 }
 
 // Rounding
+lostbit_high = extractBits(0,0,lostbits);
+if(lostbits > 1){
+lostbit_low = 1;
+}else{
+lostbit_low = 0;
+}
 LSB = extractBits(0,0,z.m);
 //cout<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
+//cout<<"pre round z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl<<"lostbits: "<<lostbits<<endl;
 if(lostbit_high == 1 & (LSB | lostbit_low)){
 if(IsUp){
 z.m += 1;
@@ -369,13 +409,21 @@ z.m -= 1;
 ///////////////////// arithmetic functions////////////////////////////
 fp_t adder(fp_t x, fp_t y, bool IsSub){
 fp_t z;
-int lostbit_high = 0, lostbit_low = 0;
+int lostbits = 0, LSB = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
+setFlag(x); setFlag(y);
 
 // Full numbers (with significands)
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+if(x.v == 0 | y.v == 1 | y.v == 2){
+return y;
+}
+if(y.v == 0 | x.v == 1 | x.v == 2){
+return x;
+}
 
 // Difference of exponents
 int d;
@@ -384,23 +432,19 @@ d = x.e-y.e;
 
 // Align significands
 if(d>0){
-for(int j = 0; j<d; j++){
-
-if(lostbit_low == 0){
-lostbit_low = lostbit_high;
-}
-lostbit_high = extractBits(0,0,y.m);
+for(int j = 0; j<d; j++){	
+lostbits <<= 1;
+LSB = extractBits(0,0,y.m);
+lostbits += LSB;
 
 y.m >>= 1;
 }
 z.e = x.e;
 }else if(d<0){
-for(int j = 0; j>d; j--){
-
-if(lostbit_low == 0){
-lostbit_low = lostbit_high;
-}
-lostbit_high = extractBits(0,0,x.m);
+for(int j = 0; j>d; j--){	
+lostbits <<= 1;
+LSB = extractBits(0,0,x.m);
+lostbits += LSB;
 
 x.m >>= 1;
 }
@@ -409,8 +453,9 @@ z.e = y.e;
 z.e = x.e;
 }
 
-cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl
+// <<"lostbits: "<<lostbits<<endl<<endl;
 
 // decision: add or subtract?
 if(x.m >= y.m){
@@ -431,21 +476,21 @@ z.m = 1;
 }
 }
 
-cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl
-<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl
+// <<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 // add
 z.m += x.m + y.m;
 //cout<<"Significand Sum: "<<hex<<z.m<<endl;
-cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 // Rounding and normalisation
 bool RoundUp = true;
-if ((x.s != y.s)&(!IsSub)){
+if ((x.e < y.e)|(IsSub)){
 RoundUp = false;
 }
-round_norm(z, lostbit_high, lostbit_low, RoundUp);
+round_norm(z, lostbits, RoundUp);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 if(z.m == 0){
@@ -457,12 +502,25 @@ return z;
 
 fp_t multiplier(fp_t x, fp_t y){
 fp_t z;
+int lostbits = 0, LSB = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
+setFlag(x); setFlag(y);
 
 // Full numbers (with significands)
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
+
+if(x.v == 0 & y.v == 1){
+z.v = 2; z.s = 0; z.e = 255; z.m = 1;
+return z;
+}
+if((x.v != 3)|(y.e == 1 & y.m == 0x800000)){
+return x;
+}
+if((y.v != 3)|(x.e == 1 & x.m == 0x800000)){
+return y;
+}
 
 // Calculate sign
 if(x.s != y.s){
@@ -470,10 +528,10 @@ z.s = 1;
 }
 
 // New exponent
-if(x.e != 0 & y.e != 0){
-z.e = x.e + y.e - 0x7F;
-}
-//cout<<"New exponent: "<<dec<<z.e<<endl;
+//if(x.e != 0 & y.e != 0){ <--- may cause denormal failure
+z.e = x.e + y.e - 127;
+
+//cout<<"New exponent: "<<dec<<x.e<<"+"<<y.e<<" = "<<z.e<<endl;
 
 
 // Booth encode
@@ -491,18 +549,18 @@ int negtwoxm = negxm<<1;
 // <<"-2x: "<<negtwoxm<<endl<<endl;
 
 // Multiply via Booth additions
-int lostone = 0; int lostbits = 0;
 for(int i = 0; i<=11; i++){
 beys = extractBits(2*i,(2*i)+2,y.m);
 //cout<<dec<<2*i<<" to "<<(2*i)+2<<" is "<<hex<<beys<<endl;
-//cout<<hex<<z.m<<" ";
-if(lostone == 0){
-lostbits = extractBits(0,0,z.m);
-if(lostbits != 0){
-lostone = 1;
-}
-}
+//cout<<hex<<z.m<<" "<<lostbits<<endl;
+lostbits <<= 1;
+LSB = extractBits(0,0,z.m);
+lostbits += LSB;
+lostbits <<= 1;
+LSB = extractBits(1,1,z.m);
+lostbits += LSB;
 z.m = z.m>>2;
+
 if(z.m>>30 == 1){
 z.m |= 0x60000000;
 }
@@ -517,21 +575,30 @@ case 5: z.m += negxm; break;
 case 6: z.m += negxm; break;
 case 7: NULL; break;
 }
-//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<endl;
+//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
 }
 
 if(y.e != 0){
-if(lostone == 0){
-lostbits = extractBits(0,0,z.m);
-if(lostbits != 0){
-lostone = 1;
-}
-}
+lostbits <<= 1;
+LSB = extractBits(0,0,z.m);
+lostbits += LSB;
+lostbits <<= 1;
+LSB = extractBits(1,1,z.m);
+lostbits += LSB;
 z.m = z.m>>2;
+
 z.m += x.m; // this takes account of the leading 1
+
+//cout<<hex<<z.m<<" "<<lostbits<<endl;
 }
 
-z.m <<= 1;
+//z.m <<= 1;
+z.e++;
+
+//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<"lostbits: "<<lostbits<<endl;
+// Rounding and normalisation
+round_norm(z, lostbits, 1);
+//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 // Full number (with significand)
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -579,8 +646,8 @@ break;
 i++;
 }
 
-y = multiplier(f,y);	round_norm(y,0,0,1);	// calculate new value for denominator
-z = multiplier(f,z);	round_norm(z,0,0,1);	// calculate new value for numerator
+y = multiplier(f,y);	// calculate new value for denominator
+z = multiplier(f,z);	// calculate new value for numerator
 f = adder(two,y,true);
 }
 
@@ -656,13 +723,22 @@ fp_t newton_divider(fp_t x, fp_t y){
 fp_t z;
 
 z.s = 0; z.m = 0; z.e = 0;
+setFlag(x); setFlag(y);
 
 // Full number (with significand)
 //cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
+if((x.v == 0 & y.v == 0)|(x.v == 1 & y.v == 1)|x.v == 2 | y.v == 2){
+z.v = 2; z.s = 0; z.e = 255; z.m = 1;
+return z;
+}
+if((x.v == 1 & y.v == 0)|(x.v == 1 & y.v == 0)){
+return x;
+}
+
 // Divide by power of 2, base case
 if(y.m == 0x800000){
-z.e = x.e - y.e + 0x7F;
+z.e = x.e - y.e + 127;
 z.m = x.m;
 return z;
 }
@@ -675,26 +751,48 @@ z.s = 1;
 // Newton-Raphson Method
 int sign;
 fp_t two, x0;
+bool denorm = false;
+
+/*if(x.e == y.e){
+x.e = 127;
+y.e = 127;
+} //z.e = 254 - y.e;*/
 
 sign = z.s; // preserves sign bit, to be reused later
 x.s = 0; y.s = 0; // Use algorithm with positive numbers
 two.s = 0; two.e = 128; two.m = 0x800000; // define 2.0 in floating point to be used in subtraction
 z.s = 0; z.e = 254 - y.e; z.m = 0x800000; // initial guess is the reciprocal of the highest power of 2 below divisor
+//cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 
-int i = 0;
-while( i < 5 ){
-
-x0 = z;
-z = multiplier(y,x0);	round_norm(z,0,0,1);
-z = adder(two,z,true);
-z = multiplier(z,x0);	round_norm(z,0,0,1);
-
-i++;
-
+if(y.e == 0){
+y.e++;
+y.m |= 0x800000;
+z.e--;
+denorm = true;
 }
 
-z = multiplier(z,x);	round_norm(z,0,0,1);
+int i = 0;
+while( i < 10 ){
+x0 = z;
+z = multiplier(y,x0);
+z = adder(two,z,true);
+z = multiplier(z,x0);
+//cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+i++;
+}
+
+if(denorm){
+z.e++;
+}
+//cout<<endl<<dec<<"inv y: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+//<<dec<<"x: "<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl;
+
+z = multiplier(z,x);
 z.s = sign;
+if(z.e >= 255){
+z.e = 255; z.m = 0;
+}
+//cout<<dec<<"ans z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 
 // Full number (with significand)
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -740,15 +838,15 @@ g = f;
 int i = 0;
 while( i < 5 ){
 
-h = multiplier(f,g);	round_norm(z,0,0,1);
-z = multiplier(g,x);	round_norm(z,0,0,1);
+h = multiplier(f,g);
+z = multiplier(g,x);
 f = adder(f,z,false);
 g = h;
 
 i++;
 }
 
-z = newton_divider(f,g); round_norm(z,0,0,1);
+z = newton_divider(f,g);
 
 // Full number (with significand)
 cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -787,8 +885,8 @@ x0.s = 0; x0.e = 127 + x.e; x0.e >>= 1; x0.m = 0x800000;
 int i = 0;
 while( i < 5 ){
 
-z = newton_divider(x,x0);	round_norm(z,0,0,1);
-z = adder(z,x0,false);	round_norm(z,0,0,1);
+z = newton_divider(x,x0);
+z = adder(z,x0,false);
 z.e--;
 
 i++;
@@ -832,10 +930,10 @@ int i = 0;
 while( i < 5 ){
 
 x0 = z;
-z = multiplier(x0,x0);	round_norm(z,0,0,1);
-z = multiplier(x,z);	round_norm(z,0,0,1);
+z = multiplier(x0,x0);
+z = multiplier(x,z);
 z = adder(three,z,true);
-z = multiplier(x0,z);	round_norm(z,0,0,1);
+z = multiplier(x0,z);
 z.e--;
 
 i++;
@@ -878,10 +976,10 @@ halfno.e--;
 z = halfno;
 z = adder(quake_const,z,true);	// subtract the fp_t equivalent of 0x5f3759df
 y = z;
-z = multiplier(z,z);	round_norm(z,0,0,1);
-z = multiplier(halfno,z);	round_norm(z,0,0,1);
+z = multiplier(z,z);
+z = multiplier(halfno,z);
 z = adder(threehalves,z,true);
-z = multiplier(y,z);	round_norm(z,0,0,1);
+z = multiplier(y,z);
 
 // Full number (with significand)
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -919,10 +1017,10 @@ int i = 0;
 while( i < 5 ){
 
 x0 = z;
-z = multiplier(x0,x0);	round_norm(z,0,0,1);
-z = multiplier(x,z);	round_norm(z,0,0,1);
+z = multiplier(x0,x0);
+z = multiplier(x,z);
 z = adder(three,z,true);
-z = multiplier(x0,z);	round_norm(z,0,0,1);
+z = multiplier(x0,z);
 z.e--;
 
 i++;
@@ -933,7 +1031,7 @@ i++;
 // we multiply the reciprocal root we just calculated
 // by the original number
 if(!IsReciprocal){
-z = multiplier(x,z);	round_norm(z,0,0,1);
+z = multiplier(x,z);
 }
 
 // Full number (with significand)
