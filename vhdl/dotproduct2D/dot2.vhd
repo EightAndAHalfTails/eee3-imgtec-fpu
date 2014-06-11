@@ -144,7 +144,7 @@ normalise:process(pre_norm_significand,pre_norm_exponent)
         end if;
       end loop;
       
-      sft_result_exponent:=pre_norm_exponent-leadingzeros;
+      sft_result_exponent:=pre_norm_exponent-leadingzeros-127;
       
       post_norm_significand<=sft_result_significand(48 downto 24)&s_bit;
       post_norm_exponent<=sft_result_exponent;
