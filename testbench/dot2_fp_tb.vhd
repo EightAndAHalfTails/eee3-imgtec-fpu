@@ -136,6 +136,12 @@ BEGIN
 				--calculate result_tb using real package
 				result_tb := to_float((to_real(p)*to_real(q))+(to_real(r)*to_real(s)));
 
+				--------------------------------------------------------------
+				-- check if overflow
+				IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
+					result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
+				END IF;
+				
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------
 				--check result
