@@ -25,8 +25,7 @@ architecture chained of dot2 is
   signal post_mult_exp1,post_mult_exp2      :usg(8 downto 0);
   signal post_mult_significand1,post_mult_significand2:usg(47 downto 0);
   signal exp_diff                           :sgn(9 downto 0);
-  signal opA,opB                            :usg(47 downto 0);
-  signal pre_norm_exponent                  :usg(8 downto 0);
+  signal pre_norm_exponent                  :sgn(9 downto 0);
   signal pre_norm_significand               :usg(48 downto 0);
   signal post_norm_significand              :usg(25 downto 0);
   signal post_norm_exponent                 :usg(8 downto 0);
@@ -91,12 +90,12 @@ begin  -- chained
     if ab_st_cd = '1' then              -- swap order if a*b<c*d
       opA:=post_mult_significand2;
       opB:=post_mult_significand1;
-      pre_norm_exponent<=post_mult_exp2; 
+      pre_norm_exponent<=sgn(resize(post_mult_exp2,10)-125); 
       temp_sign<=post_mult_sign2;       -- sign agree with the larger number
     else
       opA:=post_mult_significand1;
       opB:=post_mult_significand2;
-      pre_norm_exponent<=post_mult_exp1;
+      pre_norm_exponent<=sgn(resize(post_mult_exp1,10)-125);
       temp_sign<=post_mult_sign1;
     end if;
     ----------------------------
@@ -112,7 +111,7 @@ begin  -- chained
       ----------------------------------
       --shift by shift_unit
       ----------------------------------
-      if i+shift_unit<28 then 				
+      if i+shift_unit<48 then 				
         post_shift_opB(i):=opB(i+shift_unit);		        --right shift
       else
         post_shift_opB(i):='0';					--zero padding				
@@ -143,6 +142,32 @@ begin  -- chained
     variable sft_unit:integer range -512 to 511;
   begin
     leadingzeros := 0;
+    s_bit:='0';
+    sft_result_significand:=pre_norm_significand;
+  if pre_norm_exponent<=0 then
+      sft_unit:=to_integer(not pre_norm_exponent + 1);
+      
+      sft_result_exponent:=(others=>'0');
+      for i in 0 to 48 loop
+        -----------------------------------------------------------------------
+        --sticky_bit
+        -----------------------------------------------------------------------
+        if i <sft_unit then
+          s_bit:=s_bit or pre_norm_significand(i);
+        end if;
+        -----------------------------------------------------------------------
+        --right shift to get denormal result
+        -----------------------------------------------------------------------
+        if i+sft_unit<=47 then
+          sft_result_significand(i):=pre_norm_significand(i+sft_unit+1);
+        --shift by sft_unit+1 
+        else
+          sft_result_significand(i):='0';
+        end if;
+      end loop;
+      
+      sft_result_exponent:=(others=>'0');
+  else
     -----------------------------------------------------------------------------
     --leading zero detector
     ---------------------------------------------------------------------------
@@ -155,11 +180,15 @@ begin  -- chained
       end if;
     end loop;
       
-    sft_result_exponent:=pre_norm_exponent-leadingzeros-127;
-      
+    for i in 0 to 23 loop
+      s_bit:=s_bit or sft_result_significand(i);
+    end loop;
+    
+    sft_result_exponent:=usg(pre_norm_exponent(8 downto 0)-leadingzeros);
+  end if;  
     post_norm_significand<=sft_result_significand(48 downto 24)&s_bit;
     post_norm_exponent<=sft_result_exponent;
-      
+   
   end process normalise;
   
 ----------------------------------------------------------------------------------------
