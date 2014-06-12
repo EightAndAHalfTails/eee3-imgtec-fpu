@@ -90,13 +90,18 @@ BEGIN
 				start<='1';
 				----------------------------------------------------------------------
 				-- calculate square root of x (exception with -1)
-				IF x = NEG_ONE_F THEN
-					isqrt_x := NEG_ONE_F;
+				IF isnan(x) THEN
+					isqrt_x := PNAN_F;
 				ELSE
-					x_real := to_real(x);
-					isqrt_x := to_float(1.0/sqrt(x_real));
+					CASE x IS
+						WHEN NEG_ONE_F => isqrt_x := NEG_ONE_F;
+						WHEN NINFINITY_F => isqrt_x := PNAN_F;
+						WHEN PZERO_F =>	isqrt_x := to_float(PINFINITY_slv);
+						WHEN NZERO_F => isqrt_x := to_float(NINFINITY_slv);
+						WHEN OTHERS =>	x_real := to_real(x);
+										isqrt_x := to_float(1.0/sqrt(x_real));
+					END CASE;
 				END IF;
-				
 				----------------------------------------------------------------------
 				-- check sqrt_x for zeros, infinities or NaNs
 				-- else find left and right boundaries of sqrt_x (4 ulps)
@@ -183,10 +188,18 @@ BEGIN
 
 				REPORT "isqrt_l = " & to_string(isqrt_l);
 				REPORT "isqrt_r = " & to_string(isqrt_r);
-				IF not ((to_float(result) < to_float(isqrt_r)) and (to_float(result) > to_float(isqrt_l))) THEN
-					incorrect_result := incorrect_result+1;
-					REPORT "Inverse square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
-							" which is incorrect. Correct answer is  " & to_string(isqrt_x)SEVERITY warning;
+				IF isnan(isqrt_x) THEN
+					IF not(isnan(to_float(result))) THEN
+						incorrect_result := incorrect_result+1;
+						REPORT "Inverse square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
+							" which is incorrect. Correct answer is NAN" SEVERITY warning;
+					END IF;
+				ELSE
+					IF not ((to_float(result) <= to_float(isqrt_r)) and (to_float(result) >= to_float(isqrt_l))) THEN
+						incorrect_result := incorrect_result+1;
+						REPORT "Inverse square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
+								" which is incorrect. Correct answer is  " & to_string(isqrt_x)SEVERITY warning;
+					END IF;
 				END IF;
 				
 			END IF;	
