@@ -7,6 +7,7 @@ use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 
 entity mult is
+  generic(debug: boolean := false);
   port(
     mult_in1, mult_in2 : in std_logic_vector(31 downto 0);
     mult_out : out std_logic_vector(31 downto 0)
@@ -71,7 +72,7 @@ begin
     end if;
     
     computed_significand <= sig_a * sig_b;
-    report "Performing " & v2s(to_slv(sig_a)) & " * " & v2s(to_slv(sig_b)) severity note;
+    if debug then report "Performing " & v2s(to_slv(sig_a)) & " * " & v2s(to_slv(sig_b)) severity note; end if;
   end process compute_significand;
   -----------------------------------------------------------
   
@@ -85,8 +86,10 @@ begin
     
     constant ulp : ufixed(rounded_sig'high downto rounded_sig'low) := (rounded_sig'low => '1', others => '0');
   begin
-    report "computed_exponent is " & integer'image(computed_exponent);
-    report "computed_significand is " & v2s(to_slv(computed_significand));
+    if debug then
+      report "computed_exponent is " & integer'image(computed_exponent);
+      report "computed_significand is " & v2s(to_slv(computed_significand));
+    end if;
     
     shift_amount := leading_one(to_slv(computed_significand)) - 2;
     if shift_amount = -2 then
@@ -100,7 +103,7 @@ begin
       shifted_exp := -126;
     end if;
     
-    report "shift_amount is " & integer'image(shift_amount);
+    if debug then report "shift_amount is " & integer'image(shift_amount); end if;
     shifted_sig := resize(computed_significand, 1, -47) sll shift_amount;
     rounded_sig := shifted_sig(0 downto -23);
     roundup := scalb(shifted_sig(-24 downto -47), 23) > to_ufixed(0.5, 0, -1)
@@ -123,8 +126,10 @@ begin
     -- (final_exponent + 127) must be in range [1, 254]
     -- (0 is reserved for subnormals, and 255 is inf and nan)
     -- which makes the range of final_exponent [-126, 127]
-    report "norm_exp is " & integer'image(norm_exp) severity note;
-    report "norm_sig is " & v2s(to_slv(norm_sig)) severity note;
+    if debug then
+      report "norm_exp is " & integer'image(norm_exp) severity note;
+      report "norm_sig is " & v2s(to_slv(norm_sig)) severity note;
+    end if;
     if   (isInf(a) and isZero(b))
       or (isInf(b) and isZero(a))
       or isNan(a)

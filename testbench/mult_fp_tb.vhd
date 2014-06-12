@@ -48,7 +48,7 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	mult: ENTITY work.mult
+	mult: ENTITY work.mult(debug => true)
 	PORT MAP(
 		mult_in1		=>A,
 		mult_in2		=>B,
