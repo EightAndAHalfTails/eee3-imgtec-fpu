@@ -115,7 +115,7 @@ BEGIN
 							exponent_r := exponent_r + to_unsigned(1, 9);
 							
 							IF exponent_r(8) = '1' THEN
-								z_r := PINFINITY;
+								z_r := PINFINITY_slv;
 							ELSE
 								z_r := slv('0'&exponent_r(7 DOWNTO 0) & mantissa_r(23 DOWNTO 1));
 							END IF;
@@ -128,7 +128,7 @@ BEGIN
 						-- if z is denormal and mantissa underflow, z_l will be set to positive zero
 						IF mantissa_l(23) = '0' THEN
 							IF exponent_l = "00000000" THEN
-								z_l := PZERO;
+								z_l := PZERO_slv;
 							ELSE
 								exponent_l := exponent_l - to_unsigned(1,9);
 								z_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(21 DOWNTO 0) & '0');
@@ -145,7 +145,7 @@ BEGIN
 						-- find z_r
 						IF mantissa_r(23) = '0' THEN
 							IF exponent_r = "00000000" THEN
-								z_r := NZERO;
+								z_r := NZERO_slv;
 							ELSE
 								exponent_r := exponent_r - to_unsigned(1,9);
 								z_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(21 DOWNTO 0) & '0');
@@ -159,7 +159,7 @@ BEGIN
 							exponent_l := exponent_l + to_unsigned(1, 9);
 							
 							IF exponent_l(8) = '1' THEN
-								z_l := NINFINITY;
+								z_l := NINFINITY_slv;
 							ELSE
 								z_l := slv('1'&exponent_l(7 DOWNTO 0) & mantissa_l(23 DOWNTO 1));
 							END IF;

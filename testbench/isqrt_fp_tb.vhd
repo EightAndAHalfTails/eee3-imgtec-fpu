@@ -90,8 +90,8 @@ BEGIN
 				start<='1';
 				----------------------------------------------------------------------
 				-- calculate square root of x (exception with -1)
-				IF x = NEG_ONE THEN
-					isqrt_x := NEG_ONE;
+				IF x = NEG_ONE_F THEN
+					isqrt_x := NEG_ONE_F;
 				ELSE
 					x_real := to_real(x);
 					isqrt_x := to_float(1.0/sqrt(x_real));
@@ -121,7 +121,7 @@ BEGIN
 							exponent_r := exponent_r + to_unsigned(1, 9);
 							
 							IF exponent_r(8) = '1' THEN
-								isqrt_r := PINFINITY;
+								isqrt_r := PINFINITY_slv;
 							ELSE
 								isqrt_r := slv('0'&exponent_r(7 DOWNTO 0) & mantissa_r(23 DOWNTO 1));
 							END IF;
@@ -134,7 +134,7 @@ BEGIN
 						-- if isqrt_x is denormal and mantissa underflow, isqrt_l will be set to positive zero
 						IF mantissa_l(23) = '0' THEN
 							IF exponent_l = "00000000" THEN
-								isqrt_l := PZERO;
+								isqrt_l := PZERO_slv;
 							ELSE
 								exponent_l := exponent_l - to_unsigned(1,9);
 								isqrt_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(21 DOWNTO 0) & '0');
@@ -151,7 +151,7 @@ BEGIN
 						-- find isqrt_r
 						IF mantissa_r(23) = '0' THEN
 							IF exponent_r = "00000000" THEN
-								isqrt_r := NZERO;
+								isqrt_r := NZERO_slv;
 							ELSE
 								exponent_r := exponent_r - to_unsigned(1,9);
 								isqrt_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(21 DOWNTO 0) & '0');
@@ -165,7 +165,7 @@ BEGIN
 							exponent_l := exponent_l + to_unsigned(1, 9);
 							
 							IF exponent_l(8) = '1' THEN
-								isqrt_l := NINFINITY;
+								isqrt_l := NINFINITY_slv;
 							ELSE
 								isqrt_l := slv('1'&exponent_l(7 DOWNTO 0) & mantissa_l(23 DOWNTO 1));
 							END IF;
