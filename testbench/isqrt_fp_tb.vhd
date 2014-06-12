@@ -213,7 +213,7 @@ BEGIN
 
 				REPORT "isqrt_l = " & to_string(isqrt_l);
 				REPORT "isqrt_r = " & to_string(isqrt_r);
-				IF (to_float(result) > to_float(isqrt_r)) OR (to_float(result) < to_float(isqrt_l)) THEN
+				IF not ((to_float(result) < to_float(isqrt_r)) and (to_float(result) > to_float(isqrt_l))) THEN
 					incorrect_result := incorrect_result+1;
 					REPORT "Inverse square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
 							" which is incorrect. Correct answer is  " & to_string(isqrt_x)SEVERITY warning;
