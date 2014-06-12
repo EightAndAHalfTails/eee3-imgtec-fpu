@@ -55,8 +55,11 @@ normaliser:PROCESS(prenorm_result_man_s,prenorm_result_e_s,leadingzeros,result_d
 BEGIN	
   
   IF prenorm_result_man_s(28)='1' THEN	                           --if mantissa has overflowed(1x.man)
-    sft_exp:=slv(usg(prenorm_result_e_s)+1);                      --add 1 to exponent
-    sft_man:=prenorm_result_man_s;
+    
+    postnorm_result_e_s<=slv(usg(prenorm_result_e_s)+1);
+	  postnorm_result_man_s(25 downto 1)<=prenorm_result_man_s(28 downto 4);
+		postnorm_result_man_s(0)<=prenorm_result_man_s(3) OR prenorm_result_man_s(2) OR prenorm_result_man_s(1) OR prenorm_result_man_s(0);--recompute sticky bit (merge with round bit)
+		
   ELSIF result_denorm='1' THEN                                    --result is denormal
     sft_exp:= (OTHERS=>'0');
     FOR i IN 0 TO 28 LOOP
@@ -66,6 +69,11 @@ BEGIN
 		      sft_man(i):=prenorm_result_man_s(i-to_integer(usg(prenorm_result_e_s)));--left shift				
 			  END IF;
 		 END LOOP;  
+		 
+		postnorm_result_e_s<=sft_exp;
+	  postnorm_result_man_s(25 downto 1)<=sft_man(28 downto 4);
+		postnorm_result_man_s(0)<=sft_man(3) OR sft_man(2) OR sft_man(1) OR sft_man(0);--recompute sticky bit (merge with round bit)
+		
   ELSE                                                            --if mantissa cancellation happens(result is with leading zeros) OR normal operation(01.man)
     
       sft_exp:= slv(usg(prenorm_result_e_s)-leadingzeros+1);
@@ -76,18 +84,19 @@ BEGIN
 		      sft_man(i):=prenorm_result_man_s(i-leadingzeros);--left shift				
 			  END IF;
 		  END LOOP;
-		  		
+		  
+		  if (sft_man(28)='0') then
+	     postnorm_result_e_s<=slv(usg(sft_exp)-1);
+	     postnorm_result_man_s(25 downto 1)<=sft_man(27 downto 3);
+		    postnorm_result_man_s(0)<=sft_man(2) OR sft_man(1) OR sft_man(0);--recompute sticky bit (merge with round bit)
+	    else
+	     postnorm_result_e_s<=sft_exp;
+	     postnorm_result_man_s(25 downto 1)<=sft_man(28 downto 4);
+		   postnorm_result_man_s(0)<=sft_man(3) OR sft_man(2) OR sft_man(1) OR sft_man(0);--recompute sticky bit (merge with round bit)
+	    end if;
 	END IF;
 	
-	if (sft_man(28)='0') then
-	  postnorm_result_e_s<=slv(usg(sft_exp)-1);
-	  postnorm_result_man_s(25 downto 1)<=sft_man(27 downto 3);
-		postnorm_result_man_s(0)<=sft_man(2) OR sft_man(1) OR sft_man(0);--recompute sticky bit (merge with round bit)
-	else
-	  postnorm_result_e_s<=sft_exp;
-	  postnorm_result_man_s(25 downto 1)<=sft_man(28 downto 4);
-		postnorm_result_man_s(0)<=sft_man(3) OR sft_man(2) OR sft_man(1) OR sft_man(0);--recompute sticky bit (merge with round bit)
-	end if;
+	
 END PROCESS normaliser;
 
 --------------------------------------------------------------------------------------

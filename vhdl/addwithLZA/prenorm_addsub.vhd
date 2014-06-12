@@ -51,6 +51,7 @@ BEGIN
 		eop_o			   <=	operation;
 	END BLOCK output;
 	
+  
   --exponent difference (with one signed bit)
 	expo_diff<=slv(Resize(usg(A.exponent),9)-Resize(usg(B.exponent),9));				
 	
@@ -93,7 +94,7 @@ BEGIN
 --swap and shift
 --swap the inputs when abs(A)<abs(B),shift the smaller number to align with the bigger.
 --------------------------------------------------------------------------------------------	
-	swap_align:PROCESS(addsub_A_st_B,A,B)
+	swap_align:PROCESS(addsub_A_st_B,A,B,expo_diff)
 	VARIABLE A_man_v,B_man_v       :slv(27 downto 1);
 	VARIABLE pre_shift_opA,pre_shift_opB :slv(27 downto 1);
 	VARIABLE sticky_b              :std_logic; 
