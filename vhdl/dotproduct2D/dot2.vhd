@@ -31,6 +31,8 @@ architecture chained of dot2 is
   signal post_norm_exponent                 :usg(8 downto 0);
   --flags
   signal ab_st_cd                           :std_logic;
+  signal eop                                :std_logic;  
+  signal neg_sig                            :std_logic;
   
 begin  -- chained
   -----------------------------------------------------------------------------
@@ -69,21 +71,22 @@ begin  -- chained
   -----------------------------------------------------------------------------
   exp_diff<=sgn(resize(post_mult_exp1,10)-resize(post_mult_exp2,10));
   ab_st_cd<='1' when exp_diff <0 or (exp_diff=0 and post_mult_significand1<post_mult_significand2) else '0';
+  eop<=post_mult_sign1 xor post_mult_sign2; --effective operation:0=>add,1=>sub
 -------------------------------------------------------------------------------
   --adder
   -----------------------------------------------------------------------------
   --This process swap and align the products from the multiply stage and
   --calculate the sum of products. 
   -----------------------------------------------------------------------------
-  add:process(post_mult_significand1,post_mult_significand2,post_mult_exp1,post_mult_exp2,post_mult_sign1,post_mult_sign2,ab_st_cd,exp_diff)
+  add:process(post_mult_significand1,post_mult_significand2,post_mult_exp1,post_mult_exp2,post_mult_sign1,post_mult_sign2,ab_st_cd,exp_diff,eop)
   variable opA,opB              : usg(47 downto 0);
   variable shift_unit           : integer range 0 to 512; 
   variable post_shift_opB       : usg(47 downto 0);
-  variable eop                  : std_logic;  --effective operation:0=>add,1=>sub
+  variable added_result         : usg(48 downto 0);
   BEGIN
     shift_unit:=to_integer(abs(exp_diff));
     post_shift_opB:=(others=>'0');
-    eop:=post_mult_sign1 xor post_mult_sign2;
+    neg_sig<='0';
     ----------------------------
     --swap
     ----------------------------
@@ -122,12 +125,26 @@ begin  -- chained
     --adder
     ----------------------------
     if eop='0' then
-      pre_norm_significand <= resize(opA,49)+resize(post_shift_opB,49);
+      added_result := resize(opA,49)+resize(post_shift_opB,49);
+      pre_norm_significand<=added_result;
     else
-      pre_norm_significand <= resize(opA,49)-resize(post_shift_opB,49);
-    end if;
+      added_result := resize(opA,49)-resize(post_shift_opB,49);
+      neg_sig<=added_result(48);
+      pre_norm_significand<=usg(abs(sgn(added_result)));
+    end if;	
 	
   end process add;
+  
+  sign_logic:process(temp_sign,neg_sig,post_mult_sign1,post_mult_sign2,a,b,c,d)
+  begin
+    if isZero(a) and isZero(b) and isZero(c) and isZero(d) then
+      result.sign<=post_mult_sign1 and post_mult_sign2;
+    elsif neg_sig ='1' then
+      result.sign<= not temp_sign;
+    else
+      result.sign<= temp_sign;
+    end if;
+  end process;
 -------------------------------------------------------------------------------
   --normalise
   -----------------------------------------------------------------------------
@@ -143,7 +160,9 @@ begin  -- chained
   begin
     leadingzeros := 0;
     s_bit:='0';
-    sft_result_significand:=pre_norm_significand;
+    
+      sft_result_significand:=pre_norm_significand;
+      
   if pre_norm_exponent<=0 then
       sft_unit:=to_integer(not pre_norm_exponent + 1);
       
@@ -174,18 +193,33 @@ begin  -- chained
     for i in pre_norm_significand'high downto pre_norm_significand'low loop
       if pre_norm_significand(i)='0' then
         leadingzeros:=leadingzeros+1;
-        sft_result_significand:=sft_result_significand sll 1;--left shift until left aligned
+       -- sft_result_significand:=sft_result_significand sll 1;--left shift until left aligned
       else
         exit; 
       end if;
     end loop;
-      
-    for i in 0 to 23 loop
+    
+    if  pre_norm_exponent>0 and pre_norm_exponent<=leadingzeros then
+      sft_unit:=to_integer(pre_norm_exponent-1);
+       sft_result_exponent:=(others=>'0');
+    else
+      sft_unit:=leadingzeros;
+       sft_result_exponent:=usg(pre_norm_exponent(8 downto 0))-leadingzeros;
+    end if;
+    
+    for i in 0 to 48 loop
+      if i-sft_unit>=0 then
+      sft_result_significand(i):=pre_norm_significand(i-sft_unit);
+      else
+      sft_result_significand(i):='0';
+      end if;
+    end loop;      
+  end if;  
+  
+   for i in 0 to 23 loop
       s_bit:=s_bit or sft_result_significand(i);
     end loop;
     
-    sft_result_exponent:=usg(pre_norm_exponent(8 downto 0)-leadingzeros);
-  end if;  
     post_norm_significand<=sft_result_significand(48 downto 24)&s_bit;
     post_norm_exponent<=sft_result_exponent;
    
@@ -195,7 +229,7 @@ begin  -- chained
   --rounder
   --The process round the result to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:process(post_norm_significand,post_norm_exponent,temp_sign)
+  rounder:process(post_norm_significand,post_norm_exponent)
 
     variable rounded_result_e_s		:usg(8 downto 0);
     variable rounded_result_man_s	:usg(23 downto 0);
@@ -220,7 +254,7 @@ begin  -- chained
       result.significand <=	slv(rounded_result_man_s(22 downto 0));
       result.exponent	 <=	slv(rounded_result_e_s(7 downto 0));
     end if;
-    result.sign<=temp_sign;
+   
   end process rounder;
   
 end chained;
