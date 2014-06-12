@@ -96,13 +96,13 @@ void testDivision3_newton(string testfile, string testfile_div_output3);
 //////////////////////main function//////////////////////////
 int main(){
 	//test addition unit
-	//testAddition(testfile, testfile_add_output, 1);
+	testAddition(testfile, testfile_add_output, 1);
 	
 	//test subtraction
 	//testAddition(testfile, testfile_sub_output, 0);
 	
 	//test multiplication
-	testMultiplication(testfile, testfile_mul_output);
+	//testMultiplication(testfile, testfile_mul_output);
 
 	//test division
 	//testDivision1_gold(testfile, testfile_div_output);
@@ -298,7 +298,7 @@ if((z.e < 0)|(z.e == 0 & z.m == 0)){
 z.v = 0;
 return;
 }
-if(z.e == 255 & z.m == 0){
+if(z.e == 255 & z.m == 0x800000){
 z.v = 1;
 return;
 }
@@ -338,8 +338,8 @@ if(z.m > 0x7FFFFF){
 z.e++;
 //z.m >>= 1;
 }
-//return;
-}else{
+return;
+}
 
 // Normalisation
 if(z.m != 0){
@@ -385,7 +385,6 @@ z.e = 0; z.m = 0;
 return;
 }
 }
-}
 
 // Rounding
 lostbit_high = extractBits(0,0,lostbits);
@@ -395,8 +394,8 @@ lostbit_low = 1;
 lostbit_low = 0;
 }
 LSB = extractBits(0,0,z.m);
-//cout<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
-//cout<<"pre round z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl<<"lostbits: "<<lostbits<<endl;
+cout<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
+cout<<"pre round z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;	
 if(lostbit_high == 1 & (LSB | lostbit_low)){
 if(IsUp){
 z.m += 1;
@@ -406,7 +405,7 @@ z.m -= 1;
 }
 
 if(z.e >= 255){
-z.v = 1; z.e = 255; z.m = 0;
+z.v = 1; z.e = 255; z.m = 0x800000;
 return;
 }
 return;
@@ -525,12 +524,13 @@ int lostbits = 0, LSB = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
 setFlag(x); setFlag(y);	
+cout<<x.v<<" "<<y.v<<endl;
 
 // Full numbers (with significands)
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
-if((x.v == 0 & y.v == 1)|(x.v == 1 & y.v == 0)){
+if((x.v == 0 & y.v == 1)|(x.v == 1 & y.v == 0)|(x.v == 2)|(y.v == 2)){
 z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
 return z;
 }
@@ -557,7 +557,9 @@ z.e = x.e + y.e - 127;
 
 // Booth encode
 int beys; // booth encoded y significand
-y.m = y.m<<1;
+if(y.e != 0){
+y.m = y.m<<1; //decoding change due to the leading 1 in significand
+}
 
 int negxm = ~x.m;
 negxm++;
@@ -596,7 +598,7 @@ case 5: z.m += negxm; break;
 case 6: z.m += negxm; break;
 case 7: NULL; break;
 }
-//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
+cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
 }
 
 if(y.e != 0){
@@ -613,7 +615,7 @@ z.m += x.m; // this takes account of the leading 1
 //cout<<hex<<z.m<<" "<<lostbits<<endl;
 }
 
-//cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
+cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 
 //z.m <<= 1;
 while(z.e < 0){
@@ -622,16 +624,20 @@ LSB = extractBits(0,0,z.m);
 lostbits += LSB;
 z.m = z.m>>1;
 z.e++;
+//cout<<dec<<z.e<<" "<<hex<<z.m<<" "<<lostbits<<endl;
 }
 if(z.e != 0 & x.e != 0 & y.e != 0){
 z.e++;
 }
-if(x.e == 0){
-z.e += 2;
-}
 
-//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
+cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 // Rounding and normalisation
+if(z.e == 0){
+LSB = extractBits(0,0,lostbits);
+if(LSB){
+z.m++;
+}
+}
 round_norm(z, lostbits, 1);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
@@ -825,7 +831,7 @@ z.e++;
 z = multiplier(z,x);
 z.s = sign;
 if(z.e >= 255){
-z.e = 255; z.m = 0;
+z.e = 255; z.m = 0x800000;
 }
 //cout<<dec<<"ans z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 
