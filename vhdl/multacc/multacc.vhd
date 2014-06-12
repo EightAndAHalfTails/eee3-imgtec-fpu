@@ -54,7 +54,7 @@ architecture fused of multacc is
   signal aligned_c : usg(71 downto 0);
   signal sticky_b1,sticky_b2 : std_logic; 
   
-  signal eff_sub ,ab_st_c,c_eq_zero: std_logic;
+  signal eff_sub ,ab_st_c,c_eq_zero,input_denorm: std_logic;
   
   signal a,b,c,result : float32_t;
   
@@ -123,6 +123,8 @@ begin
   ab_st_c<='1' when (c_eq_zero='0' and expo_diff < -1) or (expo_diff = -1 and post_mult_significand(47 downto 24)<significand_c) or (expo_diff=0 and post_mult_significand(47 downto 23)<'0'&significand_c) else '0';
   --product smaller than c flag
   c_eq_zero<='1' when usg(c.exponent)=0 and usg(c.significand)=0 else '0';
+  --denormal input flag
+  input_denorm<='1' when isNan(a) or isNan(b) or isNan(c) else '0';
 -------------------------------------------------------------------------------
   --pre-align stage
   -----------------------------------------------------------------------------
@@ -372,7 +374,7 @@ begin
   --rounder
   --The process round the result to be to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff)
+  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff,a,b,input_denorm,eff_sub)
 
     VARIABLE rounded_result_e_s		:usg(8 downto 0);
     VARIABLE rounded_result_man_s	:usg(23 downto 0);
@@ -390,8 +392,12 @@ begin
     ELSE
       rounded_result_e_s:=post_norm_exponent;
     END IF;
-    
-  if post_mult_significand =0 or expo_diff<-25 then      --if product is zero
+  
+  if (isInf(a) and isZero(b)) or (isInf(b) and isZero(a)) or input_denorm='1' or ((isInf(a) or isInf(b)) and isInf(c) and eff_sub='1') then
+      result.sign	<=	'0';     --0*inf,denormal input, +inf-inf
+      result.exponent	<=(others=>'1');
+      result.significand<=(others=>'1');
+  elsif post_mult_significand =0 or expo_diff<-25 then      --if product is zero
       result<=c;
   else  
     if rounded_result_e_s>=255 then     --overflows
