@@ -14,7 +14,7 @@ entity fpu is
 end entity fpu;
 
 architecture arch of fpu is
-  signal add_result, div_result, mult_result, sqrt_result : slv(31 downto 0);
+  signal add_result, div_result, mult_result, sqrt_result, multacc_result : slv(31 downto 0);
 begin
   as: entity addsub port map(
     add_in1 => fpu_in1,
@@ -40,6 +40,11 @@ begin
     sqrt_out => sqrt_result
   );
   
+  fma : entity multacc port map(
+    multacc_in1 => fpu_in1,
+    multacc_out => multacc_result
+  );
+  
   sel : process
     variable op : integer range 0 to 15;
   begin
@@ -53,7 +58,7 @@ begin
       when 2|3 => -- ADD|SUB
         fpu_out <= add_result;
       when 4 => -- FMA
-        fpu_out <= float2slv(nan);
+        fpu_out <= multacc_result;
       when 5 => -- DIV
         fpu_out <= div_result;
       when 6 => -- DOT2
