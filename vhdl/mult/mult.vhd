@@ -154,9 +154,11 @@ begin
       product.significand <= to_slv(norm_sig(-1 downto -23));
     elsif norm_exp > 127 then
       --round to inf
-      product.sign <= a.sign xor b.sign;
-      product.exponent <= (others => '1');
-      product.significand <= (others =>'0');
+      if (a.sign xor b.sign) = '1' then
+        product <= neg_inf;
+      else
+        product <= pos_inf;
+      end if;
     else
       --normal
       product.sign <= a.sign xor b.sign;
