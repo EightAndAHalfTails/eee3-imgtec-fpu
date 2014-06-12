@@ -96,13 +96,13 @@ void testDivision3_newton(string testfile, string testfile_div_output3);
 //////////////////////main function//////////////////////////
 int main(){
 	//test addition unit
-	testAddition(testfile, testfile_add_output, 1);
+	//testAddition(testfile, testfile_add_output, 1);
 	
 	//test subtraction
 	//testAddition(testfile, testfile_sub_output, 0);
 	
 	//test multiplication
-	//testMultiplication(testfile, testfile_mul_output);
+	testMultiplication(testfile, testfile_mul_output);
 
 	//test division
 	//testDivision1_gold(testfile, testfile_div_output);
@@ -338,8 +338,8 @@ if(z.m > 0x7FFFFF){
 z.e++;
 //z.m >>= 1;
 }
-return;
-}
+//return;
+}else{
 
 // Normalisation
 if(z.m != 0){
@@ -383,6 +383,7 @@ z.e += lzd;
 if(z.e < 0){
 z.e = 0; z.m = 0;
 return;
+}
 }
 }
 
@@ -494,8 +495,8 @@ z.m = 1;
 }
 }
 
-cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl;
+//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl;
 // <<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 // add
@@ -595,7 +596,7 @@ case 5: z.m += negxm; break;
 case 6: z.m += negxm; break;
 case 7: NULL; break;
 }
-cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
+//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
 }
 
 if(y.e != 0){
@@ -609,8 +610,10 @@ z.m = z.m>>2;
 
 z.m += x.m; // this takes account of the leading 1
 
-cout<<hex<<z.m<<" "<<lostbits<<endl;
+//cout<<hex<<z.m<<" "<<lostbits<<endl;
 }
+
+//cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 
 //z.m <<= 1;
 while(z.e < 0){
@@ -620,11 +623,14 @@ lostbits += LSB;
 z.m = z.m>>1;
 z.e++;
 }
-if(x.e != 0 & y.e != 0){
+if(z.e != 0 & x.e != 0 & y.e != 0){
 z.e++;
 }
+if(x.e == 0){
+z.e += 2;
+}
 
-cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<"lostbits: "<<lostbits<<endl;
+//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 // Rounding and normalisation
 round_norm(z, lostbits, 1);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
