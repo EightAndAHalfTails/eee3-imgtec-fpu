@@ -42,9 +42,15 @@ when_done: process(cycle)
   
   half: process(input)
   begin
-    half_input.sign <= input.sign;
-    half_input.exponent <= slv(unsigned(input.exponent) - to_unsigned(1, input.exponent'length));
-    half_input.significand <= input.significand;
+    if unsigned(input.exponent) = to_unsigned(0, input.exponent'length) then -- denormal: shift significand
+      half_input.sign <= input.sign;
+      half_input.exponent <= input.exponent;
+      half_input.significand <= slv(shift_right(unsigned(input.significand), 1));
+    else -- normal: decrement exponent
+      half_input.sign <= input.sign;
+      half_input.exponent <= slv(unsigned(input.exponent) - to_unsigned(1, input.exponent'length));
+      half_input.significand <= input.significand;
+    end if;
   end process half;
   
   improve: entity isqrt_iter(newton) port map(
