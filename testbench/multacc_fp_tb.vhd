@@ -15,7 +15,7 @@ USE ieee.numeric_std.ALL;
 USE ieee.float_pkg.ALL;		--ieee floating point package
 use ieee.math_real.all; --real data type
 USE std.textio.ALL;
-USE work.tb_lib;
+USE work.tb_lib.all;
 USE work.all;
 
 ENTITY multacc_tb IS

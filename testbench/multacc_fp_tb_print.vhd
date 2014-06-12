@@ -16,7 +16,7 @@ USE ieee.float_pkg.ALL;		--ieee floating point package
 use ieee.math_real.all; --real data type
 USE std.textio.ALL;
 USE work.txt_util.ALL;
-USE work.tb_lib;
+USE work.tb_lib.all;
 USE work.all;
 
 ENTITY multacc_tb IS
@@ -86,6 +86,8 @@ BEGIN
 			ibmvectors := true;
 		ELSE
 			ibmvectors := false;
+			file_close(f);
+			file_open(f, "threeInput_datapak.txt", read_mode);
 		END IF;
 		
 		WHILE NOT endfile(f) LOOP

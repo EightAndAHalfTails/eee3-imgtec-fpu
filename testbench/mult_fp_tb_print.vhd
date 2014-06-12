@@ -15,7 +15,7 @@ USE ieee.numeric_std.ALL;
 USE ieee.float_pkg.ALL;		--ieee floating point package
 USE std.textio.ALL;
 USE work.txt_util.ALL;
-USE work.tb_lib;
+USE work.tb_lib.all;
 
 ENTITY mult_tb IS
 END mult_tb;

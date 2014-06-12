@@ -15,7 +15,7 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 USE ieee.float_pkg.ALL;		--ieee floating point package
-USE work.tb_lib;
+USE work.tb_lib.all;
 USE std.textio.ALL;
 
 ENTITY sqrt_tb IS
