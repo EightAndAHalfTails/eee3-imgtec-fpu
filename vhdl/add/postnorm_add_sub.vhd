@@ -142,7 +142,7 @@ BEGIN
 	IF usg(prenorm_result_e_s)=255 THEN                                --INPUT NaN or infinity
 	   finalised_result_e_s	  <=	(OTHERS=>'1');
 	     IF usg(prenorm_result_man_s) =0 THEN 
-	       finalised_result_man_s	  <=	(0=>'1',OTHERS=>'0');   
+	       finalised_result_man_s	  <=	(OTHERS=>'1');   
 	     ELSE
 	        finalised_result_man_s	  <=	(OTHERS=>'0');
 	     END IF;

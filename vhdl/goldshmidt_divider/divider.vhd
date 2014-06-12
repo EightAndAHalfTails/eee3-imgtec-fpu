@@ -306,7 +306,7 @@ BEGIN
       IF (div_opA_is_zero AND div_opB_is_zero)='1' OR (div_opA_is_infinity AND div_opB_is_infinity)='1' THEN
                                                                        --NaN
          finalised_e_s<= (OTHERS=>'1');
-         finalised_man_s<= (0=>'1',OTHERS=>'0');
+         finalised_man_s<= (OTHERS=>'1');
       ELSE                                                             --zero
          finalised_e_s<= (OTHERS=>'0');
          finalised_man_s<= (OTHERS=>'0');
