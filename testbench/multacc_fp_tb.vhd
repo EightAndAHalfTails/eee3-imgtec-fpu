@@ -114,43 +114,54 @@ BEGIN
 					C<=to_slv(z);
 					
 					tb_result := mac(x,y,z);
-					tb_result_real := (to_real(x)*to_real(y))+to_real(z);
-					tb_result_float := to_float(tb_result_real);
 					
-					--------------------------------------------------------------
-					-- check if overflow
-					IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
-						tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
-					END IF;
+					IF isnan(x) or isnan(y) or isnan(z) THEN
+						tb_result_float := PNAN_F;
+					ELSIF not(isfinite(x) and isfinite(y) and isfinite(z)) THEN
+						tb_result_float := mac(x,y,z);
+					ELSE
+						tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+						tb_result_float := to_float(tb_result_real);			
+						--------------------------------------------------------------
+						-- check if overflow
+						IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
+							tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
+						END IF;
 
+					END IF;
 					-- compare result obtained from float_pkg and math.real
-					IF tb_result /= tb_result_float THEN
+					IF tb_result /= tb_result_float and not(isnan(tb_result)) and not(isnan(tb_result_float)) THEN
 						inaccurate_lines := inaccurate_lines + 1;
 					END IF;
 					
 					--------------------------------------------------------------
 					-- check result from design
 					WAIT UNTIL clk'EVENT AND clk = '1';
-					IF to_float(result) /= tb_result_float THEN
-						incorrect_result := incorrect_result+1;
-						REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-							to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
+					IF isnan(tb_result_float) THEN
+						IF not(isnan(to_float(result))) THEN
+							incorrect_result := incorrect_result+1;
+							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+								to_string(to_float(result)) & ". Correct answer should be NaN" SEVERITY warning;
+						END IF;
+					ELSIF to_float(result) /= tb_result_float THEN
+							incorrect_result := incorrect_result+1;
+							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+								to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
 					END IF;
-
 					--------------------------------------------------------------
 					-- if either input or output is NaN
-					IF unordered(x,y) = true THEN
-						nan_lines := nan_lines + 1;
-						REPORT "NaN input(s): " & to_string(x) & " and " & to_string(y) & ". Result is " & 
-							to_string(to_float(result)) SEVERITY note;			
+					--IF unordered(x,y) = true THEN
+						-- nan_lines := nan_lines + 1;
+						-- REPORT "NaN input(s): " & to_string(x) & ", " & to_string(y) & " and " & to_String(z) & ". Result is " & 
+							-- to_string(to_float(result)) SEVERITY note;			
 					--------------------------------------------------------------
 					-- there's something wrong with this ELSIF condition 
 					-- but whatever I will change it later
-					ELSIF isfinite(x) = false or isfinite(y)=false or isfinite(z)=false or isfinite(to_float(result))=false THEN
-						inf_lines := inf_lines + 1;
-						REPORT "infinite: " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & ". Result is " & 
-							to_string(to_float(result)) SEVERITY note;
-					END IF;
+					--ELSIF isfinite(x) = false or isfinite(y)=false or isfinite(z)=false or isfinite(to_float(result))=false THEN
+						-- inf_lines := inf_lines + 1;
+						-- REPORT "infinite: " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & ". Result is " & 
+							-- to_string(to_float(result)) SEVERITY note;
+					-- END IF;
 				END IF;				
 			END IF;	
 			
