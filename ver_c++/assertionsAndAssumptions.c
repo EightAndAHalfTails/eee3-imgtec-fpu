@@ -298,12 +298,12 @@ if((z.e < 0)|(z.e == 0 & z.m == 0)){
 z.v = 0;
 return;
 }
-if((z.e > 255)|(z.e == 255 & z.m == 0)){
+if(z.e == 255 & z.m == 0){
 z.v = 1;
 return;
 }
-if(z.e == 255 & z.m == 1){
-z.v = 2;
+if(z.e >= 255){
+z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
 return;
 }
 z.v = 3;
@@ -403,6 +403,12 @@ z.m += 1;
 z.m -= 1;
 }
 }
+
+if(z.e >= 255){
+z.v = 1; z.e = 255; z.m = 0;
+return;
+}
+return;
 }
 
 
@@ -418,16 +424,28 @@ setFlag(x); setFlag(y);
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
-if(x.v == 0 | y.v == 1 | y.v == 2){
+if((x.v == 1 & y.v == 1 & x.s != y.s)|(x.v == 2)|(y.v == 2)){
+z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
+return z;
+}
+if((x.v == 1)|(y.v == 0 & x.v != 0)){
+return x;
+}
+if((y.v == 1)|(x.v == 0 & y.v != 0)){
 return y;
 }
-if(y.v == 0 | x.v == 1 | x.v == 2){
-return x;
+if(x.v == 0 & y.v == 0){
+if(x.s & y.s){
+z.s = 1;
+}
+return z;
 }
 
 // Difference of exponents
 int d;
 d = x.e-y.e;
+if(y.e == 0) d--;
+if(x.e == 0) d++;
 //cout<<"Difference of exponents: "<<dec<<d<<endl;
 
 // Align significands
@@ -454,30 +472,30 @@ z.e = x.e;
 }
 
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl
+// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl;
 // <<"lostbits: "<<lostbits<<endl<<endl;
 
 // decision: add or subtract?
 if(x.m >= y.m){
-if(x.e != 0 | x.m != 0){	// temporary fix to get around -0 + +0 = +0 error
-z.s = x.s;
-}
-if ((x.s == 1)^(y.s == 1)^IsSub){
+if (x.s^y.s^IsSub){
 y.m = ~y.m;
 z.m = 1;
 }
-}else if(x.m < y.m){
-if((y.s == 1)^IsSub){
+if(x.s){
 z.s = 1;
 }
-if ((x.s == 1)^(y.s == 1)^IsSub){
+}else if(x.m < y.m){
+if(y.s^IsSub){
+z.s = 1;
+}
+if (x.s^y.s^IsSub){
 x.m = ~x.m;
 z.m = 1;
 }
 }
 
-//cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
-// <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl
+cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
+<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl;
 // <<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 // add
@@ -487,7 +505,7 @@ z.m += x.m + y.m;
 
 // Rounding and normalisation
 bool RoundUp = true;
-if ((x.e < y.e)|(IsSub)){
+if(x.s^y.s^IsSub){
 RoundUp = false;
 }
 round_norm(z, lostbits, RoundUp);
@@ -505,20 +523,22 @@ fp_t z;
 int lostbits = 0, LSB = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
-setFlag(x); setFlag(y);
+setFlag(x); setFlag(y);	
 
 // Full numbers (with significands)
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
-if(x.v == 0 & y.v == 1){
-z.v = 2; z.s = 0; z.e = 255; z.m = 1;
+if((x.v == 0 & y.v == 1)|(x.v == 1 & y.v == 0)){
+z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
 return z;
 }
 if((x.v != 3)|(y.e == 1 & y.m == 0x800000)){
+x.s = x.s^y.s;
 return x;
 }
 if((y.v != 3)|(x.e == 1 & x.m == 0x800000)){
+y.s = x.s^y.s;
 return y;
 }
 
@@ -575,7 +595,7 @@ case 5: z.m += negxm; break;
 case 6: z.m += negxm; break;
 case 7: NULL; break;
 }
-//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
+cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
 }
 
 if(y.e != 0){
@@ -589,13 +609,22 @@ z.m = z.m>>2;
 
 z.m += x.m; // this takes account of the leading 1
 
-//cout<<hex<<z.m<<" "<<lostbits<<endl;
+cout<<hex<<z.m<<" "<<lostbits<<endl;
 }
 
 //z.m <<= 1;
+while(z.e < 0){
+lostbits <<= 1;
+LSB = extractBits(0,0,z.m);
+lostbits += LSB;
+z.m = z.m>>1;
 z.e++;
+}
+if(x.e != 0 & y.e != 0){
+z.e++;
+}
 
-//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<"lostbits: "<<lostbits<<endl;
+cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<"lostbits: "<<lostbits<<endl;
 // Rounding and normalisation
 round_norm(z, lostbits, 1);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -729,7 +758,7 @@ setFlag(x); setFlag(y);
 //cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
 if((x.v == 0 & y.v == 0)|(x.v == 1 & y.v == 1)|x.v == 2 | y.v == 2){
-z.v = 2; z.s = 0; z.e = 255; z.m = 1;
+z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
 return z;
 }
 if((x.v == 1 & y.v == 0)|(x.v == 1 & y.v == 0)){
@@ -1633,5 +1662,7 @@ void testDivision3_newton(string name, string name2){
 	}
 
 }
+
+
 
 
