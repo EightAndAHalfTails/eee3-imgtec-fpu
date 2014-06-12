@@ -113,6 +113,8 @@ when_done: process(cycle)
   begin
     if input = neg_zero then
       result <= neg_inf;
+    elsif input = pos_zero then
+      result <= pos_inf;
     elsif input.sign = '1' or isNan(input) then
       result <= nan;
     elsif input = pos_inf then
