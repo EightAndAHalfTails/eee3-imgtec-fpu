@@ -98,10 +98,7 @@ BEGIN
 				REPORT "skipping line: " & INTEGER'IMAGE(n) SEVERITY note;
 			ELSE
 				REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
-				
-				-------------------------------------------------------------
-				-- note: x and y from file must be in binary
-				-------------------------------------------------------------
+
 				read(buf, x);
 				read(buf, y);
 				
@@ -131,7 +128,7 @@ BEGIN
 				--------------------------------------------------------------
 				-- there's something wrong with this ELSIF condition 
 				-- but whatever I will change it later
-				ELSIF finite(x) = false or finite(y)=false or finite(to_float(result))=false THEN
+				ELSIF isfinite(x) = false or isfinite(y)=false or isfinite(to_float(result))=false THEN
 					inf_lines := inf_lines + 1;
 					REPORT "infinite: " & to_string(x) & " and " & to_string(y) & ". Result is " & 
 						to_string(to_float(result)) SEVERITY note;
