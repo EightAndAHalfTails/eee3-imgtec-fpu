@@ -46,6 +46,8 @@ when_done: process(cycle)
       half_input.sign <= input.sign;
       half_input.exponent <= input.exponent;
       half_input.significand <= slv(shift_right(unsigned(input.significand), 1));
+    elsif unsigned(input.exponent) = to_unsigned(1, input.exponent'length) then -- half becomes denormal
+      half_input <= slv2float(slv(shift_right(unsigned(float2slv(input)), 1))); -- trust me
     else -- normal: decrement exponent
       half_input.sign <= input.sign;
       half_input.exponent <= slv(unsigned(input.exponent) - to_unsigned(1, input.exponent'length));
