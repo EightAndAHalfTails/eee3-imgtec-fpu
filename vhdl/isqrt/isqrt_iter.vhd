@@ -27,13 +27,13 @@ begin
   
   m1: entity mult port map(
     mult_in1 => float2slv(prev),
-    mult_in2 => float2slv(prev),
+    mult_in2 => float2slv(init),
     mult_out => a
   );
   
   m2: entity mult port map(
     mult_in1 => a,
-    mult_in2 => float2slv(init),
+    mult_in2 => float2slv(prev),
     mult_out => b
   );
   
