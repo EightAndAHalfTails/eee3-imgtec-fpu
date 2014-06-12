@@ -17,30 +17,16 @@ USE ieee.numeric_std.ALL;
 USE ieee.float_pkg.ALL;		--ieee floating point package
 use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
+USE work.tb_lib;
 USE std.textio.ALL;
 
 ENTITY sqrt_tb IS
 END sqrt_tb;
 
 ARCHITECTURE tb OF sqrt_tb IS
-
 	SIGNAL clk, reset: STD_LOGIC;
 	SIGNAL A, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
 
-	ALIAS slv IS std_logic_vector;
-
-	CONSTANT NEG_ONE: FLOAT32 := "10111111100000000000000000000000";
-	
-	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER IS
-	BEGIN
-		RETURN to_integer(SIGNED(x));
-	END;
-   
- 	FUNCTION i2v( x : INTEGER) RETURN STD_LOGIC_VECTOR IS
-	BEGIN
-		RETURN slv(to_signed(x, 32));
-	END;
-	
 BEGIN
 
 	-- clock generation process
@@ -94,8 +80,8 @@ BEGIN
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------
 				-- calculate square of result (exception with -1)
-				IF x = NEG_ONE THEN
-					square_result := NEG_ONE;
+				IF x = NEG_ONE_F THEN
+					square_result := NEG_ONE_F;
 				ELSE
 					square_result := to_float(result)* to_float(result);
 				END IF;

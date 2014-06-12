@@ -17,6 +17,7 @@ use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 use ieee.math_real.all; --real data type
 USE std.textio.ALL;
+USE work.txt_util.ALL;
 USE work.tb_lib;
 USE work.all;
 
@@ -25,7 +26,7 @@ END multacc_tb;
 
 ARCHITECTURE tb OF multacc_tb IS
 	SIGNAL clk, reset: STD_LOGIC; 
-	SIGNAL A, B, C, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=ab+c	
+	SIGNAL A, B, C, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=ab+c
 
 BEGIN
   
@@ -53,6 +54,7 @@ BEGIN
 	------------------------------------------------------------
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "threeInput_datapak.txt";
+		FILE fout			: TEXT OPEN write_mode IS "multacc_output.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE cmd		: STRING(1 TO 4);
 		VARIABLE header		: STRING(1 TO 3);
@@ -86,8 +88,6 @@ BEGIN
 			ibmvectors := true;
 		ELSE
 			ibmvectors := false;
-			file_close(f);
-			file_open(f, "threeInput_datapak.txt", read_mode);
 		END IF;
 		
 		WHILE NOT endfile(f) LOOP
@@ -105,11 +105,9 @@ BEGIN
 				END IF;
 				
 				IF cmd = "0100" THEN
-
 					read(buf, x);
 					read(buf, y);
 					read(buf, z);
-
 					
 					A<=to_slv(x);
 					B<=to_slv(y);
@@ -127,12 +125,14 @@ BEGIN
 
 					-- compare result obtained from float_pkg and math.real
 					IF tb_result /= tb_result_float THEN
+						REPORT "mismatch in line " & INTEGER'IMAGE(n)SEVERITY note;
 						inaccurate_lines := inaccurate_lines + 1;
 					END IF;
 					
 					--------------------------------------------------------------
 					-- check result from design
 					WAIT UNTIL clk'EVENT AND clk = '1';
+					PRINT(fout, str(result));
 					IF to_float(result) /= tb_result_float THEN
 						incorrect_result := incorrect_result+1;
 						REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 

@@ -16,6 +16,7 @@ use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 USE std.textio.ALL;
 USE work.txt_util.ALL;
+USE work.tb_lib;
 USE work.ALL;
 
 ENTITY add_tb IS
@@ -23,29 +24,8 @@ ENTITY add_tb IS
 END add_tb;
 
 ARCHITECTURE tb OF add_tb IS
-
 	SIGNAL clk, reset, operation: STD_LOGIC;   --operation 0 for add, 1 for sub
 	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
-
-	ALIAS slv IS std_logic_vector;
-	
-	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER IS
-	BEGIN
-		RETURN to_integer(SIGNED(x));
-	END;
-   
- 	FUNCTION i2v( x : INTEGER) RETURN STD_LOGIC_VECTOR IS
-	BEGIN
-		RETURN slv(to_signed(x, 32));
-	END;
-	
-	FUNCTION b2l(b : BIT) return std_logic is
-	BEGIN
-		IF b = '0' THEN
-			RETURN '0';
-		END IF;
-		RETURN '1';
-	END FUNCTION;
 	
 BEGIN
   

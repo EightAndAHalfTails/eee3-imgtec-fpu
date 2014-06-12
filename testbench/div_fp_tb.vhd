@@ -15,43 +15,14 @@ USE ieee.float_pkg.ALL;		--ieee floating point package
 use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 USE std.textio.ALL;
+USE work.tb_lib;
 
 ENTITY div_tb IS
 END div_tb;
 
 ARCHITECTURE tb OF div_tb IS
-
 	SIGNAL clk, reset: STD_LOGIC;
 	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
-
-	ALIAS slv IS std_logic_vector;
-	
-	--------------------------------------------------------------
-	--TODO: switch to package constants
-	CONSTANT PINFINITY	: slv := "01111111100000000000000000000000";
-	CONSTANT NINFINITY	: slv := "11111111100000000000000000000000";
-	CONSTANT PZERO		: slv := "00000000000000000000000000000000";
-	CONSTANT NZERO		: slv := "10000000000000000000000000000000";
-	
-	FUNCTION v2i(x:STD_LOGIC_VECTOR) RETURN INTEGER IS
-	BEGIN
-		RETURN to_integer(SIGNED(x));
-	END;
-   
- 	FUNCTION i2v(x:INTEGER) RETURN STD_LOGIC_VECTOR IS
-	BEGIN
-		RETURN slv(to_signed(x, 32));
-	END;
-	
-	FUNCTION iszero(x:FLOAT32) RETURN BOOLEAN IS
-	BEGIN
-		RETURN (x=zerofp or x = neg_zerofp);
-	END;
-	
-	FUNCTION isfinite(x:FLOAT32) RETURN BOOLEAN IS
-	BEGIN
-		RETURN (x/=pos_inffp and x/=neg_inffp);
-	END;
 	
 BEGIN
 

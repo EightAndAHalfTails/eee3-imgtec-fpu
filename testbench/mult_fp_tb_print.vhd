@@ -17,26 +17,14 @@ use ieee.fixed_float_types.all;
 use ieee.fixed_pkg.all;
 USE std.textio.ALL;
 USE work.txt_util.ALL;
+USE work.tb_lib;
 
 ENTITY mult_tb IS
 END mult_tb;
 
 ARCHITECTURE tb OF mult_tb IS
-
 	SIGNAL clk, reset: STD_LOGIC;
 	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);
-
-	ALIAS slv IS std_logic_vector;
-	
-	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER IS
-	BEGIN
-		RETURN to_integer(SIGNED(x));
-	END;
-   
- 	FUNCTION i2v( x : INTEGER) RETURN STD_LOGIC_VECTOR IS
-	BEGIN
-		RETURN slv(to_signed(x, 32));
-	END;
 	
 BEGIN
 
