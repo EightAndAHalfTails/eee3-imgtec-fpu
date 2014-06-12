@@ -2,6 +2,7 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 USE ieee.math_real;
+USE ieee.float_pkg.ALL;		--ieee floating point package
 USE work.ALL;
 
 PACKAGE tb_lib IS

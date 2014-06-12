@@ -17,8 +17,6 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 USE ieee.float_pkg.ALL;		--ieee floating point package
-use ieee.fixed_float_types.all;
-use ieee.fixed_pkg.all;
 use ieee.math_real.all; --real data type
 USE std.textio.ALL;
 USE work.tb_lib;
