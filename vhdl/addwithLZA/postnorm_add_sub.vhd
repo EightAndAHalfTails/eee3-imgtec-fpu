@@ -115,7 +115,7 @@ BEGIN
 	WHEN "011"|"110"|"111"			=>rounded_result_man_s := slv(RESIZE(usg(postnorm_result_man_s(24 downto 2)),24)+1);	--round up
 	WHEN OTHERS => NULL;
 	END CASE;
-	IF rounded_result_man_s(23)='1' THEN
+	IF rounded_result_man_s(23)='1' OR (usg(postnorm_result_e_s)=0 AND postnorm_result_man_s(25)='1') THEN
 	  rounded_result_e_s:=slv(usg(postnorm_result_e_s)+1);
 	ELSE
 	  rounded_result_e_s			:=postnorm_result_e_s;
