@@ -6,7 +6,8 @@ use work.types.all;
 
 entity fpu is
   port(
-    clk, reset, start, done : in std_logic;
+    clk, reset, start : in std_logic;
+    busy, done : out std_logic;
     opcode : in slv(3 downto 0);
     fpu_in1, fpu_in2, fpu_in3 : in slv(31 downto 0);
     fpu_out : out slv(31 downto 0)
@@ -14,55 +15,51 @@ entity fpu is
 end entity fpu;
 
 architecture arch of fpu is
-  signal add_result, div_result, mult_result, sqrt_result, isqrt_result, multacc_result, result : slv(31 downto 0);
-  signal mult1, mult2 : slv(31 downto 0);
-  signal isq_start, isq_done : std_logic;
+  signal a, b, c, add_result, div_result, mult_result, sqrt_result, isqrt_result, multacc_result, result : slv(31 downto 0);
+  signal isq_start, isq_done, s_busy : std_logic;
+  signal op : integer range 0 to 15;
   
   type state_t is (idle, isq_wait, sqt_wait);
   signal state, nstate : state_t;
 begin
   as: entity addsub port map(
-    add_in1 => fpu_in1,
-    add_in2 => fpu_in2,
+    add_in1 => a,
+    add_in2 => b,
     operation_i => opcode(0),
     add_out => add_result
   );
   
   ml: entity mult port map(
-    mult_in1 => mult1,
-    mult_in2 => mult2,
+    mult_in1 => a,
+    mult_in2 => b,
     mult_out => mult_result
   );
   
   dv : entity div port map(
-    div_in1 => fpu_in1,
-    div_in2 => fpu_in2,
+    div_in1 => a,
+    div_in2 => b,
     div_out => div_result
   );
   
-  sq : process(state, isqrt_result, fpu_in1, fpu_in2)
-  begin
-    mult1 <= fpu_in1;
-    mult2 <= fpu_in2;
-    sqrt_result <= mult_result;
-    if state = sqt_wait then
-      mult2 <= isqrt_result;
-    end if;
-  end process sq;
+  sqrt: entity mult port map(
+    mult_in1 => a,
+    mult_in2 => isqrt_result,
+    mult_out => sqrt_result
+  );
   
   isq : entity isqrt port map(
     clk => clk,
     reset => reset,
     start => isq_start,
     done => isq_done,
-    isqrt_in1 => fpu_in1,
+    isqrt_in1 => a,
     isqrt_out => isqrt_result
   );
   
   fma : entity multacc port map(
-    multacc_in1 => fpu_in1,
-    multacc_in2 => fpu_in2,
-    multacc_in3 => fpu_in3,
+    multacc_in1 => a,
+    multacc_in2 => b,
+    multacc_in3 => c,
     multacc_out => multacc_result
   );
   
@@ -78,64 +75,66 @@ begin
     end if;
   end process fsm;
   
-  sel : process(state, opcode, mult_result, add_result, multacc_result, div_result, sqrt_result, isqrt_result)
-    variable op : integer range 0 to 15;
+  next_state: process(state)
   begin
-    if state = idle and start = '1' then
-      op := to_integer(usg(opcode));
-      case op is
-        when 0 => -- NOP
-          result <= float2slv(nan);
-          nstate <= idle;
-        when 1 => -- MUL
-          result <= mult_result;
-          nstate <= idle;
-        when 2|3 => -- ADD|SUB
-          result <= add_result;
-          nstate <= idle;
-        when 4 => -- FMA
-          result <= multacc_result;
-          nstate <= idle;
-        when 5 => -- DIV
-          result <= div_result;
-          nstate <= idle;
-        when 6 => -- DOT2
-          result <= float2slv(nan);
-          nstate <= idle;
-        when 7 => -- DOT3
-          result <= float2slv(nan);
-          nstate <= idle;
-        when 8 => -- SQRT
-          result <= sqrt_result;
-          nstate <= sqt_wait;
-        when 9 => -- ISQRT
-          result <= float2slv(nan);
-          nstate <= isq_wait;
-        when 10 => -- MAG2
-          result <= float2slv(nan);
-          nstate <= idle;
-        when 11 => -- MAG3
-          result <= float2slv(nan);
-          nstate <= idle;
-        when 12 => -- NORM3
-          result <= float2slv(nan);
-          nstate <= idle;
-        when 13 to 15 => -- unused
-          result <= float2slv(nan);
-          nstate <= idle;
-      end case;
-    elsif state = idle then
-      result <= float2slv(nan);
-      nstate <= idle;
-    elsif state = sqt_wait and isq_done = '1' then
-      result <= sqrt_result;
-      nstate <= idle;
-    elsif state = isq_wait and isq_done = '1' then
-      result <= isqrt_result;
-      nstate <= idle;
+    if state = idle and start = '1' and op = 8 then
+      nstate <= sqt_wait;
+    elsif state = idle and start = '1' and op = 9 then
+      nstate <= isq_wait;
     else
-      result <= float2slv(nan);
-      nstate <= state;
+      nstate <= idle;
     end if;
+  end process next_state;
+  
+  sel : process(op, mult_result, add_result, multacc_result, div_result, sqrt_result, isqrt_result)
+  begin
+    case op is
+      when 0 => -- NOP
+        result <= float2slv(nan);
+      when 1 => -- MUL
+        result <= mult_result;
+      when 2|3 => -- ADD|SUB
+        result <= add_result;
+      when 4 => -- FMA
+        result <= multacc_result;
+      when 5 => -- DIV
+        result <= div_result;
+      when 6 => -- DOT2
+        result <= float2slv(nan);
+      when 7 => -- DOT3
+        result <= float2slv(nan);
+      when 8 => -- SQRT
+        result <= sqrt_result;
+      when 9 => -- ISQRT
+        result <= float2slv(nan);
+      when 10 => -- MAG2
+        result <= float2slv(nan);
+      when 11 => -- MAG3
+        result <= float2slv(nan);
+      when 12 => -- NORM3
+        result <= float2slv(nan);
+      when 13 to 15 => -- unused
+        result <= float2slv(nan);
+    end case;
   end process sel;
+  
+  busy <= s_busy;
+  when_busy: process(nstate)
+  begin
+    if nstate = idle then
+      s_busy <= '0';
+    else s_busy <= '1';
+    end if;
+  end process when_busy;
+  
+  register_inputs: process
+  begin
+    wait until clk'event and clk = '1';
+    if s_busy = '0' and start = '1' then
+      op <= to_integer(usg(opcode));
+      a <= fpu_in1;
+      b <= fpu_in2;
+      c <= fpu_in3;
+    end if;
+    end process register_inputs;
 end architecture arch;
