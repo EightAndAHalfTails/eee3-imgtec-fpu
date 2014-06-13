@@ -18,14 +18,30 @@ PACKAGE tb_lib IS
 	CONSTANT NINFINITY_slv	: slv := "11111111100000000000000000000000";
 	CONSTANT PZERO_slv		: slv := "00000000000000000000000000000000";
 	CONSTANT NZERO_slv		: slv := "10000000000000000000000000000000";
+	CONSTANT random_nan_slv	: slv := "01111111100000000000110000000000";
+	
+	CONSTANT SHIFT_POW	: INTEGER := 12; --for dekker product
 
 	FUNCTION isfinite(x:FLOAT32) RETURN BOOLEAN;
 	FUNCTION iszero(x:FLOAT32) RETURN BOOLEAN;
 	FUNCTION b2l(b : BIT) return std_logic;
 	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER;
 	FUNCTION i2v( x : INTEGER) RETURN STD_LOGIC_VECTOR;
-  
-
+	
+	PROCEDURE dekkerMult(
+	x			: IN FLOAT32;
+	y			: IN FLOAT32;
+	r1			: OUT FLOAT32;
+	r2			: OUT FLOAT32
+	);
+	
+	PROCEDURE veltkampSplit(
+	x			: IN FLOAT32;
+	x_high		: OUT FLOAT32;
+	x_low		: OUT FLOAT32
+	);
+	
+ 
 END PACKAGE tb_lib;
 
 PACKAGE BODY tb_lib IS
@@ -63,4 +79,50 @@ PACKAGE BODY tb_lib IS
 		RETURN (x=zerofp or x = neg_zerofp);
 	END;
 	
+	PROCEDURE dekkerMult(
+	x			: IN FLOAT32;
+	y			: IN FLOAT32;
+	r1			: OUT FLOAT32;
+	r2			: OUT FLOAT32
+	) IS
+	
+	VARIABLE x_high, x_low, y_high, y_low	: FLOAT32;
+	VARIABLE t_1, t_2, t_3					: FLOAT32;
+	VARIABLE product						: FLOAT32;
+	
+	BEGIN
+		veltkampSplit(x, x_high, x_low);
+		veltkampSplit(y, y_high, y_low);
+
+		product := x*y;
+		t_1 := -product + x_high*y_high;
+		t_2 := t_1 + x_high * y_low;
+		t_3 := t_2 + x_low * y_high;
+
+		r1 := product;
+		r2 := t_3 + x_low * y_low;
+
+	END dekkerMult;
+
+	PROCEDURE veltkampSplit(
+		x			: IN FLOAT32;
+		x_high		: OUT FLOAT32;
+		x_low		: OUT FLOAT32
+		) IS
+		
+		VARIABLE c	: FLOAT32;
+		VARIABLE gamma	: FLOAT32;
+		VARIABLE delta	: FLOAT32;
+		VARIABLE sum	: FLOAT32;
+		
+	BEGIN
+		c := "00000000000000000001000000000001";
+		gamma := c*x;
+		delta := x - gamma;
+		sum := gamma + delta;
+		
+		x_high := sum;
+		x_low := x-sum;
+
+	END veltkampSplit;
 END PACKAGE BODY tb_lib;

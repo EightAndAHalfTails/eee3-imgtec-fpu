@@ -55,7 +55,9 @@ BEGIN
 		FILE fout			: TEXT OPEN write_mode IS log_file;
 		VARIABLE buf		: LINE;
 		VARIABLE x, y       : FLOAT32;
+		VARIABLE result_tb	: FLOAT32;
 		VARIABLE op			: BIT;
+		VARIABLE op_symbol	: STRING(1 TO 1);
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 		VARIABLE nan_lines : INTEGER;
@@ -112,19 +114,27 @@ BEGIN
 				A<=to_slv(x);
 				B<=to_slv(y);
 				
+				IF op = '0' THEN
+					result_tb := x+y;
+					op_symbol := "+";
+				ELSE
+					result_tb := x-y;
+					op_symbol := "-";
+				END IF;
+				
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				PRINT(fout, str(result));
-				IF op = '0' THEN
-					IF result /= (to_slv(x+y)) THEN
+				IF isnan(result_tb) THEN
+					IF not(isnan(to_float(result))) THEN
 						incorrect_result := incorrect_result+1;
-						REPORT to_string(x) & "+" & to_string(y) & "is " & to_string(to_float(result)) &
-							". Correct answer should be " & to_string(x+y) SEVERITY warning;
+						REPORT to_string(x) & op_symbol & to_string(y) & "is " & to_string(to_float(result)) &
+							". Correct answer should be NaN" SEVERITY warning;
 					END IF;
 				ELSE
-					IF result /= (to_slv(x-y)) THEN
+					IF result /= to_slv(result_tb) THEN
 						incorrect_result := incorrect_result+1;
-						REPORT to_string(x) & "-" & to_string(y) & "is " & to_string(to_float(result)) &
-							". Correct answer should be " & to_string(x-y) SEVERITY warning;
+						REPORT to_string(x) & op_symbol & to_string(y) & "is " & to_string(to_float(result)) &
+							". Correct answer should be " & to_string(result_tb) SEVERITY warning;
 					END IF;
 				END IF;
 				--------------------------------------------------------------
@@ -134,8 +144,7 @@ BEGIN
 					REPORT "NaN input(s): " & to_string(x) & " and " & to_string(y) & ". Result is " & 
 						to_string(to_float(result)) SEVERITY note;			
 				--------------------------------------------------------------
-				-- there's something wrong with this ELSIF condition 
-				-- but whatever I will change it later
+				-- if either input or output is infinity
 				ELSIF isfinite(x) = false or isfinite(y)=false or isfinite(to_float(result))=false THEN
 					inf_lines := inf_lines + 1;
 					REPORT "infinite: " & to_string(x) & " and " & to_string(y) & ". Result is " & 

@@ -134,15 +134,21 @@ BEGIN
 						REPORT "mismatch in line " & INTEGER'IMAGE(n)SEVERITY note;
 						inaccurate_lines := inaccurate_lines + 1;
 					END IF;
-					
+
 					--------------------------------------------------------------
 					-- check result from design
 					WAIT UNTIL clk'EVENT AND clk = '1';
 					PRINT(fout, str(result));
-					IF to_float(result) /= tb_result_float THEN
-						incorrect_result := incorrect_result+1;
-						REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-							to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
+					IF isnan(tb_result_float) THEN
+						IF not(isnan(to_float(result))) THEN
+							incorrect_result := incorrect_result+1;
+							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+								to_string(to_float(result)) & ". Correct answer should be NaN" SEVERITY warning;
+						END IF;
+					ELSIF to_float(result) /= tb_result_float THEN
+							incorrect_result := incorrect_result+1;
+							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+								to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
 					END IF;
 
 					--------------------------------------------------------------
