@@ -51,10 +51,15 @@ BEGIN
 
 	for i in f'HIGH downto f'LOW+1 loop
 	 f(i):=(NOT (A_0(i) XOR B_0(i))) AND (A_0(i-1) or B_0(i-1));
- 	 if f(i)='1' then exit;
-	 else count:=count+1;
-	 end if;
 	end loop;
+	
+	for i in f'HIGH downto f'LOW+1 loop
+	if f(i)='1' then exit;
+	else count:=count+1;
+	end if;
+	end loop;
+	
  	leadingzeros<=count;
+	
 end process LZA;
 END ARCHITECTURE arch;
