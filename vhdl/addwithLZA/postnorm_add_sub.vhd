@@ -42,7 +42,7 @@ result_o<=float2slv(result);  --packing
 result.sign		<=r_sign_i;
 
 --denormal flag
-result_denorm<='1'  WHEN  (usg(r_exponent_i)=0 AND r_man_i(28)='0') OR usg(r_exponent_i)<leadingzeros ELSE '0';                --flag: result is denormal
+result_denorm<='1'  WHEN  (usg(r_exponent_i)=0 AND r_man_i(28)='0') OR usg(r_exponent_i)<=leadingzeros ELSE '0';                --flag: result is denormal
 
 --------------------------------------------------------------------------------------
 --normaliser
