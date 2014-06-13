@@ -28,6 +28,7 @@ package types is
   function isInf(inp: float32_t) return boolean;
   function isZero(inp: float32_t) return boolean;
   function isNan(inp: float32_t) return boolean;
+  function isDenormal(inp: float32_t) return boolean;
   function float2slv(inp: float32_t) return slv;
   function slv2float(inp: slv) return float32_t;
   function leading_one(inp: std_logic_vector) return integer;
@@ -51,6 +52,13 @@ package body types is
   begin
     return inp.exponent = exp_ones and inp.significand /= sig_zeros;
   end function isNan;
+  
+  function isDenormal(inp: float32_t) return boolean is
+    constant exp_zeros : exponent_t := (others => '0');
+    constant sig_zeros : significand_t := (others => '0'); 
+  begin
+    return inp.exponent = exp_zeros and inp.significand /= sig_zeros;
+  end function isDenormal;
   
   function float2slv(inp: float32_t) return slv is
   begin
