@@ -56,6 +56,7 @@ BEGIN
 		VARIABLE header		: STRING(1 TO 3);
 		VARIABLE ibmvectors	: BOOLEAN;
 		VARIABLE x, y, z    : FLOAT32;
+		VARIABLE r1, r2	    : FLOAT32;
 		VARIABLE tb_result	: FLOAT32;
 		VARIABLE tb_result_float : FLOAT32;
 		VARIABLE tb_result_real	: REAL;
@@ -120,6 +121,8 @@ BEGIN
 					ELSIF not(isfinite(x) and isfinite(y) and isfinite(z)) THEN
 						tb_result_float := mac(x,y,z);
 					ELSE
+						--dekkerMult(x,y,r1, r2);
+						--REPORT "r1 is " & to_string(r1) & ", r2 is " & to_string(r2);
 						tb_result_real := (to_real(x)*to_real(y))+to_real(z);
 						tb_result_float := to_float(tb_result_real);			
 						--------------------------------------------------------------

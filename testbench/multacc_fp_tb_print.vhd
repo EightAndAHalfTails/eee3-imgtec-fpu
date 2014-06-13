@@ -58,6 +58,7 @@ BEGIN
 		VARIABLE header		: STRING(1 TO 3);
 		VARIABLE ibmvectors	: BOOLEAN;
 		VARIABLE x, y, z    : FLOAT32;
+		VARIABLE r1, r2		: FLOAT32;
 		VARIABLE tb_result	: FLOAT32;
 		VARIABLE tb_result_float : FLOAT32;
 		VARIABLE tb_result_real	: REAL;
@@ -88,6 +89,7 @@ BEGIN
 			ibmvectors := false;
 			file_close(f);
 			file_open(f, "threeInput_datapak.txt", read_mode);
+			cmd := "0100";
 		END IF;
 		
 		WHILE NOT endfile(f) LOOP
@@ -100,8 +102,6 @@ BEGIN
 				
 				IF ibmvectors = true THEN
 					read(buf, cmd);
-				ELSE
-					cmd := "0100";
 				END IF;
 				
 				IF cmd = "0100" THEN
@@ -112,13 +112,16 @@ BEGIN
 					A<=to_slv(x);
 					B<=to_slv(y);
 					C<=to_slv(z);
-					
+
 					tb_result := mac(x,y,z);
 					IF isnan(x) or isnan(y) or isnan(z) THEN
 						tb_result_float := PNAN_F;
 					ELSIF not(isfinite(x) and isfinite(y) and isfinite(z)) THEN
 						tb_result_float := mac(x,y,z);
 					ELSE
+						--dekkerMult(x,y,r1, r2);
+						--REPORT "r1 is " & to_string(r1) & ", r2 is " & to_string(r2);
+						
 						tb_result_real := (to_real(x)*to_real(y))+to_real(z);
 						tb_result_float := to_float(tb_result_real);
 						
