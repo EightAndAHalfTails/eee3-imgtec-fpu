@@ -75,7 +75,7 @@ begin
     end if;
   end process fsm;
   
-  next_state: process(state)
+  next_state: process(state, start, op)
   begin
     if state = idle and start = '1' and op = 8 then
       nstate <= sqt_wait;
@@ -86,7 +86,7 @@ begin
     end if;
   end process next_state;
   
-  sel : process(op, mult_result, add_result, multacc_result, div_result, sqrt_result, isqrt_result)
+  sel : process(op, mult_result, add_result, multacc_result, div_result, sqrt_result) --removed isqrt_result from sensitivity list since it gives warning -R
   begin
     case op is
       when 0 => -- NOP

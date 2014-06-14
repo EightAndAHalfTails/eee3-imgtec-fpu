@@ -30,6 +30,7 @@ PACKAGE tb_lib IS
 	FUNCTION b2l(b : BIT) return std_logic;
 	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER;
 	FUNCTION i2v( x : INTEGER) RETURN STD_LOGIC_VECTOR;
+	FUNCTION to_opcode( x : STRING(1 TO 4)) RETURN STD_LOGIC_VECTOR;
 	
 	PROCEDURE twoSum(
 		x			: IN FLOAT32;
@@ -87,6 +88,27 @@ PACKAGE BODY tb_lib IS
 	FUNCTION iszero(x:FLOAT32) RETURN BOOLEAN IS
 	BEGIN
 		RETURN (x=zerofp or x = neg_zerofp);
+	END;
+	
+	--cmd to opcode
+	FUNCTION to_opcode( x : STRING(1 TO 4)) RETURN slv IS
+	BEGIN
+		CASE x IS
+			WHEN "nop_" => RETURN "0000";
+			WHEN "mul_" => RETURN "0001";
+			WHEN "add_" => RETURN "0010";
+			WHEN "sub_" => RETURN "0011";
+			WHEN "fma_" => RETURN "0100";
+			WHEN "div_" => RETURN "0101";
+			WHEN "dot2" => RETURN "0110";
+			WHEN "dot3" => RETURN "0111";
+			WHEN "sqrt" => RETURN "1000";
+			WHEN "isqr" => RETURN "1001";
+			WHEN "mag2" => RETURN "1010";
+			WHEN "mag3" => RETURN "1011";
+			WHEN "norm" => RETURN "1100";
+			WHEN OTHERS => RETURN "1111";
+		END CASE;
 	END;
 	
 	--x+y = r1+r2
