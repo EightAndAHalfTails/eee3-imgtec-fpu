@@ -222,7 +222,9 @@ begin
   -----------------------------------------------------------------------------
   sign_logic:PROCESS(c,pre_norm_significand,post_mult_sign,post_mult_significand)
 	BEGIN
-		IF (pre_norm_significand(48)='1') or post_mult_significand=0 THEN			
+	  IF pre_norm_significand=0 THEN
+	    temp_sign<='0';
+		ELSIF (pre_norm_significand(48)='1') or post_mult_significand=0 THEN			
 			temp_sign<=c.sign;	
 		ELSE	
 			temp_sign<=post_mult_sign;	
@@ -319,8 +321,10 @@ begin
     for i in 0 to 22 loop
       s_bit:=s_bit OR sft_result_significand(i);
     end loop; 
-    
-    if pre_norm_significand(48)='1' then
+    if pre_norm_significand=0 then
+      post_norm_exponent<=(others=>'0');
+      post_norm_significand<=(others=>'0');
+    elsif pre_norm_significand(48)='1' then
       if s_bit ='1' then
       post_norm_significand<=(not sft_result_significand(47 downto 23))&s_bit;
       post_norm_exponent<=sft_result_exponent;
