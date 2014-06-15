@@ -369,7 +369,7 @@ begin
   elsif post_mult_significand =0 or expo_diff<-25 then      --if product is zero
       result<=c;
   else  
-    if rounded_result_e_s>=255 then     --overflows
+    if rounded_result_e_s>=255 or isInf(a) or isInf(b) or isInf(c) then     --overflows
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'0');
     else
