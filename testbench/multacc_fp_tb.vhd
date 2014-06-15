@@ -56,7 +56,7 @@ BEGIN
 		VARIABLE header		: STRING(1 TO 3);
 		VARIABLE ibmvectors	: BOOLEAN;
 		VARIABLE x, y, z    : FLOAT32;
-		VARIABLE r1, r2	    : FLOAT32;
+		VARIABLE r1, r2, r3, r4    : FLOAT32;
 		VARIABLE tb_result	: FLOAT32;
 		VARIABLE tb_result_float : FLOAT32;
 		VARIABLE tb_result_real	: REAL;
@@ -121,14 +121,34 @@ BEGIN
 					ELSIF not(isfinite(x) and isfinite(y) and isfinite(z)) THEN
 						tb_result_float := mac(x,y,z);
 					ELSE
-						--dekkerMult(x,y,r1, r2);
+						IF(isfinite(x*y)) THEN
+							dekkerMult(x,y,r1, r2);
+						ELSE
+							r1 := x*y;
+							r2 := PZERO_F;
+						END IF;
+						REPORT "r1 is " & to_string(r1);
+						REPORT "r2 is " & to_string(r2);
+						IF (isfinite(r2+z)) THEN
+							twoSum(r2, z, r3, r4);
+							REPORT "Performing twoSum";
+						ELSE
+							r3 := r2+ z;
+							r4 := PZERO_F;
+						END IF;
+						REPORT "r3 is " & to_string(r3);
+						REPORT "r4 is " & to_string(r4);
+						tb_result_float := to_float((to_real(r1)+to_real(r3))+to_real(r4));
+						
 						--REPORT "r1 is " & to_string(r1) & ", r2 is " & to_string(r2);
-						tb_result_real := (to_real(x)*to_real(y))+to_real(z);
-						tb_result_float := to_float(tb_result_real);			
+						--tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+						--tb_result_float := to_float(tb_result_real);			
+						REPORT to_string(tb_result_float);
 						--------------------------------------------------------------
 						-- check if overflow
 						IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
 							tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
+							REPORT "result_tb is infinity";
 						END IF;
 
 					END IF;
