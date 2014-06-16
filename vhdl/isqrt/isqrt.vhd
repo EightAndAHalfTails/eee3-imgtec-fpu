@@ -19,17 +19,17 @@ end entity isqrt;
 
 architecture fast_newton of isqrt is
   signal input, held_input, half_input, initial_guess, improve_in, improve_out, result, output : float32_t;
-
+  signal s_done : std_logic;
   signal cycle, ncycle : integer range 0 to iterations-1 := 0;
 begin
 isqrt_out <= float2slv(output);
   
 when_done: process(cycle)
   begin
-    if cycle = 0 then
-      done <= '1';
+    if cycle = iterations-1 then
+      s_done <= '1';
     else
-      done <= '0';
+      s_done <= '0';
     end if;
   end process when_done;
   
@@ -86,9 +86,11 @@ when_done: process(cycle)
     if reset = '1' then
       cycle <= 0;
       output <= pos_zero;
+      done <= '0';
     else
       cycle <= ncycle;
       output <= result;
+      done <= s_done;
     end if;
   end process fsm;
   
