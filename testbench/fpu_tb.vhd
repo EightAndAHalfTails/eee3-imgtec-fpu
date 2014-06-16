@@ -221,7 +221,8 @@ BEGIN
 	ELSE
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
 	END IF;
-
+	
+	REPORT "FPU Test finished normally." SEVERITY failure;
 	END PROCESS main;
 
 END tb;

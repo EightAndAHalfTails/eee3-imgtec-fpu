@@ -18,6 +18,7 @@ USE work.tb_lib.all;
 USE work.ALL;
 
 ENTITY div_tb IS
+	GENERIC( ulp : INTEGER := 1);
 END div_tb;
 
 ARCHITECTURE tb OF div_tb IS
@@ -104,12 +105,12 @@ BEGIN
 				ELSE
 					exponent_r := '0'& unsigned(z(7 DOWNTO 0));
 					exponent_l := '0'& unsigned(z(7 DOWNTO 0));				
-					temp:=unsigned(z(-1 DOWNTO -23));
+					temp:=unsigned(to_slv(z(-1 DOWNTO -23)));
 					
 					-- if z is positive, then z_r is greater than z and z_l is smaller than z
 					IF z(8) = '0' THEN  
-						mantissa_r := unsigned("01" & temp) + to_unsigned(3, 25);
-						mantissa_l := unsigned("01" & temp) - to_unsigned(3, 25);
+						mantissa_r := unsigned("01" & temp) + to_unsigned(ulp, 25);
+						mantissa_l := unsigned("01" & temp) - to_unsigned(ulp, 25);
 						
 						-- find z_r
 						-- if mantissa overflow, increment exp
@@ -142,8 +143,8 @@ BEGIN
 						
 					ELSE 
 					-- if z is negative, then z_r is less negative than z and z_l is more negative than z
-						mantissa_r := unsigned("01" & temp) - to_unsigned(3, 25);
-						mantissa_l := unsigned("01" & temp) + to_unsigned(3, 25);
+						mantissa_r := unsigned("01" & temp) - to_unsigned(ulp, 25);
+						mantissa_l := unsigned("01" & temp) + to_unsigned(ulp, 25);
 						
 						-- find z_r
 						IF mantissa_r(23) = '0' THEN
