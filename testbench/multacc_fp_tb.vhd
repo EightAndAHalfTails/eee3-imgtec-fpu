@@ -19,6 +19,7 @@ USE work.tb_lib.all;
 USE work.all;
 
 ENTITY multacc_tb IS
+	GENERIC( ibm_model_answer_file : string := "MultiplyAdd-Shift-And-Special-Significands_output.txt" );
 END multacc_tb;
 
 ARCHITECTURE tb OF multacc_tb IS
@@ -51,6 +52,7 @@ BEGIN
 	------------------------------------------------------------
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "threeInput_datapak.txt";
+		FILE ibm_output		: TEXT OPEN read_mode IS ibm_model_answer_file;
 		VARIABLE buf		: LINE;
 		VARIABLE cmd		: STRING(1 TO 4);
 		VARIABLE header		: STRING(1 TO 3);
@@ -114,48 +116,55 @@ BEGIN
 					B<=to_slv(y);
 					C<=to_slv(z);
 					
-					tb_result := mac(x,y,z);
-					
-					IF isnan(x) or isnan(y) or isnan(z) THEN
-						tb_result_float := PNAN_F;
-					ELSIF not(isfinite(x) and isfinite(y) and isfinite(z)) THEN
-						tb_result_float := mac(x,y,z);
+					IF ibmvectors = true THEN
+						readline(ibm_output, buf);
+						read(buf, tb_result_float);
 					ELSE
-						IF(isfinite(x*y)) THEN
-							dekkerMult(x,y,r1, r2);
-						ELSE
-							r1 := x*y;
-							r2 := PZERO_F;
-						END IF;
-						REPORT "r1 is " & to_string(r1);
-						REPORT "r2 is " & to_string(r2);
-						IF (isfinite(r2+z)) THEN
-							twoSum(r2, z, r3, r4);
-							REPORT "Performing twoSum";
-						ELSE
-							r3 := r2+ z;
-							r4 := PZERO_F;
-						END IF;
-						REPORT "r3 is " & to_string(r3);
-						REPORT "r4 is " & to_string(r4);
-						tb_result_float := to_float((to_real(r1)+to_real(r3))+to_real(r4));
+						tb_result := mac(x,y,z);
+						tb_result_real := (to_real(x)*to_real(y))+to_real(z);
 						
-						--REPORT "r1 is " & to_string(r1) & ", r2 is " & to_string(r2);
-						--tb_result_real := (to_real(x)*to_real(y))+to_real(z);
-						--tb_result_float := to_float(tb_result_real);			
-						REPORT to_string(tb_result_float);
-						--------------------------------------------------------------
-						-- check if overflow
-						IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
-							tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
-							REPORT "result_tb is infinity";
+						IF isnan(x) or isnan(y) or isnan(z) THEN
+							tb_result_float := PNAN_F;
+						ELSIF not(isfinite(x) and isfinite(y) and isfinite(z)) THEN
+							tb_result_float := mac(x,y,z);
+						ELSE
+							IF(isfinite(x*y)) and not(iszero(x*y)) THEN
+								dekkerMult(x,y,r1, r2);
+								REPORT "r1 is " & to_string(r1);
+								REPORT "r2 is " & to_string(r2);
+								IF (isfinite(r2+z)) and not(iszero(r2+z)) and not(isnan(r2)) THEN
+									twoSum(r2, z, r3, r4);
+									REPORT "Performing twoSum";
+									tb_result_float := (r1+r3)+r4;
+								ELSE
+									-- r3 := r2+ z;
+									-- r4 := PZERO_F;
+									tb_result_float := to_float(tb_result_real);
+								END IF;
+								REPORT "r3 is " & to_string(r3);
+								REPORT "r4 is " & to_string(r4);
+							ELSE
+								tb_result_float := to_float(tb_result_real);		
+							END IF;
+						
+							--REPORT "r1 is " & to_string(r1) & ", r2 is " & to_string(r2);
+							--tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+							--tb_result_float := to_float(tb_result_real);			
+							REPORT "result_tb is " & to_string(tb_result_float);
+							--------------------------------------------------------------
+							-- check if overflow
+							IF slv(tb_result_float(7 DOWNTO 0)) = "11111111" THEN
+								tb_result_float := to_float(slv(tb_result_float(8 DOWNTO 0)) & "00000000000000000000000");
+								REPORT "result_tb is infinity";
+							END IF;							
+						END IF;
+						-- compare result obtained from float_pkg and math.real
+						IF tb_result /= tb_result_float and not(isnan(tb_result)) and not(isnan(tb_result_float)) THEN
+							inaccurate_lines := inaccurate_lines + 1;
 						END IF;
 
 					END IF;
-					-- compare result obtained from float_pkg and math.real
-					IF tb_result /= tb_result_float and not(isnan(tb_result)) and not(isnan(tb_result_float)) THEN
-						inaccurate_lines := inaccurate_lines + 1;
-					END IF;
+
 					
 					--------------------------------------------------------------
 					-- check result from design
@@ -170,6 +179,8 @@ BEGIN
 							incorrect_result := incorrect_result+1;
 							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
 								to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
+							REPORT "Result from mac(x,y,z) is " & to_string(tb_result);
+							REPORT "Result from real_mac(x,y,z) is " & to_string(to_float(tb_result_real));
 					END IF;
 					--------------------------------------------------------------
 					-- if either input or output is NaN
