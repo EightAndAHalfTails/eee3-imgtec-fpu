@@ -137,6 +137,14 @@ begin
     end case;
   end process sel;
   
+  start_isq : process(op)
+  begin
+    if op = 8 or op = 9 then
+      isq_start <= '1';
+    else isq_start <= '0';
+    end if;
+  end process start_isq;
+  
   busy <= s_busy;
   when_busy: process(nstate)
   begin
