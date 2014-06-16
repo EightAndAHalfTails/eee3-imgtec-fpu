@@ -24,7 +24,7 @@ END multacc_tb;
 ARCHITECTURE tb OF multacc_tb IS
 	SIGNAL clk, reset: STD_LOGIC; 
 	SIGNAL A, B, C, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=ab+c	
-
+	TYPE line_numbers IS ARRAY(0 to 9) OF INTEGER;
 BEGIN
   
 	-- clock generation process
@@ -57,7 +57,7 @@ BEGIN
 		VARIABLE ibmvectors	: BOOLEAN;
 		VARIABLE x, y, z    : FLOAT32;
 		VARIABLE r1, r2, r3, r4    : FLOAT32;
-		VARIABLE tb_result	: FLOAT32;
+		VARIABLE tb_result_mac	: FLOAT32;
 		VARIABLE tb_result_float : FLOAT32;
 		VARIABLE tb_result_real	: REAL;
 		VARIABLE n          : INTEGER;		--line counter
@@ -65,6 +65,7 @@ BEGIN
 		VARIABLE nan_lines : INTEGER;
 		VARIABLE inf_lines : INTEGER;
 		VARIABLE inaccurate_lines : INTEGER;	--where using float pkg does not match real result
+		VARIABLE incorrect_lines : line_numbers;
 	
 	BEGIN
 		reset <= '1';
@@ -76,7 +77,8 @@ BEGIN
 		nan_lines := 0;
 		inf_lines := 0;
 		inaccurate_lines := 0;
-		
+		incorrect_lines := (0,0,0,0,0,0,0,0,0,0);
+
 		---------------------------------------------------------------------
 		-- read data file until eof
 		readline(f, buf);
@@ -114,11 +116,12 @@ BEGIN
 					B<=to_slv(y);
 					C<=to_slv(z);
 					
+					tb_result_mac := mac(x,y,z);
+					tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+					
 					IF ibmvectors = true THEN
 						read(buf, tb_result_float);
-					ELSE
-						tb_result := mac(x,y,z);
-						tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+					ELSE	
 						
 						IF isnan(x) or isnan(y) or isnan(z) THEN
 							tb_result_float := PNAN_F;
@@ -156,7 +159,7 @@ BEGIN
 							END IF;							
 						END IF;
 						-- compare result obtained from float_pkg and math.real
-						IF tb_result /= tb_result_float and not(isnan(tb_result)) and not(isnan(tb_result_float)) THEN
+						IF tb_result_mac /= tb_result_float and not(isnan(tb_result_mac)) and not(isnan(tb_result_float)) THEN
 							inaccurate_lines := inaccurate_lines + 1;
 						END IF;
 
@@ -168,16 +171,22 @@ BEGIN
 					WAIT UNTIL clk'EVENT AND clk = '1';
 					IF isnan(tb_result_float) THEN
 						IF not(isnan(to_float(result))) THEN
+							IF incorrect_result < 10 THEN
+								incorrect_lines(incorrect_result) := n;
+							END IF;
 							incorrect_result := incorrect_result+1;
 							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
 								to_string(to_float(result)) & ". Correct answer should be NaN" SEVERITY warning;
 						END IF;
 					ELSIF to_float(result) /= tb_result_float THEN
-							incorrect_result := incorrect_result+1;
-							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
-								to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
-							REPORT "Result from mac(x,y,z) is " & to_string(tb_result);
-							REPORT "Result from real_mac(x,y,z) is " & to_string(to_float(tb_result_real));
+						IF incorrect_result < 10 THEN
+							incorrect_lines(incorrect_result) := n;
+						END IF;
+						incorrect_result := incorrect_result+1;
+						REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
+							to_string(to_float(result)) & ". Correct answer should be " & to_string(tb_result_float) SEVERITY warning;
+						REPORT "Result from mac(x,y,z) is " & to_string(tb_result_mac);
+						REPORT "Result from real_mac(x,y,z) is " & to_string(to_float(tb_result_real));
 					END IF;
 					--------------------------------------------------------------
 					-- if either input or output is NaN
@@ -207,6 +216,14 @@ BEGIN
 	ELSE
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
 		REPORT "Float pkg and Real pkg mismatch (number of lines): " & INTEGER'IMAGE(inaccurate_lines) SEVERITY note;
+		FOR i IN 0 TO 9 LOOP
+			IF incorrect_lines(i) /= 0 THEN
+				REPORT "Error in line " & INTEGER'IMAGE(incorrect_lines(i));
+			END IF;
+		END LOOP;
+		IF incorrect_result > 10 THEN
+			REPORT "etc.";
+		END IF;
 	END IF;
 	
 	REPORT "Multiply-accumulate test finished normally." SEVERITY failure;
