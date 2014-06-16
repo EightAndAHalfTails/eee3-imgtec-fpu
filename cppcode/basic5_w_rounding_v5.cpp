@@ -721,7 +721,7 @@ fp_t multiplier(fp_t x, fp_t y){
 		//cout<<hex<<z.m<<"	"<<lostbits<<endl;
 	}
 	
-	cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<"	"<<"lostbits: "<<lostbits<<endl;
+	//cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<"	"<<"lostbits: "<<lostbits<<endl;
 	
 	//z.m <<= 1;
 	while(z.e < -1){
@@ -737,7 +737,7 @@ fp_t multiplier(fp_t x, fp_t y){
 		z.e += 2;
 	}
 	
-	cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<"	"<<"lostbits: "<<lostbits<<endl;
+	//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<"	"<<"lostbits: "<<lostbits<<endl;
 	// Rounding and normalisation
 	if(z.e == 0){
 		LSB = extractBits(0,0,lostbits);
