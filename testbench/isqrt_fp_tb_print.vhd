@@ -20,6 +20,7 @@ USE ieee.float_pkg.ALL;		--ieee floating point package
 use ieee.math_real.all; --real data type
 USE std.textio.ALL;
 USE work.tb_lib.all;
+USE work.txt_util.all;
 
 ENTITY isqrt_tb IS
 END isqrt_tb;
@@ -56,6 +57,7 @@ BEGIN
 	------------------------------------------------------------
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "oneInput_datapak.txt";
+		FILE fout			: TEXT OPEN write_mode IS "isqrt_output.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE x	 		: FLOAT32; 
 		VARIABLE x_real		: REAL;
@@ -187,6 +189,7 @@ BEGIN
 
 				REPORT "isqrt_l = " & to_string(isqrt_l);
 				REPORT "isqrt_r = " & to_string(isqrt_r);
+				PRINT(fout, str(result));
 				IF isnan(isqrt_x) THEN
 					IF not(isnan(to_float(result))) THEN
 						incorrect_result := incorrect_result+1;
