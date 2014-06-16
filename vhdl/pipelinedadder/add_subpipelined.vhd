@@ -21,8 +21,8 @@ END ENTITY addsub;
 
 architecture rtl of addsub IS
 signal A,B,result                               :float32_t;
-signal addsub_A_st_B,addsub_A_st_B0,addsub_A_st_B1,addsub_A_st_B2 :std_logic;
-signal input_NaN,input_NaN0,input_NaN1,input_NaN2  :boolean;
+signal addsub_A_st_B :std_logic;
+signal input_NaN,input_NaN0,input_NaN2  :boolean;
 signal expo_diff,expo_diff0,expo_diff1		:sgn(8 downto 0);
 signal result_denorm          :std_logic;
 signal result_inf,result_inf3 :std_logic;
@@ -30,15 +30,15 @@ signal result_NaN,result_NaN3 :std_logic;
 signal result_zero,result_zero3 :std_logic;
 
 
-signal operation0,operation1,operation2         :std_logic;
-signal temp_sign0,temp_sign1,temp_sign2,temp_sign3  :sign_t;
+signal operation0,operation1        :std_logic;
+signal temp_sign0  :sign_t;
 
 
 signal pre_shift_opA,pre_shift_opB              :slv(27 downto 1);
 
 signal post_shift_opA,post_shift_opB	        :slv(27 downto 0);
 
-signal temp_expo0,temp_expo1,temp_expo2 :exponent_t;
+signal temp_expo0,temp_expo1:exponent_t;
 signal prenorm_result_e_s		:exponent_t;
 signal prenorm_result_man_s		:std_logic_vector(28 downto 0);
 signal leadingzeros           		:integer range 0 to 28;
@@ -54,14 +54,10 @@ begin
     wait until clk'EVENT and clk='1';
       if reset='1' then 
 	temp_sign0<='0';
-	temp_sign1<='0';
-	temp_sign2<='0';
-	temp_sign3<='0';
 	result.sign<='0';
 
 	operation0<='0';
 	operation1<='0';
-	operation2<='0';
       else
         for i in 0 to 4 loop
           case i is
@@ -81,12 +77,8 @@ begin
                           temp_sign0<=A.sign;					
                         end if;
                         operation0<=A.sign xor B.sign xor operation_i;
-            when 1 =>temp_sign1<=temp_sign0;
-                     operation1<=operation0;
-            when 2 =>temp_sign2<=temp_sign1;
-                     operation2<=operation1;
-            when 3 =>temp_sign3<=temp_sign2;
-            when 4 =>result.sign<=temp_sign3;
+            when 1 =>operation1<=operation0;
+            when 4 =>result.sign<=temp_sign0;
             when others => null;
           end case;
         end loop;
@@ -98,20 +90,14 @@ reg:process
 begin
 wait until clk'EVENT and clk='1';
 if reset='1' then 
-	addsub_A_st_B0<='0';
-	addsub_A_st_B1<='0';
-	addsub_A_st_B2<='0';
 
 	input_NaN0<=false;
-	input_NaN1<=false;
 	input_NaN2<=false;
 	
 	expo_diff0<=(others=>'0');
 	expo_diff1<=(others=>'0');
 	
 	temp_expo1<=(others=>'0');
-	temp_expo2<=(others=>'0');
-	prenorm_result_e_s<=(others=>'0');
 
 	result_NaN3<='0';
 	result_inf3<='0';
@@ -119,17 +105,15 @@ if reset='1' then
 else
  for i in 0 to 4 loop
   case i is
-	when 0=>addsub_A_st_B0<=addsub_A_st_B;	--swap
+	when 0=>	--swap
 		input_NaN0<=input_NaN;
 		expo_diff0<=expo_diff;
-	when 1=>addsub_A_st_B1<=addsub_A_st_B0; --align
+	when 1=> --align
 		temp_expo1<=temp_expo0;
 		expo_diff1<=expo_diff0;
-		input_NaN1<=input_NaN0;
-	when 2=>addsub_A_st_B2<=addsub_A_st_B;	--add
-		input_NaN2<=input_NaN1;
-		temp_expo2<=temp_expo1;
-	when 3=>prenorm_result_e_s<=temp_expo2;	--normalise
+	when 2=>	--add
+		input_NaN2<=input_NaN0;
+	when 3=>	--normalise
 		result_NaN3<=result_NaN;
 		result_inf3<=result_inf;
 		result_zero3<=result_zero;
@@ -368,5 +352,4 @@ else
 end if;
 END PROCESS rounder;
 END ARCHITECTURE rtl;
-
 
