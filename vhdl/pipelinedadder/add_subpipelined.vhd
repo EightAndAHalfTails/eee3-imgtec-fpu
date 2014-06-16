@@ -143,6 +143,7 @@ end process reg;
 -----------------------------------------------------------------pipeline stage 0----------------------------------------------------------------------------------------------------------------
   A<=slv2float(add_in1);
   B<=slv2float(add_in2);
+  add_out<=float2slv(result);
   addsub_A_st_B<='1' when usg(A.exponent)<usg(B.exponent) or (usg(A.exponent)=usg(B.exponent) and usg(A.significand)<usg(B.significand)) else '0';
   input_NaN<=isNan(A) or isNan(B);
   expo_diff<=sgn(resize(usg(A.exponent),9)-resize(usg(B.exponent),9));
