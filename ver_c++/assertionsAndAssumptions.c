@@ -23,6 +23,7 @@ string testfile_mul_output = "test1_mul_output.txt";
 //this is for division, we use tests: 1 - 8
 string testfile_div_output = "test1_gold_div_output.txt";
 string testfile_div_output2 = "test1_gold2_div_output2.txt";
+
 string testfile_div_output3 = "test1_newton_div_output3.txt";
 
 //testing of functions with 1 input
@@ -379,11 +380,6 @@ lostbits >>= 1;
 }
 }
 z.e += lzd;
-
-if(z.e < 0){
-z.e = 0; z.m = 0;
-return;
-}
 }
 
 // Rounding
@@ -394,8 +390,8 @@ lostbit_low = 1;
 lostbit_low = 0;
 }
 LSB = extractBits(0,0,z.m);
-cout<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
-cout<<"pre round z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;	
+//cout<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
+//cout<<"pre round z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 if(lostbit_high == 1 & (LSB | lostbit_low)){
 if(IsUp){
 z.m += 1;
@@ -404,6 +400,12 @@ z.m -= 1;
 }
 }
 
+// Underflow Limiting
+if(z.e < 0){
+z.e = 0; z.m = 0;
+return;
+}
+// Overflow Limiting
 if(z.e >= 255){
 z.v = 1; z.e = 255; z.m = 0x800000;
 return;
@@ -424,6 +426,7 @@ setFlag(x); setFlag(y);
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
+// Exception Handling
 if((x.v == 1 & y.v == 1 & x.s != y.s)|(x.v == 2)|(y.v == 2)){
 z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
 return z;
@@ -524,12 +527,13 @@ int lostbits = 0, LSB = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
 setFlag(x); setFlag(y);	
-cout<<x.v<<" "<<y.v<<endl;
+//cout<<x.v<<" "<<y.v<<endl;
 
 // Full numbers (with significands)
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
 // <<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
+// Exception Handling
 if((x.v == 0 & y.v == 1)|(x.v == 1 & y.v == 0)|(x.v == 2)|(y.v == 2)){
 z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
 return z;
@@ -544,9 +548,7 @@ return y;
 }
 
 // Calculate sign
-if(x.s != y.s){
-z.s = 1;
-}
+z.s = x.s^y.s;
 
 // New exponent
 //if(x.e != 0 & y.e != 0){ <--- may cause denormal failure
@@ -554,12 +556,10 @@ z.e = x.e + y.e - 127;
 
 //cout<<"New exponent: "<<dec<<x.e<<"+"<<y.e<<" = "<<z.e<<endl;
 
-
 // Booth encode
 int beys; // booth encoded y significand
-if(y.e != 0){
 y.m = y.m<<1; //decoding change due to the leading 1 in significand
-}
+
 
 int negxm = ~x.m;
 negxm++;
@@ -598,7 +598,7 @@ case 5: z.m += negxm; break;
 case 6: z.m += negxm; break;
 case 7: NULL; break;
 }
-cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
+//cout<<"New estimate: "<<hex<<beys<<" "<<z.m<<" "<<lostbits<<endl;
 }
 
 if(y.e != 0){
@@ -615,10 +615,10 @@ z.m += x.m; // this takes account of the leading 1
 //cout<<hex<<z.m<<" "<<lostbits<<endl;
 }
 
-cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
+//cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 
 //z.m <<= 1;
-while(z.e < 0){
+while(z.e < -1){
 lostbits <<= 1;
 LSB = extractBits(0,0,z.m);
 lostbits += LSB;
@@ -626,11 +626,12 @@ z.m = z.m>>1;
 z.e++;
 //cout<<dec<<z.e<<" "<<hex<<z.m<<" "<<lostbits<<endl;
 }
-if(z.e != 0 & x.e != 0 & y.e != 0){
-z.e++;
+if(z.e == -1) z.e++;
+if(x.e == 0 & z.e != 0){
+z.e += 2;
 }
 
-cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
+//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 // Rounding and normalisation
 if(z.e == 0){
 LSB = extractBits(0,0,lostbits);
@@ -769,13 +770,22 @@ setFlag(x); setFlag(y);
 // Full number (with significand)
 //cout<<"y: "<<dec<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl<<endl;
 
+// Exception Handling
 if((x.v == 0 & y.v == 0)|(x.v == 1 & y.v == 1)|x.v == 2 | y.v == 2){
 z.v = 2; z.s = 1; z.e = 255; z.m = 0xFFFFFF;
 return z;
 }
-if((x.v == 1 & y.v == 0)|(x.v == 1 & y.v == 0)){
-return x;
+if(x.v == 1 | y.v == 0){
+z.v = 1; z.s = x.s^y.s; z.e = 255;	// inf
+return z;
 }
+if(x.v == 1 | y.v == 0){
+z.v = 0; z.s = x.s^y.s;	// zero
+return z;
+}
+
+// Calculate sign
+z.s = x.s^y.s;
 
 // Divide by power of 2, base case
 if(y.m == 0x800000){
@@ -784,56 +794,42 @@ z.m = x.m;
 return z;
 }
 
-// Calculate sign
-if(x.s != y.s){
-z.s = 1;
-}
-
 // Newton-Raphson Method
 int sign;
-fp_t two, x0;
-bool denorm = false;
+fp_t two, y0;
+int scale = 0; // this is needed because some denormals have reciprocal larger than MAX
 
-/*if(x.e == y.e){
-x.e = 127;
-y.e = 127;
-} //z.e = 254 - y.e;*/
+if(y.e == 0){
+while(y.m < 0x200000){
+scale++;
+y.m <<= 1;
+
+}
+}
+cout<<endl<<dec<<"new y: "<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl;
 
 sign = z.s; // preserves sign bit, to be reused later
 x.s = 0; y.s = 0; // Use algorithm with positive numbers
 two.s = 0; two.e = 128; two.m = 0x800000; // define 2.0 in floating point to be used in subtraction
 z.s = 0; z.e = 254 - y.e; z.m = 0x800000; // initial guess is the reciprocal of the highest power of 2 below divisor
-//cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
-
-if(y.e == 0){
-y.e++;
-y.m |= 0x800000;
-z.e--;
-denorm = true;
-}
+cout<<dec<<"initial z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 
 int i = 0;
 while( i < 10 ){
-x0 = z;
-z = multiplier(y,x0);
-z = adder(two,z,true);
-z = multiplier(z,x0);
+y0 = z;
+z = multiplier(y,y0);	// D*y0
+z = adder(two,z,true);	// 2-(D*y0)
+z = multiplier(z,y0);	// y0*(2-(D*y0))
 //cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 i++;
 }
+y.m >>= scale;
 
-if(denorm){
-z.e++;
-}
-//cout<<endl<<dec<<"inv y: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+cout<<endl<<dec<<"inv y: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 //<<dec<<"x: "<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl;
 
-z = multiplier(z,x);
+z = multiplier(z,x);	// z = x*(1/y)
 z.s = sign;
-if(z.e >= 255){
-z.e = 255; z.m = 0x800000;
-}
-//cout<<dec<<"ans z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 
 // Full number (with significand)
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
