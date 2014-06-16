@@ -97,13 +97,13 @@ void testDivision3_newton(string testfile, string testfile_div_output3);
 //////////////////////main function//////////////////////////
 int main(){
 	//test addition unit
-	testAddition(testfile, testfile_add_output, 1);
+	//testAddition(testfile, testfile_add_output, 1);
 	
 	//test subtraction
 	//testAddition(testfile, testfile_sub_output, 0);
 	
 	//test multiplication
-	//testMultiplication(testfile, testfile_mul_output);
+	testMultiplication(testfile, testfile_mul_output);
 
 	//test division
 	//testDivision1_gold(testfile, testfile_div_output);
@@ -339,12 +339,10 @@ if(z.m > 0x7FFFFF){
 z.e++;
 //z.m >>= 1;
 }
-return;
-}
-
+}else{
 // Normalisation
 if(z.m != 0){
-int lzd = 25;
+int lzd = 31;
 int found = 0;
 int err;
 while(!found){
@@ -381,16 +379,17 @@ lostbits >>= 1;
 }
 z.e += lzd;
 }
+}
 
 // Rounding
 lostbit_high = extractBits(0,0,lostbits);
-if(lostbits > 1){
+if(lostbits>>1 != 0){
 lostbit_low = 1;
 }else{
 lostbit_low = 0;
 }
 LSB = extractBits(0,0,z.m);
-//cout<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
+//cout<<endl<<"LSB:"<<LSB<<" "<<lostbit_high<<" "<<lostbit_low<<endl;
 //cout<<"pre round z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 if(lostbit_high == 1 & (LSB | lostbit_low)){
 if(IsUp){
@@ -562,7 +561,6 @@ z.e = x.e + y.e - 127;
 int beys; // booth encoded y significand
 y.m = y.m<<1; //decoding change due to the leading 1 in significand
 
-
 int negxm = ~x.m;
 negxm++;
 int twoxm = x.m<<1;
@@ -619,14 +617,8 @@ z.m += x.m; // this takes account of the leading 1
 
 //cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 
-z.e++;
-int stop;
-if(x.e == 0 & y.e == 0){
-stop = -1;
-}else{
-stop = 0;
-}
-while(z.e < stop){
+//z.e++;
+while(z.e < 0){
 lostbits <<= 1;
 LSB = extractBits(0,0,z.m);
 lostbits += LSB;
@@ -634,12 +626,10 @@ z.m = z.m>>1;
 z.e++;
 //cout<<dec<<z.e<<" "<<hex<<z.m<<" "<<lostbits<<endl;
 }
-if(x.e == 0 & y.e == 0 & z.e == -1) z.e++;
-if(x.e == 0 & z.e != 0){
-z.e ++;
-}
+if(x.e == 0 & z.e != 0) z.e+=2;
+if(z.e != 0) z.e++;
 
-//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
+cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 // Rounding and normalisation
 /*if(z.e == 0){
 LSB = extractBits(0,0,lostbits);
@@ -1075,7 +1065,7 @@ i++;
 
 // If we are looking for the normal square root,
 // we multiply the reciprocal root we just calculated
-// by the original number
+// with the original number
 if(!IsReciprocal){
 z = multiplier(x,z);
 }
