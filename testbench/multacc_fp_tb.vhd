@@ -19,7 +19,6 @@ USE work.tb_lib.all;
 USE work.all;
 
 ENTITY multacc_tb IS
-	GENERIC( ibm_model_answer_file : string := "MultiplyAdd-Shift-And-Special-Significands_output.txt" );
 END multacc_tb;
 
 ARCHITECTURE tb OF multacc_tb IS
@@ -52,7 +51,6 @@ BEGIN
 	------------------------------------------------------------
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "threeInput_datapak.txt";
-		FILE ibm_output		: TEXT OPEN read_mode IS ibm_model_answer_file;
 		VARIABLE buf		: LINE;
 		VARIABLE cmd		: STRING(1 TO 4);
 		VARIABLE header		: STRING(1 TO 3);
@@ -117,7 +115,6 @@ BEGIN
 					C<=to_slv(z);
 					
 					IF ibmvectors = true THEN
-						readline(ibm_output, buf);
 						read(buf, tb_result_float);
 					ELSE
 						tb_result := mac(x,y,z);
