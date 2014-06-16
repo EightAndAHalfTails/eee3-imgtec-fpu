@@ -82,6 +82,9 @@ BEGIN
 	BEGIN
 		reset <= '1';
 		start <= '0';
+
+		opcode <= to_opcode("nop_");
+		
 		WAIT UNTIL clk'EVENT and clk = '1';
 		reset <= '0';
 		
@@ -101,7 +104,7 @@ BEGIN
 				REPORT "Reading input line:" & INTEGER'IMAGE(n) SEVERITY note;
 				
 				read(buf, cmd);
-				opcode <= to_opcode(cmd); --TODO write this function
+				opcode <= to_opcode(cmd);
 				CASE cmd IS
 					WHEN "nop_" => -- NOP
 					WHEN "mul_" => -- MUL
