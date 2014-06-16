@@ -421,6 +421,7 @@ int lostbits = 0, LSB = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
 setFlag(x); setFlag(y);
+cout<<x.v<<" "<<y.v<<endl;
 
 // Full numbers (with significands)
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
@@ -435,10 +436,11 @@ if((x.v == 1)|(y.v == 0 & x.v != 0)){
 return x;
 }
 if((y.v == 1)|(x.v == 0 & y.v != 0)){
+y.s = (y.s^IsSub);
 return y;
 }
 if(x.v == 0 & y.v == 0){
-if(x.s & y.s){
+if(x.s & (y.s^IsSub)){
 z.s = 1;
 }
 return z;
@@ -617,8 +619,14 @@ z.m += x.m; // this takes account of the leading 1
 
 //cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 
-//z.m <<= 1;
-while(z.e < -1){
+z.e++;
+int stop;
+if(x.e == 0 & y.e == 0){
+stop = -1;
+}else{
+stop = 0;
+}
+while(z.e < stop){
 lostbits <<= 1;
 LSB = extractBits(0,0,z.m);
 lostbits += LSB;
@@ -626,19 +634,19 @@ z.m = z.m>>1;
 z.e++;
 //cout<<dec<<z.e<<" "<<hex<<z.m<<" "<<lostbits<<endl;
 }
-if(z.e == -1) z.e++;
+if(x.e == 0 & y.e == 0 & z.e == -1) z.e++;
 if(x.e == 0 & z.e != 0){
-z.e += 2;
+z.e ++;
 }
 
 //cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 // Rounding and normalisation
-if(z.e == 0){
+/*if(z.e == 0){
 LSB = extractBits(0,0,lostbits);
 if(LSB){
 z.m++;
 }
-}
+}*/
 round_norm(z, lostbits, 1);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
@@ -670,29 +678,31 @@ return z;
 
 // Goldschmidt's Algorithm
 int sign;
-fp_t f, n, two;
+fp_t f, n, d, two;
 
 sign = z.s; // preserves sign bit, to be reused later
 x.s = 0; y.s = 0; // Goldschmidt's Algorithm works with positive numbers
 two.s = 0; two.e = 128; two.m = 0x800000; // define 2.0 in floating point to used in subtraction
 f.s = 0; f.e = 254 - y.e; f.m = 0x800000; // initial guess is highest power of 2 below divisor
 
-z = x;
+n = multiplier(f,x);
+d = multiplier(f,y);
+f = adder(two,d,true);
+
+cout<<endl;
 
 int i = 0;
-while( i < 5 ){
+while( i < 20 ){
+n = multiplier(f,n);	// calculate new value for numerator
+d = multiplier(f,d);	// calculate new value for denominator
+f = adder(two,d,true);
 
-if(z.m == 0){	// if the exact answer is found, break, otherwise iterate
-break;
-}else{
+cout<<hex<<n.m<<" : "<<d.m<<endl;
+
 i++;
 }
 
-y = multiplier(f,y);	// calculate new value for denominator
-z = multiplier(f,z);	// calculate new value for numerator
-f = adder(two,y,true);
-}
-
+z = multiplier(n,f);
 z.s = sign;
 
 // Full number (with significand)
@@ -733,7 +743,7 @@ long long d = 0, f = 0, n = 0;
 
 d = y.m;
 n = x.m;
-f = 0x1000000 - d; f <<= 1;
+f = ~d; //f <<= 1;
 
 cout<<endl<<"f: "<<f<<" "
 <<"n: "<<n<<" "
@@ -742,9 +752,9 @@ cout<<endl<<"f: "<<f<<" "
 int i = 0;
 while( i < 5 ){
 
-d = d*f*2; d >>= 24;	// calculate new value for denominator
-n = n*f*2; n >>= 24;	// calculate new value for numerator
-f = 0x1000000 - d; f <<= 1;	// calculate "error"
+d = d*f*2; //d >>= 24; // calculate new value for denominator
+n = n*f*2; //n >>= 24; // calculate new value for numerator
+f = ~d; //f <<= 1; // calculate "error"
 
 cout<<endl<<"f: "<<f<<" "
 <<"n: "<<n<<" "
@@ -806,7 +816,7 @@ y.m <<= 1;
 
 }
 }
-cout<<endl<<dec<<"new y: "<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<endl;
+cout<<endl<<dec<<"new y: "<<y.s<<"-"<<y.e<<"-"<<hex<<y.m<<" "<<dec<<scale<<endl;
 
 sign = z.s; // preserves sign bit, to be reused later
 x.s = 0; y.s = 0; // Use algorithm with positive numbers
@@ -815,15 +825,15 @@ z.s = 0; z.e = 254 - y.e; z.m = 0x800000; // initial guess is the reciprocal of 
 cout<<dec<<"initial z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 
 int i = 0;
-while( i < 10 ){
+while( i < 20 ){
 y0 = z;
 z = multiplier(y,y0);	// D*y0
 z = adder(two,z,true);	// 2-(D*y0)
 z = multiplier(z,y0);	// y0*(2-(D*y0))
-//cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 i++;
 }
-y.m >>= scale;
+//y.m >>= scale;
 
 cout<<endl<<dec<<"inv y: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 //<<dec<<"x: "<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl;
@@ -836,7 +846,6 @@ z.s = sign;
 
 return z;
 }
-
 
 fp_t fractioning_rooter(fp_t x){
 fp_t z;
@@ -1081,35 +1090,39 @@ return z;
 
 void read_in(fp_t &a_fp, fp_t &b_fp){
 string line, reline;
-int size;
+int size, zeroerr = 0;
 ifstream myfile("input.txt");
 if (myfile.is_open()){
 while (myfile.good()){
 getline (myfile,line);
 
-a_fp.s = atoi(line.substr(0,1).c_str());
+while(line.substr(zeroerr,1) == " "){
+zeroerr++;
+}
 
-reline = line.substr(1,8);
+a_fp.s = atoi(line.substr(zeroerr,1).c_str());
+
+reline = line.substr(zeroerr+1,8);
 for(int i = 0; i<8; i++){
 a_fp.e <<= 1;
 a_fp.e += atoi(reline.substr(i,1).c_str());
 }
 
-reline = line.substr(9,23);
+reline = line.substr(zeroerr+9,23);
 for(int i = 0; i<23; i++){
 a_fp.m <<= 1;
 a_fp.m += atoi(reline.substr(i,1).c_str());
 }
 
-b_fp.s = atoi(line.substr(33,1).c_str());
+b_fp.s = atoi(line.substr(zeroerr+33,1).c_str());
 
-reline = line.substr(34,8);
+reline = line.substr(zeroerr+34,8);
 for(int i = 0; i<8; i++){
 b_fp.e <<= 1;
 b_fp.e += atoi(reline.substr(i,1).c_str());
 }
 
-reline = line.substr(42,23);
+reline = line.substr(zeroerr+42,23);
 for(int i = 0; i<23; i++){
 b_fp.m <<= 1;
 b_fp.m += atoi(reline.substr(i,1).c_str());
@@ -1131,21 +1144,25 @@ b_fp.m |= 0x00800000;
 
 void output(fp_t &a_fp){
 string line, reline;
-int size;
+int size, zeroerr = 0;
 ifstream myfile("output.txt");
 if (myfile.is_open()){
 while (myfile.good()){
 getline (myfile,line);
 
-a_fp.s = atoi(line.substr(0,1).c_str());
+while(line.substr(zeroerr,1) == " "){
+zeroerr++;
+}
 
-reline = line.substr(1,8);
+a_fp.s = atoi(line.substr(zeroerr,1).c_str());
+
+reline = line.substr(zeroerr+1,8);
 for(int i = 0; i<8; i++){
 a_fp.e <<= 1;
 a_fp.e += atoi(reline.substr(i,1).c_str());
 }
 
-reline = line.substr(9,23);
+reline = line.substr(zeroerr+9,23);
 for(int i = 0; i<23; i++){
 a_fp.m <<= 1;
 a_fp.m += atoi(reline.substr(i,1).c_str());
