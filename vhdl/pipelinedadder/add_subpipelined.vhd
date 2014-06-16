@@ -15,7 +15,8 @@ ENTITY addsub IS
 	  add_in1		: IN  std_logic_vector(31 downto 0);
 	  add_in2		: IN  std_logic_vector(31 downto 0);
 	  operation_i		: IN  std_logic; -- 0:add, 1:sub
-	  add_out		: OUT std_logic_vector(31 downto 0)
+	  add_out		: OUT std_logic_vector(31 downto 0);
+	  done			:OUT std_logic
 	);
 END ENTITY addsub;
 
@@ -102,12 +103,13 @@ if reset='1' then
 	result_NaN3<='0';
 	result_inf3<='0';
 	result_zero3<='0';
+	done<='0';
 else
  for i in 0 to 4 loop
   case i is
 	when 0=>	--swap
 		input_NaN0<=input_NaN;
-		expo_diff0<=expo_diff;
+		expo_diff0<=expo_diff;		
 	when 1=> --align
 		temp_expo1<=temp_expo0;
 		expo_diff1<=expo_diff0;
@@ -117,7 +119,8 @@ else
 		result_NaN3<=result_NaN;
 		result_inf3<=result_inf;
 		result_zero3<=result_zero;
-	when 4=>null;				--round
+	when 4=>
+		done<='1';
 	when others=>null;
   end case;
  end loop;
@@ -352,4 +355,3 @@ else
 end if;
 END PROCESS rounder;
 END ARCHITECTURE rtl;
-
