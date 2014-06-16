@@ -16,7 +16,7 @@ end entity fpu;
 
 architecture arch of fpu is
   signal a, b, c, add_result, div_result, mult_result, sqrt_result, isqrt_result, multacc_result, result : slv(31 downto 0);
-  signal isq_start, isq_done, s_busy : std_logic;
+  signal isq_start, isq_done, s_busy, s_done : std_logic;
   signal op : integer range 0 to 15;
   
   type state_t is (idle, isq_wait, sqt_wait);
@@ -69,9 +69,11 @@ begin
     if reset = '1' then
       state <= idle;
       fpu_out <= (others => '0');
+      done <= '0';
     else
       state <= nstate;
       fpu_out <= result;
+      done <= s_done;
     end if;
   end process fsm;
   
@@ -81,8 +83,12 @@ begin
       nstate <= sqt_wait;
     elsif state = idle and start = '1' and op = 9 then
       nstate <= isq_wait;
-    else
+    elsif state = sqt_wait and isq_done = '1' then
       nstate <= idle;
+    elsif state = isq_wait and isq_done = '1' then
+      nstate <= idle;
+    else
+      nstate <= state;
     end if;
   end process next_state;
   
@@ -91,30 +97,43 @@ begin
     case op is
       when 0 => -- NOP
         result <= float2slv(nan);
+        s_done <= '1';
       when 1 => -- MUL
         result <= mult_result;
+        s_done <= '1';
       when 2|3 => -- ADD|SUB
         result <= add_result;
+        s_done <= '1';
       when 4 => -- FMA
         result <= multacc_result;
+        s_done <= '1';
       when 5 => -- DIV
         result <= div_result;
+        s_done <= '1';
       when 6 => -- DOT2
         result <= float2slv(nan);
+        s_done <= '1';
       when 7 => -- DOT3
         result <= float2slv(nan);
+        s_done <= '1';
       when 8 => -- SQRT
         result <= sqrt_result;
+        s_done <= isq_done;
       when 9 => -- ISQRT
         result <= float2slv(nan);
+        s_done <= isq_done;
       when 10 => -- MAG2
         result <= float2slv(nan);
+        s_done <= '1';
       when 11 => -- MAG3
         result <= float2slv(nan);
+        s_done <= '1';
       when 12 => -- NORM3
         result <= float2slv(nan);
+        s_done <= '1';
       when 13 to 15 => -- unused
         result <= float2slv(nan);
+        s_done <= '1';
     end case;
   end process sel;
   
