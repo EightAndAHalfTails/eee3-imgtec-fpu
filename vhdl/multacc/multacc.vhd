@@ -156,10 +156,10 @@ begin
      --------------------------------------------------------------------------
      --sticky bit
      --------------------------------------------------------------------------
-     if shift_unit>25 then              --compute stickybit if right shift by
+     if shift_unit>23 then              --compute stickybit if right shift by
                                         --more than 25 units
-        for i in 0 to 23 loop
-          if i+25<shift_unit then
+        for i in 0 to 24 loop
+          if i+23<shift_unit then
               s_bit:=s_bit or sig_c(i);
           end if;
         end loop;
