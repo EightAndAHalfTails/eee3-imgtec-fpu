@@ -24,7 +24,6 @@ END multacc_tb;
 ARCHITECTURE tb OF multacc_tb IS
 	SIGNAL clk, reset: STD_LOGIC; 
 	SIGNAL A, B, C, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=ab+c	
-	TYPE line_numbers IS ARRAY(0 to 9) OF INTEGER;
 BEGIN
   
 	-- clock generation process

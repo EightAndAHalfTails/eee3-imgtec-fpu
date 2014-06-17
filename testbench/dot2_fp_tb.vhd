@@ -56,12 +56,11 @@ BEGIN
 	main: PROCESS
 		FILE f				: TEXT OPEN read_mode IS "fourInput_datapak.txt";
 		VARIABLE buf		: LINE;
-		VARIABLE p,q,r,s	: FLOAT32; 
+		VARIABLE p,q,r,s	: FLOAT32;
+		VARIABLE res1, res2, res_t	: FLOAT32;
+		VARIABLE err1, err2, err3, err_t	: FLOAT32;
 		VARIABLE result_tb 	: FLOAT32;
 		VARIABLE result_chained	:FLOAT32;
-		
-		VARIABLE nan1, nan2	: REAL;
-		VARIABLE nan_result : FLOAT32;
 		
 		--VARIABLE dot2_l, dot2_r	: slv(31 DOWNTO 0);
 		--VARIABLE exponent_l, exponent_r	: unsigned(8 DOWNTO 0);
@@ -69,6 +68,7 @@ BEGIN
 		VARIABLE temp   	:unsigned(22 DOWNTO 0); --temp mantissa of dot2_x
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
+		VARIABLE incorrect_lines : line_numbers;
 	
 	BEGIN
 		reset <= '1';
@@ -77,6 +77,7 @@ BEGIN
 		
 		n := 1;
 		incorrect_result := 0;
+		incorrect_lines := (0,0,0,0,0,0,0,0,0,0);
 		
 		WHILE NOT endfile(f) LOOP
 			WAIT UNTIL clk'EVENT and clk = '1';
@@ -101,35 +102,122 @@ BEGIN
 				
 				--calculate result_tb using real package
 				result_tb := to_float((to_real(p)*to_real(q))+(to_real(r)*to_real(s)));
-
 				--------------------------------------------------------------
 				-- check if overflow
 				IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
 					result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
 				END IF;
 				
+				-------------------------------------------------------------
+				--calculate best rounded result res_t and total error
+				IF isnan(p) or isnan(q) or isnan(r) or isnan(s) THEN
+					res_t := result_tb;
+				ELSE
+					IF isfinite(p*q) and not(iszero(p*q)) THEN
+						--REPORT "Performing Dekker 1";
+						dekkerMult(p,q,res1,err1);
+					ELSE
+						res1 := PNAN_F;
+						err1 := PNAN_F;
+					END IF;
+					REPORT "res1 is " & to_string(res1);
+					REPORT "err1 is " & to_string(err1);
+					IF isfinite(r*s) and not(iszero(r*s)) THEN
+						--REPORT "Performing Dekker 2";
+						dekkerMult(r,s,res2,err2);
+					ELSE
+						res2 := PNAN_F;
+						err2 := PNAN_F;
+					END IF;
+					REPORT "res2 is " & to_string(res2);
+					REPORT "err2 is " & to_string(err2);
+					IF isfinite(res1+res2) and not(iszero(res1+res2)) and not(isnan(res1)) and not(isnan(res2)) and not(isnan(err1)) and not(isnan(err2)) THEN
+						--REPORT "Performing twoSum";
+						twoSum(res1, res2, res_t, err3);
+						err_t := (err2+ err3) + err1;
+						res_t := res_t + err_t;
+					ELSE
+						REPORT "Using real package";
+						res_t := result_tb;
+						err_t := PNAN_F;
+					END IF;
+					REPORT "res_t is " & to_string(res_t);
+					REPORT "err_t is " & to_string(err_t);
+				END IF;
+				-----------------------------------
+				-- TODO: check if result is within range of res_t +/- abs(err_t)
+				
+				
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------
 				--check result
 				REPORT "result_chained = " & to_string(result_chained);
 				REPORT "result real = " & to_string(result_tb);
-				IF result/=to_slv(result_tb) THEN
+				-- IF isnan(result_tb) THEN
+					-- IF not(isnan(to_float(result))) THEN
+						-- incorrect_result := incorrect_result+1;
+						-- REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
+							-- & "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is NAN" SEVERITY warning;
+					-- END IF;
+				-- ELSIF result/=to_slv(result_tb) THEN
+					-- incorrect_result := incorrect_result+1;
+					-- REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
+							-- & "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(result_tb)SEVERITY warning;
+				-- END IF;
+				
+				IF not(isfinite(res_t)) THEN
+					IF to_float(result) /= res_t THEN
+						IF incorrect_result < 10 THEN
+							incorrect_lines(incorrect_result) := n;
+						END IF;
+						incorrect_result := incorrect_result+1;
+						REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
+							& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
+						END IF;
+				ELSIF isnan(res_t) THEN
+					IF not(isnan(to_float(result))) THEN
+						IF incorrect_result < 10 THEN
+							incorrect_lines(incorrect_result) := n;
+						END IF;
+						incorrect_result := incorrect_result+1;
+						REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
+							& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is NAN" SEVERITY warning;
+					END IF;
+				ELSIF result_chained > res_t THEN
+					IF incorrect_result < 10 THEN
+						incorrect_lines(incorrect_result) := n;
+					END IF;
+					IF not(to_float(result)>= res_t and to_float(result)<= result_chained) THEN
+						incorrect_result := incorrect_result+1;
+						REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
+								& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(res_t)SEVERITY warning;
+					END IF;
+				ELSIF not(to_float(result)<= res_t and to_float(result)>= result_chained) THEN
+					IF incorrect_result < 10 THEN
+						incorrect_lines(incorrect_result) := n;
+					END IF;
 					incorrect_result := incorrect_result+1;
 					REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
-							& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(result_tb)SEVERITY warning;
+							& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(res_t)SEVERITY warning;
 				END IF;
 				
 			END IF;	
 			
 			n := n+1;
 		END LOOP;
-	nan_result := NNAN_F+PNAN_F;
-	--------****************TEST*****************
-	REPORT "ignore this: testing NaN as real numbers" & to_string(nan_result) SEVERITY warning;
+	
 	IF incorrect_result = 0 THEN
 		REPORT "***************** TEST PASSED *****************";
 	ELSE
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
+		FOR i IN 0 TO 9 LOOP
+			IF incorrect_lines(i) /= 0 THEN
+				REPORT "Error in line " & INTEGER'IMAGE(incorrect_lines(i));
+			END IF;
+		END LOOP;
+		IF incorrect_result > 10 THEN
+			REPORT "etc.";
+		END IF;
 	END IF;
 	
 	REPORT "Test finished normally." SEVERITY failure;
