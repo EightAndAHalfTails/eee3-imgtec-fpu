@@ -117,7 +117,13 @@ BEGIN
 					C<=to_slv(z);
 					
 					tb_result_mac := mac(x,y,z);
-					tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+					IF isnan(x) or isnan(y) or isnan(z) THEN
+							tb_result_real := to_real(PNAN_F);
+					ELSIF not(isfinite(x) and isfinite(y) and isfinite(z)) THEN
+							tb_result_real := to_real(mac(x,y,z));
+					ELSE
+						tb_result_real := (to_real(x)*to_real(y))+to_real(z);
+					END IF;
 					
 					IF ibmvectors = true THEN
 						read(buf, tb_result_float);
@@ -202,6 +208,8 @@ BEGIN
 						-- REPORT "infinite: " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & ". Result is " & 
 							-- to_string(to_float(result)) SEVERITY note;
 					-- END IF;
+				ELSE
+					REPORT "skipping line: " & INTEGER'IMAGE(n) SEVERITY note;
 				END IF;				
 			END IF;	
 			
