@@ -347,7 +347,7 @@ begin
   --rounder
   --The process round the result to be to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff,a,b,eff_sub,input_NaN)
+  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff,a,b,eff_sub,input_NaN,post_mult_sign)
 
     VARIABLE rounded_result_e_s		:usg(8 downto 0);
     VARIABLE rounded_result_man_s	:usg(23 downto 0);
@@ -376,11 +376,18 @@ begin
     if rounded_result_e_s>=255 or isInf(a) or isInf(b) or isInf(c) then     --overflows
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'0');
+      IF isInf(c) THEN
+      result.sign<=c.sign;
+      ELSIF isInf(a) or isInf(b) THEN
+      result.sign<=post_mult_sign;
+      ELSE
+      result.sign<=temp_sign;
+      END IF;
     else
       result.significand	<=	slv(rounded_result_man_s(22 downto 0));
       result.exponent	   <=	slv(rounded_result_e_s(7 downto 0));
+      result.sign	<=	temp_sign;
     end if;
-    result.sign	<=	temp_sign;
   end if;
   END PROCESS rounder;
 
