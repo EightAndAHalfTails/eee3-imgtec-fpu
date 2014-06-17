@@ -8,6 +8,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 use work.all;
 use config_pack.all;
+use types.all;
 
 ENTITY div IS
   GENERIC (lsize :integer :=3);
@@ -347,4 +348,3 @@ END IF;
 END PROCESS sign_logic;
 
 END rtl;
-

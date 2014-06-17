@@ -7,6 +7,7 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 use work.all;
 use config_pack.all;
+use types.all;
 
 ENTITY mult27bit IS
   PORT
