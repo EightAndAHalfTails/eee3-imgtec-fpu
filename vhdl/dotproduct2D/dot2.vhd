@@ -139,8 +139,6 @@ begin  -- chained
   begin
     if (isZero(a) or isZero(b)) and (isZero(c) or isZero(d)) then
       result.sign<=post_mult_sign1 and post_mult_sign2;
-    elsif isInf(a) or isInf(b) then
-    elsif isInf(c) or isInf(d) then
     elsif neg_sig ='1' then
       result.sign<= not temp_sign;
     else
@@ -230,7 +228,7 @@ begin  -- chained
   --rounder
   --The process round the result to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:process(post_norm_significand,post_norm_exponent,a,b,c,d)
+  rounder:process(post_norm_significand,post_norm_exponent,a,b,c,d,eop)
 
     variable rounded_result_e_s		:usg(8 downto 0);
     variable rounded_result_man_s	:usg(23 downto 0);
