@@ -64,11 +64,15 @@ begin
   get_sig_exp: process(input)
   begin
     s_half_exp <= unsigned(input.exponent(7 downto 1)) + to_unsigned(64, 8);
-    
-    if input.exponent(0) = '0' then -- exponent even -> exponent-127 odd -> sig needs shifting
+    if input.exponent = exponent_t(to_unsigned(0, input.exponent'length)) then
+      -- denormal --> 0.{bits}0 x 2^-126
+      s_sig_in <= unsigned('0' & input.significand & '0');
+    elsif input.exponent(0) = '0' then -- exponent even -> exponent-127 odd -> sig needs shifting
+      -- 1.{bits}0
       s_sig_in(24 downto 23) <= "01";
       s_sig_in(22 downto 0) <= unsigned(input.significand);
     else
+      -- 0.1{bits}
       s_sig_in <= unsigned('1' & input.significand & '0');
     end if;
   end process get_sig_exp;
