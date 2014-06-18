@@ -54,7 +54,13 @@ PACKAGE tb_lib IS
 		x_low		: OUT FLOAT32
 	);
 	
- 
+	PROCEDURE getRightLeftBound(
+		x	: IN FLOAT32; 
+		ulp	: IN INTEGER;
+		x_right	: OUT FLOAT32;
+		x_left	: OUT FLOAT32
+	);
+	
 END PACKAGE tb_lib;
 
 PACKAGE BODY tb_lib IS
@@ -147,11 +153,13 @@ PACKAGE BODY tb_lib IS
 		VARIABLE product						: FLOAT32;
 	
 	BEGIN
+	
+		-- REPORT "x is " & to_string(x);
+		-- REPORT "y = " & to_string(y);
+		
 		veltkampSplit(x, x_high, x_low);
 		veltkampSplit(y, y_high, y_low);
 
-		-- REPORT "x = " & to_string(x);
-		-- REPORT "y = " & to_string(y);
 		-- REPORT "x_high = " & to_string(x_high);
 		-- REPORT "x_low = " & to_string(x_low);
 		-- REPORT "y_high = " & to_string(y_high);
@@ -184,10 +192,108 @@ PACKAGE BODY tb_lib IS
 		gamma := c*x;
 		delta := x - gamma;
 		sum := gamma + delta;
-		
+
+		-- REPORT "gamma is " & to_string(gamma);
+		-- REPORT "delta is " & to_string(delta);
 		x_high := sum;
 		x_low := x-sum;
 
 	END veltkampSplit;
+	
+	PROCEDURE getRightLeftBound(
+		x	: IN FLOAT32; 
+		ulp	: IN INTEGER;
+		x_right	: OUT FLOAT32;
+		x_left	: OUT FLOAT32
+		) IS
+		
+		VARIABLE exponent_l, exponent_r	: unsigned(8 DOWNTO 0);
+		VARIABLE mantissa_l, mantissa_r	: unsigned(24 DOWNTO 0); --25 bits for overflow, left and right bound error interval
+		VARIABLE x_right_slv, x_left_slv	: slv(31 DOWNTO 0);
+		VARIABLE temp : unsigned(22 DOWNTO 0);
+		
+	BEGIN
+		----------------------------------------------------------------------
+		-- check x for zeros, infinities or NaNs
+		-- else find right boundaries of x
+		IF (not(isfinite(x))) or iszero(x) or isnan(x) THEN
+			REPORT "x is not normal number";
+			x_left_slv := to_slv(x);
+			x_right_slv := to_slv(x);
+		ELSE
+			exponent_r := '0'& unsigned(x(7 DOWNTO 0));
+			exponent_l := '0'& unsigned(x(7 DOWNTO 0));				
+			temp:=unsigned(to_slv(x(-1 DOWNTO -23)));
+			
+			-- if x is positive, then x_right_slv is greater than x and x_left_slv is smaller than x
+			IF x(8) = '0' THEN  
+				mantissa_r := unsigned("01" & temp) + to_unsigned(4, 25);
+				mantissa_l := unsigned("01" & temp) - to_unsigned(4, 25);
+				
+				-- find x_right_slv
+				-- if mantissa overflow, increment exp
+				-- check if exponent overflow
+				IF mantissa_r(24) = '1' THEN
+					exponent_r := exponent_r + to_unsigned(1, 9);
+					
+					IF exponent_r(8) = '1' THEN
+						x_right_slv := PINFINITY_slv;
+					ELSE
+						x_right_slv := slv('0'&exponent_r(7 DOWNTO 0) & mantissa_r(23 DOWNTO 1));
+					END IF;
+				ELSE
+					x_right_slv := slv('0'&exponent_r(7 DOWNTO 0) &  mantissa_r(22 DOWNTO 0));
+				END IF;
+				
+				-- find x_left_slv
+				-- if mantissa underflow, decrement exponent
+				-- if x is denormal and mantissa underflow, x_left_slv will be set to positive zero
+				IF mantissa_l(23) = '0' THEN
+					IF exponent_l = "00000000" THEN
+						x_left_slv := PZERO_slv;
+					ELSE
+						exponent_l := exponent_l - to_unsigned(1,9);
+						x_left_slv := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(21 DOWNTO 0) & '0');
+					END IF;
+				ELSE
+					x_left_slv := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(22 DOWNTO 0));
+				END IF;	
+				
+			ELSE 
+			-- if x is negative, then x_right_slv is less negative than x and x_left_slv is more negative than x
+				mantissa_r := unsigned("01" & temp) - to_unsigned(4, 25);
+				mantissa_l := unsigned("01" & temp) + to_unsigned(4, 25);
+				
+				-- find x_right_slv
+				IF mantissa_r(23) = '0' THEN
+					IF exponent_r = "00000000" THEN
+						x_right_slv := NZERO_slv;
+					ELSE
+						exponent_r := exponent_r - to_unsigned(1,9);
+						x_right_slv := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(21 DOWNTO 0) & '0');
+					END IF;
+				ELSE 
+					x_right_slv := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(22 DOWNTO 0));
+				END IF;
+				
+				-- find x_left_slv
+				IF mantissa_l(24) = '1' THEN
+					exponent_l := exponent_l + to_unsigned(1, 9);
+					
+					IF exponent_l(8) = '1' THEN
+						x_left_slv := NINFINITY_slv;
+					ELSE
+						x_left_slv := slv('1'&exponent_l(7 DOWNTO 0) & mantissa_l(23 DOWNTO 1));
+					END IF;
+				ELSE
+					x_left_slv := slv('1'&exponent_l(7 DOWNTO 0) &  mantissa_l(22 DOWNTO 0));
+				END IF;
+				
+			END IF;
+		END IF;
+		
+		x_right := to_float(x_right_slv);
+		x_left := to_float(x_left_slv);
+	END getRightLeftBound;
 	
 END PACKAGE BODY tb_lib;

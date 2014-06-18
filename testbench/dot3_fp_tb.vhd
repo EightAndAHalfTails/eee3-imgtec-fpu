@@ -22,6 +22,7 @@ USE std.textio.ALL;
 USE work.tb_lib.all;
 
 ENTITY dot3_tb IS
+	GENERIC( ulp: INTEGER := 1);
 END dot3_tb;
 
 ARCHITECTURE tb OF dot3_tb IS
@@ -62,12 +63,8 @@ BEGIN
 		VARIABLE res1, res2, res3, res4, res_t	: FLOAT32;
 		VARIABLE err1, err2, err3, err4, err5, err_t	: FLOAT32;
 		VARIABLE result_tb 	: FLOAT32;
-		VARIABLE result_chained	:FLOAT32;
-		
-		--VARIABLE dot3_l, dot3_r	: slv(31 DOWNTO 0);
-		--VARIABLE exponent_l, exponent_r	: unsigned(8 DOWNTO 0);
-		--VARIABLE mantissa_l, mantissa_r	: unsigned(24 DOWNTO 0); --25 bits for overflow, left and right bound error interval
-		VARIABLE temp   	:unsigned(22 DOWNTO 0); --temp mantissa of dot3_x
+		VARIABLE result_chained	: FLOAT32;
+		VARIABLE res_r, res_l	: FLOAT32;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 		VARIABLE incorrect_lines : line_numbers;
@@ -107,7 +104,11 @@ BEGIN
 				result_chained := ((p*q)+(r*s))+(t*u);
 				
 				--calculate result_tb using real package
-				result_tb := to_float(((to_real(p)*to_real(q))+(to_real(r)*to_real(s)))+(to_real(t)*to_real(u)));
+				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) and isfinite(t) and isfinite(u) THEN
+					result_tb := to_float(((to_real(p)*to_real(q))+(to_real(r)*to_real(s)))+(to_real(t)*to_real(u)));
+				ELSE
+					result_tb := result_chained;
+				END IF;
 				--------------------------------------------------------------
 				-- check if overflow
 				IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
@@ -126,8 +127,8 @@ BEGIN
 						res1 := PNAN_F;
 						err1 := PNAN_F;
 					END IF;
-					REPORT "res1 is " & to_string(res1);
-					REPORT "err1 is " & to_string(err1);
+					--REPORT "res1 is " & to_string(res1);
+					--REPORT "err1 is " & to_string(err1);
 					IF isfinite(r*s) and not(iszero(r*s)) THEN
 						--REPORT "Performing Dekker 2";
 						dekkerMult(r,s,res2,err2);
@@ -135,8 +136,8 @@ BEGIN
 						res2 := PNAN_F;
 						err2 := PNAN_F;
 					END IF;
-					REPORT "res2 is " & to_string(res2);
-					REPORT "err2 is " & to_string(err2);
+					--REPORT "res2 is " & to_string(res2);
+					--REPORT "err2 is " & to_string(err2);
 					IF isfinite(t*u) and not(iszero(t*u)) THEN
 						--REPORT "Performing Dekker 3";
 						dekkerMult(t,u,res3,err3);
@@ -144,8 +145,8 @@ BEGIN
 						res3 := PNAN_F;
 						err3 := PNAN_F;
 					END IF;
-					REPORT "res3 is " & to_string(res3);
-					REPORT "err3 is " & to_string(err3);
+					--REPORT "res3 is " & to_string(res3);
+					--REPORT "err3 is " & to_string(err3);
 					IF isfinite(res1+res2) and not(iszero(res1+res2)) and not(isnan(res1)) and not(isnan(res2)) and not(isnan(err1)) and not(isnan(err2)) THEN
 						--REPORT "Performing twoSum";
 						twoSum(res1, res2, res4, err4);
@@ -168,7 +169,7 @@ BEGIN
 					REPORT "err_t is " & to_string(err_t);
 				END IF;
 				-----------------------------------
-				-- TODO: check if result is within range of res_t +/- abs(err_t)
+				getRightLeftBound(res_t, ulp, res_r, res_l);
 				
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
@@ -176,6 +177,9 @@ BEGIN
 				--check result
 				REPORT "result_chained = " & to_string(result_chained);
 				REPORT "result real = " & to_string(result_tb);
+				REPORT "result from test entity = " & to_string(to_float(result));
+				REPORT "right bound = " & to_string(res_r);
+				REPORT "left bound = " & to_string(res_l);
 				-- IF isnan(result_tb) THEN
 					-- IF not(isnan(to_float(result))) THEN
 						-- incorrect_result := incorrect_result+1;
@@ -203,27 +207,17 @@ BEGIN
 							incorrect_lines(incorrect_result) := n;
 						END IF;
 						incorrect_result := incorrect_result+1;
-						REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
+						REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
 							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is NAN" SEVERITY warning;
 					END IF;
-				ELSIF result_chained > res_t THEN
+				ELSIF not(to_float(result)<=res_r and to_float(result) >= res_l) THEN
 					IF incorrect_result < 10 THEN
-						incorrect_lines(incorrect_result) := n;
-					END IF;
-					IF not(to_float(result)>= res_t and to_float(result)<= result_chained) THEN
-						incorrect_result := incorrect_result+1;
-						REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
-							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
-					END IF;
-				ELSIF not(to_float(result)<= res_t and to_float(result)>= result_chained) THEN
-					IF incorrect_result < 10 THEN
-						incorrect_lines(incorrect_result) := n;
+							incorrect_lines(incorrect_result) := n;
 					END IF;
 					incorrect_result := incorrect_result+1;
 					REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
-							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
+						& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
 				END IF;
-				
 			END IF;	
 			
 			n := n+1;
@@ -241,6 +235,12 @@ BEGIN
 		IF incorrect_result > 10 THEN
 			REPORT "etc.";
 		END IF;
+	END IF;
+	
+	IF NZERO_F = PZERO_F THEN
+		REPORT "any zero is the same";
+	ELSE
+		REPORT "zero not the same";
 	END IF;
 	
 	REPORT "Test finished normally." SEVERITY failure;
