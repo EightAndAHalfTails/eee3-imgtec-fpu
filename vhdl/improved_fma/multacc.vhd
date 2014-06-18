@@ -151,7 +151,7 @@ begin
          aligned_c(i)<='0';         	--zeros at other locations
        end if;
      end loop; 
-   elsif shift_unit>=48 then                 -
+   elsif shift_unit>=48 then                 
      	aligned_c<=(others=>'0');
    else
 	aligned_c(72 downto 48)<=(others=>sig_c(24));
