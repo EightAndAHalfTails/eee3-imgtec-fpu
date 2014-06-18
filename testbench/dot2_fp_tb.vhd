@@ -22,6 +22,7 @@ USE std.textio.ALL;
 USE work.tb_lib.all;
 
 ENTITY dot2_tb IS
+	GENERIC( ulp: INTEGER := 1);
 END dot2_tb;
 
 ARCHITECTURE tb OF dot2_tb IS
@@ -61,11 +62,7 @@ BEGIN
 		VARIABLE err1, err2, err3, err_t	: FLOAT32;
 		VARIABLE result_tb 	: FLOAT32;
 		VARIABLE result_chained	:FLOAT32;
-		
-		--VARIABLE dot2_l, dot2_r	: slv(31 DOWNTO 0);
-		--VARIABLE exponent_l, exponent_r	: unsigned(8 DOWNTO 0);
-		--VARIABLE mantissa_l, mantissa_r	: unsigned(24 DOWNTO 0); --25 bits for overflow, left and right bound error interval
-		VARIABLE temp   	:unsigned(22 DOWNTO 0); --temp mantissa of dot2_x
+		VARIABLE res_r, res_l	: FLOAT32;	--result right, result left
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 		VARIABLE incorrect_lines : line_numbers;
@@ -100,14 +97,18 @@ BEGIN
 				--calculate chained result
 				result_chained := (p*q)+(r*s);
 				
-				--calculate result_tb using real package
-				result_tb := to_float((to_real(p)*to_real(q))+(to_real(r)*to_real(s)));
-				--------------------------------------------------------------
-				-- check if overflow
-				IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
-					result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
+				--calculate result_tb using real package is number is finite
+				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) THEN
+					result_tb := to_float((to_real(p)*to_real(q))+(to_real(r)*to_real(s)));
+					--------------------------------------------------------------
+					-- check if overflow
+					IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
+						result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
+					END IF;
+				ELSE
+					result_tb := result_chained;
 				END IF;
-				
+	
 				-------------------------------------------------------------
 				--calculate best rounded result res_t and total error
 				IF isnan(p) or isnan(q) or isnan(r) or isnan(s) THEN
@@ -145,7 +146,7 @@ BEGIN
 					REPORT "err_t is " & to_string(err_t);
 				END IF;
 				-----------------------------------
-				-- TODO: check if result is within range of res_t +/- abs(err_t)
+				getRightLeftBound(res_t, ulp, res_r, res_l);
 				
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
@@ -153,18 +154,7 @@ BEGIN
 				--check result
 				REPORT "result_chained = " & to_string(result_chained);
 				REPORT "result real = " & to_string(result_tb);
-				-- IF isnan(result_tb) THEN
-					-- IF not(isnan(to_float(result))) THEN
-						-- incorrect_result := incorrect_result+1;
-						-- REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
-							-- & "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is NAN" SEVERITY warning;
-					-- END IF;
-				-- ELSIF result/=to_slv(result_tb) THEN
-					-- incorrect_result := incorrect_result+1;
-					-- REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
-							-- & "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(result_tb)SEVERITY warning;
-				-- END IF;
-				
+
 				IF iszero(res_t) THEN
 					IF (to_slv(p*q)=NZERO_slv) and (to_slv(r*s) = NZERO_slv) THEN
 						res_t := NZERO_F;
@@ -195,22 +185,13 @@ BEGIN
 						REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
 							& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is NAN" SEVERITY warning;
 					END IF;
-				ELSIF result_chained > res_t THEN
+				ELSIF not(to_float(result)<=res_r and to_float(result) >= res_l) THEN
 					IF incorrect_result < 10 THEN
-						incorrect_lines(incorrect_result) := n;
-					END IF;
-					IF not(to_float(result)>= res_t and to_float(result)<= result_chained) THEN
-						incorrect_result := incorrect_result+1;
-						REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
-								& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(res_t)SEVERITY warning;
-					END IF;
-				ELSIF not(to_float(result)<= res_t and to_float(result)>= result_chained) THEN
-					IF incorrect_result < 10 THEN
-						incorrect_lines(incorrect_result) := n;
+							incorrect_lines(incorrect_result) := n;
 					END IF;
 					incorrect_result := incorrect_result+1;
-					REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
-							& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(res_t)SEVERITY warning;
+					REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
+						& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
 				END IF;
 				
 			END IF;	

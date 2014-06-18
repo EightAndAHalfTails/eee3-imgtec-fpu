@@ -103,7 +103,7 @@ BEGIN
 				--calculate chained result
 				result_chained := ((p*q)+(r*s))+(t*u);
 				
-				--calculate result_tb using real package
+				--calculate result_tb using real package is number is finite
 				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) and isfinite(t) and isfinite(u) THEN
 					result_tb := to_float(((to_real(p)*to_real(q))+(to_real(r)*to_real(s)))+(to_real(t)*to_real(u)));
 				ELSE
@@ -180,17 +180,7 @@ BEGIN
 				REPORT "result from test entity = " & to_string(to_float(result));
 				REPORT "right bound = " & to_string(res_r);
 				REPORT "left bound = " & to_string(res_l);
-				-- IF isnan(result_tb) THEN
-					-- IF not(isnan(to_float(result))) THEN
-						-- incorrect_result := incorrect_result+1;
-						-- REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
-							-- & "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is NAN" SEVERITY warning;
-					-- END IF;
-				-- ELSIF result/=to_slv(result_tb) THEN
-					-- incorrect_result := incorrect_result+1;
-					-- REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
-							-- & "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(result_tb)SEVERITY warning;
-				-- END IF;
+
 				IF iszero(res_t) THEN
 					IF (to_slv(p*q)=NZERO_slv) and (to_slv(r*s) = NZERO_slv) and (to_slv(t*u)= NZERO_slv) THEN
 						res_t := NZERO_F;

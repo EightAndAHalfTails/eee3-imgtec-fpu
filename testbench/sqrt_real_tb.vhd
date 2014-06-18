@@ -22,6 +22,7 @@ USE std.textio.ALL;
 USE work.tb_lib.all;
 
 ENTITY sqrt_tb IS
+	GENERIC ( ulp : INTEGER := 4 );
 END sqrt_tb;
 
 ARCHITECTURE tb OF sqrt_tb IS
@@ -56,10 +57,7 @@ BEGIN
 		VARIABLE x	 		: FLOAT32; 
 		VARIABLE x_real		: REAL;
 		VARIABLE sqrt_x 	: FLOAT32;
-		VARIABLE sqrt_l, sqrt_r	: slv(31 DOWNTO 0);
-		VARIABLE exponent_l, exponent_r	: unsigned(8 DOWNTO 0);
-		VARIABLE mantissa_l, mantissa_r	: unsigned(24 DOWNTO 0); --25 bits for overflow, left and right bound error interval
-		VARIABLE temp   	:unsigned(22 DOWNTO 0); --temp mantissa of sqrt_x
+		VARIABLE sqrt_l, sqrt_r	: FLOAT32;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
 	
@@ -85,7 +83,7 @@ BEGIN
 				
 				----------------------------------------------------------------------
 				-- calculate square root of x (exception with -0)
-				IF x = NZERO_F THEN
+				IF to_slv(x) = NZERO_slv THEN
 					sqrt_x := NZERO_F;
 				ELSIF isnan(x) or x < PZERO_F THEN
 				  sqrt_x := PNAN_F;
@@ -99,94 +97,21 @@ BEGIN
 				----------------------------------------------------------------------
 				-- check sqrt_x for zeros, infinities or NaNs
 				-- else find left and right boundaries of sqrt_x (4 ulps)
-				IF (not(isfinite(sqrt_x))) or iszero(sqrt_x) or isnan(sqrt_x) THEN
-					REPORT "sqrt_x is not normal number";
-					sqrt_l := to_slv(sqrt_x);
-					sqrt_r := to_slv(sqrt_x);
-				ELSE
-					exponent_r := '0'& unsigned(sqrt_x(7 DOWNTO 0));
-					exponent_l := '0'& unsigned(sqrt_x(7 DOWNTO 0));				
-					temp:=unsigned(to_slv(sqrt_x(-1 DOWNTO -23)));
-					
-					-- if sqrt_x is positive, then sqrt_r is greater than sqrt_x and sqrt_l is smaller than sqrt_x
-					IF sqrt_x(8) = '0' THEN  
-						mantissa_r := unsigned("01" & temp) + to_unsigned(4, 25);
-						mantissa_l := unsigned("01" & temp) - to_unsigned(4, 25);
-						
-						-- find sqrt_r
-						-- if mantissa overflow, increment exp
-						-- check if exponent overflow
-						IF mantissa_r(24) = '1' THEN
-							exponent_r := exponent_r + to_unsigned(1, 9);
-							
-							IF exponent_r(8) = '1' THEN
-								sqrt_r := PINFINITY_slv;
-							ELSE
-								sqrt_r := slv('0'&exponent_r(7 DOWNTO 0) & mantissa_r(23 DOWNTO 1));
-							END IF;
-						ELSE
-							sqrt_r := slv('0'&exponent_r(7 DOWNTO 0) &  mantissa_r(22 DOWNTO 0));
-						END IF;
-						
-						-- find sqrt_l
-						-- if mantissa underflow, decrement exponent
-						-- if sqrt_x is denormal and mantissa underflow, sqrt_l will be set to positive zero
-						IF mantissa_l(23) = '0' THEN
-							IF exponent_l = "00000000" THEN
-								sqrt_l := PZERO_slv;
-							ELSE
-								exponent_l := exponent_l - to_unsigned(1,9);
-								sqrt_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(21 DOWNTO 0) & '0');
-							END IF;
-						ELSE
-							sqrt_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(22 DOWNTO 0));
-						END IF;	
-						
-					ELSE 
-					-- if sqrt_x is negative, then sqrt_r is less negative than sqrt_x and sqrt_l is more negative than sqrt_x
-						mantissa_r := unsigned("01" & temp) - to_unsigned(4, 25);
-						mantissa_l := unsigned("01" & temp) + to_unsigned(4, 25);
-						
-						-- find sqrt_r
-						IF mantissa_r(23) = '0' THEN
-							IF exponent_r = "00000000" THEN
-								sqrt_r := NZERO_slv;
-							ELSE
-								exponent_r := exponent_r - to_unsigned(1,9);
-								sqrt_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(21 DOWNTO 0) & '0');
-							END IF;
-						ELSE 
-							sqrt_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(22 DOWNTO 0));
-						END IF;
-						
-						-- find sqrt_l
-						IF mantissa_l(24) = '1' THEN
-							exponent_l := exponent_l + to_unsigned(1, 9);
-							
-							IF exponent_l(8) = '1' THEN
-								sqrt_l := NINFINITY_slv;
-							ELSE
-								sqrt_l := slv('1'&exponent_l(7 DOWNTO 0) & mantissa_l(23 DOWNTO 1));
-							END IF;
-						ELSE
-							sqrt_l := slv('1'&exponent_l(7 DOWNTO 0) &  mantissa_l(22 DOWNTO 0));
-						END IF;
-						
-					END IF;
-				END IF;
+				getRightLeftBound(sqrt_x, ulp, sqrt_r, sqrt_l);
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
+				--REPORT "result from test entity is " & to_string(to_float(result));
 				----------------------------------------------------------------------
 				--check result
 				IF isnan(sqrt_x) THEN
 				  IF not(isnan(to_float(result))) THEN
 				    incorrect_result := incorrect_result+1;
-					   REPORT "Square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
+					   REPORT "Square root of " & to_string(x) & " gives " &to_string(to_float(result)) & 
 							" which is incorrect. Correct answer is NaN" SEVERITY warning;
 					END IF;
-				ELSIF not((to_float(result) <= to_float(sqrt_r)) AND (to_float(result) >= to_float(sqrt_l))) THEN
+				ELSIF not((to_float(result) <= sqrt_r) AND (to_float(result) >= sqrt_l)) THEN
 					incorrect_result := incorrect_result+1;
-					REPORT "Square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
+					REPORT "Square root of " & to_string(x) & " gives " &to_string(to_float(result)) & 
 							" which is incorrect. Correct answer is  " & to_string(sqrt_x)SEVERITY warning;
 				END IF;
 				
