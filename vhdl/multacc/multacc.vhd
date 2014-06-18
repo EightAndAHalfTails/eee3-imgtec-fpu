@@ -370,7 +370,11 @@ begin
       result.sign	<=	'0';     --0*inf,NaN input, +inf-inf
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'1');
-  elsif post_mult_significand =0 or expo_diff<-25 then      --if product is zero
+  elsif post_mult_significand =0 then      --if product is zero
+      result.sign<=c.sign and temp_sign;
+      result.exponent<=c.exponent;
+      result.significand<=c.significand;
+  elsif expo_diff<-25 then
       result<=c;
   else  
     if rounded_result_e_s>=255 or isInf(a) or isInf(b) or isInf(c) then     --overflows
