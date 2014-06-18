@@ -191,8 +191,19 @@ BEGIN
 					-- REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
 							-- & "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is  " & to_string(result_tb)SEVERITY warning;
 				-- END IF;
-				
-				IF not(isfinite(res_t)) THEN
+				IF iszero(res_t) THEN
+					IF (to_slv(p*q)=NZERO_slv) and (to_slv(r*s) = NZERO_slv) and (to_slv(t*u)= NZERO_slv) THEN
+						res_t := NZERO_F;
+					END IF;
+					IF result /= to_slv(res_t) THEN
+						IF incorrect_result < 10 THEN
+							incorrect_lines(incorrect_result) := n;
+						END IF;
+						incorrect_result := incorrect_result+1;
+						REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
+							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
+					END IF;
+				ELSIF not(isfinite(res_t)) THEN
 					IF to_float(result) /= res_t THEN
 						IF incorrect_result < 10 THEN
 							incorrect_lines(incorrect_result) := n;
@@ -200,7 +211,7 @@ BEGIN
 						incorrect_result := incorrect_result+1;
 						REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
 							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
-						END IF;
+					END IF;
 				ELSIF isnan(res_t) THEN
 					IF not(isnan(to_float(result))) THEN
 						IF incorrect_result < 10 THEN
@@ -235,12 +246,6 @@ BEGIN
 		IF incorrect_result > 10 THEN
 			REPORT "etc.";
 		END IF;
-	END IF;
-	
-	IF NZERO_F = PZERO_F THEN
-		REPORT "any zero is the same";
-	ELSE
-		REPORT "zero not the same";
 	END IF;
 	
 	REPORT "Test finished normally." SEVERITY failure;
