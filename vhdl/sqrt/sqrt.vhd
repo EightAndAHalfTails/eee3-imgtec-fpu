@@ -108,6 +108,8 @@ begin
   begin
     if input = neg_zero then
       output <= neg_zero;
+    elsif input = pos_zero then
+      output <= pos_zero;
     elsif input.sign = '1' or isNan(input) then
       output <= nan;
     elsif input = pos_inf then
