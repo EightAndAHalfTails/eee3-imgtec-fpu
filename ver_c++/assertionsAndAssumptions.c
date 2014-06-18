@@ -97,13 +97,13 @@ void testDivision3_newton(string testfile, string testfile_div_output3);
 //////////////////////main function//////////////////////////
 int main(){
 	//test addition unit
-	//testAddition(testfile, testfile_add_output, 1);
+	testAddition(testfile, testfile_add_output, 1);
 	
 	//test subtraction
 	//testAddition(testfile, testfile_sub_output, 0);
 	
 	//test multiplication
-	testMultiplication(testfile, testfile_mul_output);
+	//testMultiplication(testfile, testfile_mul_output);
 
 	//test division
 	//testDivision1_gold(testfile, testfile_div_output);
@@ -330,9 +330,11 @@ cout<<hex<<n<<endl
 return m;
 }
 
-void round_norm(fp_t &z, int lostbits, bool IsUp){
+void round_norm(fp_t &z, int lostbits, bool IsUp, bool IsMult){
 int LSB;
 int lostbit_high, lostbit_low;
+
+cout<<"pre norm "<<dec<<z.e<<hex<<z.m<<endl;
 
 if(z.e == 0){	// denormals cannot be rounded normally as the exponent cannot be scaled down
 if(z.m > 0x7FFFFF){
@@ -367,6 +369,7 @@ z.m >>= 1;
 }
 }else{
 for(int j = 0; j>lzd; j--){
+//cout<<"iteration: "<<hex<<z.m<<endl;
 z.m <<= 1;
 LSB = extractBits(0,0,lostbits);
 if(IsUp){
@@ -379,6 +382,13 @@ lostbits >>= 1;
 }
 z.e += lzd;
 }
+}
+
+if(IsMult & z.e == 0){
+lostbits <<= 1;
+LSB = extractBits(0,0,z.m);
+lostbits += LSB;
+z.m >>= 1;
 }
 
 // Rounding
@@ -420,7 +430,7 @@ int lostbits = 0, LSB = 0;
 
 z.s = 0; z.m = 0; z.e = 0;
 setFlag(x); setFlag(y);
-cout<<x.v<<" "<<y.v<<endl;
+//cout<<x.v<<" "<<y.v<<endl;
 
 // Full numbers (with significands)
 //cout<<"x: "<<dec<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl
@@ -512,7 +522,7 @@ bool RoundUp = true;
 if(x.s^y.s^IsSub){
 RoundUp = false;
 }
-round_norm(z, lostbits, RoundUp);
+round_norm(z, lostbits, RoundUp, 0);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 if(z.m == 0){
@@ -548,18 +558,29 @@ y.s = x.s^y.s;
 return y;
 }
 
+if(x.e == 0){
+z = y;
+y = x;
+x = z;
+z.s = 0; z.m = 0; z.e = 0;
+}
+
 // Calculate sign
 z.s = x.s^y.s;
 
 // New exponent
-//if(x.e != 0 & y.e != 0){ <--- may cause denormal failure
 z.e = x.e + y.e - 127;
+if(y.e == 0){
+z.e -= 2;
+}else{
+z.e++;
+}
 
 //cout<<"New exponent: "<<dec<<x.e<<"+"<<y.e<<" = "<<z.e<<endl;
 
 // Booth encode
 int beys; // booth encoded y significand
-y.m = y.m<<1; //decoding change due to the leading 1 in significand
+y.m <<= 1;	//decoding change due to the leading 1 in significand
 
 int negxm = ~x.m;
 negxm++;
@@ -608,28 +629,38 @@ lostbits += LSB;
 lostbits <<= 1;
 LSB = extractBits(1,1,z.m);
 lostbits += LSB;
-z.m = z.m>>2;
+z.m >>= 2;
 
 z.m += x.m; // this takes account of the leading 1
 
 //cout<<hex<<z.m<<" "<<lostbits<<endl;
+}else{
+lostbits <<= 1;
+LSB = extractBits(0,0,z.m);
+lostbits += LSB;
+z.m >>= 1;
+z.e +=2;
+//cout<<hex<<z.m<<" "<<lostbits<<endl;
 }
+
 
 //cout<<"estimate z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 
-//z.e++;
 while(z.e < 0){
 lostbits <<= 1;
 LSB = extractBits(0,0,z.m);
 lostbits += LSB;
-z.m = z.m>>1;
+z.m >>= 1;
 z.e++;
 //cout<<dec<<z.e<<" "<<hex<<z.m<<" "<<lostbits<<endl;
 }
-if(x.e == 0 & z.e != 0) z.e+=2;
-if(z.e != 0) z.e++;
+if(y.e == 0 & z.e != 0){
+z.e++;
+}
 
-cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
+//cout<<x.m<<" "<<y.m<<endl;
+
+//cout<<"pre norm z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<" "<<"lostbits: "<<lostbits<<endl;
 // Rounding and normalisation
 /*if(z.e == 0){
 LSB = extractBits(0,0,lostbits);
@@ -637,8 +668,15 @@ if(LSB){
 z.m++;
 }
 }*/
-round_norm(z, lostbits, 1);
+round_norm(z, lostbits, 1, 1);
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+
+/*if(x.e - y.e > 127){
+lostbits <<= 1;
+LSB = extractBits(0,0,z.m);
+lostbits += LSB;
+z.m >>= 1;
+}*/
 
 // Full number (with significand)
 //cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
@@ -800,6 +838,11 @@ fp_t two, y0;
 int scale = 0; // this is needed because some denormals have reciprocal larger than MAX
 
 if(y.e == 0){
+if(y.m < 0x200000){
+y0 = y;
+y = x;
+x = y0;
+}
 while(y.m < 0x200000){
 scale++;
 y.m <<= 1;
@@ -812,7 +855,7 @@ sign = z.s; // preserves sign bit, to be reused later
 x.s = 0; y.s = 0; // Use algorithm with positive numbers
 two.s = 0; two.e = 128; two.m = 0x800000; // define 2.0 in floating point to be used in subtraction
 z.s = 0; z.e = 254 - y.e; z.m = 0x800000; // initial guess is the reciprocal of the highest power of 2 below divisor
-cout<<dec<<"initial z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+//cout<<dec<<"initial z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 
 int i = 0;
 while( i < 20 ){
@@ -820,19 +863,26 @@ y0 = z;
 z = multiplier(y,y0);	// D*y0
 z = adder(two,z,true);	// 2-(D*y0)
 z = multiplier(z,y0);	// y0*(2-(D*y0))
-cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+//cout<<dec<<"z: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 i++;
 }
-//y.m >>= scale;
 
 cout<<endl<<dec<<"inv y: "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
 //<<dec<<"x: "<<x.s<<"-"<<x.e<<"-"<<hex<<x.m<<endl;
 
+setFlag(z);
+//cout<<z.v<<" "<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl;
+if(z.v == 1){
+z.v = 0; z.e = 0; z.m = 0;
+cout<<"ere"<<endl;
+}else{
 z = multiplier(z,x);	// z = x*(1/y)
+z.e += scale;
+}
 z.s = sign;
 
 // Full number (with significand)
-//cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
+cout<<"z: "<<dec<<z.s<<"-"<<z.e<<"-"<<hex<<z.m<<endl<<endl;
 
 return z;
 }
