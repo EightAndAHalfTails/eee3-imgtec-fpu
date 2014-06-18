@@ -98,7 +98,8 @@ BEGIN
 				result_chained := (p*q)+(r*s);
 				
 				--calculate result_tb using real package is number is finite
-				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) THEN
+				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) 
+					and	not(isnan(p) or isnan(q) or isnan(r) or isnan(s))THEN
 					result_tb := to_float((to_real(p)*to_real(q))+(to_real(r)*to_real(s)));
 					--------------------------------------------------------------
 					-- check if overflow
@@ -146,6 +147,9 @@ BEGIN
 					REPORT "err_t is " & to_string(err_t);
 				END IF;
 				-----------------------------------
+				IF (to_slv(p*q)=NZERO_slv) and (to_slv(r*s) = NZERO_slv) THEN
+						res_t := NZERO_F;
+				END IF;
 				getRightLeftBound(res_t, ulp, res_r, res_l);
 				
 				
@@ -155,19 +159,7 @@ BEGIN
 				REPORT "result_chained = " & to_string(result_chained);
 				REPORT "result real = " & to_string(result_tb);
 
-				IF iszero(res_t) THEN
-					IF (to_slv(p*q)=NZERO_slv) and (to_slv(r*s) = NZERO_slv) THEN
-						res_t := NZERO_F;
-					END IF;
-					IF result /= to_slv(res_t) THEN
-						IF incorrect_result < 10 THEN
-							incorrect_lines(incorrect_result) := n;
-						END IF;
-						incorrect_result := incorrect_result+1;
-						REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s) 
-							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
-					END IF;
-				ELSIF not(isfinite(res_t)) THEN
+				IF not(isfinite(res_t)) THEN
 					IF to_float(result) /= res_t THEN
 						IF incorrect_result < 10 THEN
 							incorrect_lines(incorrect_result) := n;
@@ -186,11 +178,13 @@ BEGIN
 							& "gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is NAN" SEVERITY warning;
 					END IF;
 				ELSIF not(to_float(result)<=res_r and to_float(result) >= res_l) THEN
+					REPORT "result_right is " & to_string(res_r);
+					REPORT "result left is " & to_string(res_l);
 					IF incorrect_result < 10 THEN
 							incorrect_lines(incorrect_result) := n;
 					END IF;
 					incorrect_result := incorrect_result+1;
-					REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
+					REPORT "2D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &" and "& to_string(s)
 						& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
 				END IF;
 				

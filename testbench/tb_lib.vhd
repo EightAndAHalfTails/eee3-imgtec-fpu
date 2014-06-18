@@ -216,7 +216,7 @@ PACKAGE BODY tb_lib IS
 		----------------------------------------------------------------------
 		-- check x for zeros, infinities or NaNs
 		-- else find right boundaries of x
-		IF (not(isfinite(x))) or iszero(x) or isnan(x) THEN
+		IF (not(isfinite(x))) or isnan(x) THEN
 			REPORT "x is not normal number";
 			x_left_slv := to_slv(x);
 			x_right_slv := to_slv(x);

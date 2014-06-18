@@ -114,7 +114,7 @@ BEGIN
 					REPORT "Square root of " & to_string(x) & " gives " &to_string(to_float(result)) & 
 							" which is incorrect. Correct answer is  " & to_string(sqrt_x)SEVERITY warning;
 				END IF;
-				
+				 
 			END IF;	
 			
 			n := n+1;

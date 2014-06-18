@@ -104,7 +104,8 @@ BEGIN
 				result_chained := ((p*q)+(r*s))+(t*u);
 				
 				--calculate result_tb using real package is number is finite
-				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) and isfinite(t) and isfinite(u) THEN
+				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) and isfinite(t) and isfinite(u) 
+					and	not(isnan(p) or isnan(q) or isnan(r) or isnan(s) or isnan(t) or isnan(u))THEN
 					result_tb := to_float(((to_real(p)*to_real(q))+(to_real(r)*to_real(s)))+(to_real(t)*to_real(u)));
 				ELSE
 					result_tb := result_chained;
@@ -169,6 +170,9 @@ BEGIN
 					REPORT "err_t is " & to_string(err_t);
 				END IF;
 				-----------------------------------
+				IF (to_slv(p*q)=NZERO_slv) and (to_slv(r*s) = NZERO_slv) and (to_slv(t*u)= NZERO_slv) THEN
+						res_t := NZERO_F;
+				END IF;
 				getRightLeftBound(res_t, ulp, res_r, res_l);
 				
 				
@@ -181,19 +185,7 @@ BEGIN
 				REPORT "right bound = " & to_string(res_r);
 				REPORT "left bound = " & to_string(res_l);
 
-				IF iszero(res_t) THEN
-					IF (to_slv(p*q)=NZERO_slv) and (to_slv(r*s) = NZERO_slv) and (to_slv(t*u)= NZERO_slv) THEN
-						res_t := NZERO_F;
-					END IF;
-					IF result /= to_slv(res_t) THEN
-						IF incorrect_result < 10 THEN
-							incorrect_lines(incorrect_result) := n;
-						END IF;
-						incorrect_result := incorrect_result+1;
-						REPORT "3D dot product of " & to_string(p) & ", " & to_string(q) &", "& to_string(r) &", "& to_string(s) & ", " & to_string(t) & " and " & to_string(u) 
-							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
-					END IF;
-				ELSIF not(isfinite(res_t)) THEN
+				IF not(isfinite(res_t)) THEN
 					IF to_float(result) /= res_t THEN
 						IF incorrect_result < 10 THEN
 							incorrect_lines(incorrect_result) := n;
