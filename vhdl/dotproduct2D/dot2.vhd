@@ -70,7 +70,7 @@ begin  -- chained
   --take difference of two exponents+ab smaller than c flag
   -----------------------------------------------------------------------------
   exp_diff<=sgn(resize(post_mult_exp1,10)-resize(post_mult_exp2,10));
-  ab_st_cd<='1' when exp_diff <0 or (exp_diff=0 and post_mult_significand1<post_mult_significand2) else '0';
+  ab_st_cd<='1' when exp_diff <0 or (exp_diff=0 and post_mult_significand1<post_mult_significand2) or isInf(c) or isInf(d) else '0';
   eop<=post_mult_sign1 xor post_mult_sign2; --effective operation:0=>add,1=>sub
 -------------------------------------------------------------------------------
   --adder
@@ -90,7 +90,7 @@ begin  -- chained
     ----------------------------
     --swap
     ----------------------------
-    if ab_st_cd = '1' then              -- swap order if a*b<c*d
+    if ab_st_cd = '1' or post_mult_significand1=0 then              -- swap order if a*b<c*d
       opA:=post_mult_significand2;
       opB:=post_mult_significand1;
       pre_norm_exponent<=sgn(resize(post_mult_exp2,10)-125); 
@@ -137,8 +137,10 @@ begin  -- chained
   
   sign_logic:process(temp_sign,neg_sig,post_mult_sign1,post_mult_sign2,a,b,c,d)
   begin
-    if isZero(a) and isZero(b) and isZero(c) and isZero(d) then
+    if (isZero(a) or isZero(b)) and (isZero(c) or isZero(d)) then
       result.sign<=post_mult_sign1 and post_mult_sign2;
+    elsif isInf(a) or isInf(b) then
+    elsif isInf(c) or isInf(d) then
     elsif neg_sig ='1' then
       result.sign<= not temp_sign;
     else
@@ -193,7 +195,6 @@ begin  -- chained
     for i in pre_norm_significand'high downto pre_norm_significand'low loop
       if pre_norm_significand(i)='0' then
         leadingzeros:=leadingzeros+1;
-       -- sft_result_significand:=sft_result_significand sll 1;--left shift until left aligned
       else
         exit; 
       end if;
@@ -229,7 +230,7 @@ begin  -- chained
   --rounder
   --The process round the result to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:process(post_norm_significand,post_norm_exponent)
+  rounder:process(post_norm_significand,post_norm_exponent,a,b,c,d)
 
     variable rounded_result_e_s		:usg(8 downto 0);
     variable rounded_result_man_s	:usg(23 downto 0);
@@ -246,10 +247,17 @@ begin  -- chained
     else
       rounded_result_e_s:=post_norm_exponent;
     end if;
-    
-    if rounded_result_e_s>=255 then     --overflows
+    if isNan(a) or isNan(b) or isNan(c) or isNan(d) or (isZero(a) and isInf(b)) or (isZero(b) and isInf(a)) or (isZero(c) and isInf(d)) or (isZero(d) and isInf(c)) or ((isInf(a) or isInf(b))and(isInf(c) or isInf(d)) and eop='1') then
+      result.exponent	 <=      (others=>'1');
+      result.significand <=      (others=>'1');
+    elsif (isZero(a) or isZero(b))and(isZero(c)or isZero(d)) then
+      result.exponent	 <=      (others=>'0');
+      result.significand <=      (others=>'0');
+
+    elsif rounded_result_e_s>=255 or isInf(a) or isInf(b) or isInf(c) or isInf(d) then     --overflows
       result.exponent	 <=      (others=>'1');
       result.significand <=      (others=>'0');
+	
     else
       result.significand <=	slv(rounded_result_man_s(22 downto 0));
       result.exponent	 <=	slv(rounded_result_e_s(7 downto 0));
