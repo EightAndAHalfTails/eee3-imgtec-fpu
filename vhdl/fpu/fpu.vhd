@@ -6,162 +6,171 @@ use work.types.all;
 
 entity fpu is
   port(
-    clk, reset, start : in std_logic;
-    busy, done : out std_logic;
+    clk, reset : in std_logic;
     opcode : in slv(3 downto 0);
-    fpu_in1, fpu_in2, fpu_in3 : in slv(31 downto 0);
+    fpu_in1, fpu_in2, fpu_in3, fpu_in4, fpu_in5, fpu_in6 : in slv(31 downto 0);
     fpu_out : out slv(31 downto 0)
     );
 end entity fpu;
 
 architecture arch of fpu is
-  signal a, b, c, add_result, div_result, mult_result, sqrt_result, isqrt_result, multacc_result, result : slv(31 downto 0);
+  signal a, b, c, d, e, f, div_in1, div_in2, sqrt_in1, dot3_in1, dot3_in2, dot3_in3, dot3_in4, dot3_in5, dot3_in6, div_out, sqrt_out, dot3_out, result : slv(31 downto 0);
   signal isq_start, isq_done, s_busy, s_done : std_logic;
   signal op : integer range 0 to 15;
   
   type state_t is (idle, isq_wait, sqt_wait);
   signal state, nstate : state_t;
-begin
-  as: entity addsub port map(
-    add_in1 => a,
-    add_in2 => b,
-    operation_i => opcode(0),
-    add_out => add_result
-  );
   
-  ml: entity mult port map(
-    mult_in1 => a,
-    mult_in2 => b,
-    mult_out => mult_result
-  );
+  constant one : slv(31 downto 0) := x"00000001"; 
+  constant neg_one : slv(31 downto 0) := x"80000001";
+  constant nan : slv(31 downto 0) := float2slv(nan);
+begin
   
   dv : entity div port map(
-    div_in1 => a,
-    div_in2 => b,
-    div_out => div_result
+    div_in1 => div_in1,
+    div_in2 => div_in2,
+    div_out => div_out
   );
-  
-  sqrt: entity mult port map(
-    mult_in1 => a,
-    mult_in2 => isqrt_result,
-    mult_out => sqrt_result
-  );
-  
-  isq : entity isqrt port map(
-    clk => clk,
-    reset => reset,
-    start => isq_start,
-    done => isq_done,
-    isqrt_in1 => a,
-    isqrt_out => isqrt_result
-  );
-  
-  fma : entity multacc port map(
-    multacc_in1 => a,
-    multacc_in2 => b,
-    multacc_in3 => c,
-    multacc_out => multacc_result
-  );
-  
-  fsm : process
+  div_in: process(op, a, b, sqrt_out)
   begin
-    wait until clk'event and clk = '1';
-    if reset = '1' then
-      state <= idle;
-      fpu_out <= (others => '0');
-      done <= '0';
+    if op = 5 then
+      div_in1 <= a;
+      div_in2 <= b;
+    elsif op = 9 then
+      div_in1 <= one;
+      div_in2 <= sqrt_out;
+    elsif op = 12 then
+      div_in1 <= a;
+      div_in2 <= sqrt_out;
     else
-      state <= nstate;
-      fpu_out <= result;
-      done <= s_done;
+      div_in1 <= nan;
+      div_in2 <= nan;
     end if;
-  end process fsm;
+  end process div_in;
   
-  next_state: process(state, start, op, isq_done)
-  begin
-    if state = idle and start = '1' and op = 8 then
-      nstate <= sqt_wait;
-    elsif state = idle and start = '1' and op = 9 then
-      nstate <= isq_wait;
-    elsif state = sqt_wait and isq_done = '1' then
-      nstate <= idle;
-    elsif state = isq_wait and isq_done = '1' then
-      nstate <= idle;
-    else
-      nstate <= state;
-    end if;
-  end process next_state;
-  
-  sel : process(op, mult_result, add_result, multacc_result, div_result, sqrt_result, isq_done) --removed isqrt_result from sensitivity list since it gives warning -R
-  begin
-    case op is
-      when 0 => -- NOP
-        result <= float2slv(nan);
-        s_done <= '1';
-      when 1 => -- MUL
-        result <= mult_result;
-        s_done <= '1';
-      when 2|3 => -- ADD|SUB
-        result <= add_result;
-        s_done <= '1';
-      when 4 => -- FMA
-        result <= multacc_result;
-        s_done <= '1';
-      when 5 => -- DIV
-        result <= div_result;
-        s_done <= '1';
-      when 6 => -- DOT2
-        result <= float2slv(nan);
-        s_done <= '1';
-      when 7 => -- DOT3
-        result <= float2slv(nan);
-        s_done <= '1';
-      when 8 => -- SQRT
-        result <= sqrt_result;
-        s_done <= isq_done;
-      when 9 => -- ISQRT
-        result <= float2slv(nan);
-        s_done <= isq_done;
-      when 10 => -- MAG2
-        result <= float2slv(nan);
-        s_done <= '1';
-      when 11 => -- MAG3
-        result <= float2slv(nan);
-        s_done <= '1';
-      when 12 => -- NORM3
-        result <= float2slv(nan);
-        s_done <= '1';
-      when 13 to 15 => -- unused
-        result <= float2slv(nan);
-        s_done <= '1';
-    end case;
-  end process sel;
-  
-  start_isq : process(op)
+  sq : entity sqrt port map(
+    sqrt_in1 => sqrt_in1,
+    sqrt_out => sqrt_out
+  );
+  sq_in: process(op, dot3_out)
   begin
     if op = 8 or op = 9 then
-      isq_start <= '1';
-    else isq_start <= '0';
+      sqrt_in1 <= a;
+    elsif op = 10 or op = 11 or op = 12 then
+      sqrt_in1 <= dot3_out;
     end if;
-  end process start_isq;
+  end process sq_in;
   
-  busy <= s_busy;
-  when_busy: process(nstate)
+  dot : entity dot3 port map(
+    dot3_in1 => dot3_in1,
+    dot3_in2 => dot3_in2,
+    dot3_in3 => dot3_in3,
+    dot3_in4 => dot3_in4,
+    dot3_in5 => dot3_in5,
+    dot3_in6 => dot3_in6,
+    dot3_out => dot3_out
+  );
+  dot3_in: process(op)
+    constant zero : slv(31 downto 0) := float2slv(pos_zero);
   begin
-    if nstate = idle then
-      s_busy <= '0';
-    else s_busy <= '1';
-    end if;
-  end process when_busy;
+    case op is
+    when 1 => --MUL
+      dot3_in1 <= a;
+      dot3_in2 <= b;
+      dot3_in3 <= zero;
+      dot3_in4 <= zero;
+      dot3_in5 <= zero;
+      dot3_in6 <= zero;
+    when 2 => -- ADD
+      dot3_in1 <= a;
+      dot3_in2 <= one;
+      dot3_in3 <= b;
+      dot3_in4 <= one;
+      dot3_in5 <= zero;
+      dot3_in6 <= zero;
+    when 3 => -- SUB
+      dot3_in1 <= a;
+      dot3_in2 <= one;
+      dot3_in3 <= b;
+      dot3_in4 <= neg_one;
+      dot3_in5 <= zero;
+      dot3_in6 <= zero;
+    when 4 => -- FMA
+      dot3_in1 <= a;
+      dot3_in2 <= b;
+      dot3_in3 <= one;
+      dot3_in4 <= c;
+      dot3_in5 <= zero;
+      dot3_in6 <= zero;
+    when 6 => -- DOT2
+      dot3_in1 <= a;
+      dot3_in2 <= b;
+      dot3_in3 <= c;
+      dot3_in4 <= d;
+      dot3_in5 <= zero;
+      dot3_in6 <= zero;
+    when 7 => -- DOT3
+      dot3_in1 <= a;
+      dot3_in2 <= b;
+      dot3_in3 <= c;
+      dot3_in4 <= d;
+      dot3_in5 <= e;
+      dot3_in6 <= f;
+    when 10 => -- MAG2
+      dot3_in1 <= a;
+      dot3_in2 <= a;
+      dot3_in3 <= b;
+      dot3_in4 <= b;
+      dot3_in5 <= zero;
+      dot3_in6 <= zero;
+    when 11 => -- MAG3
+      dot3_in1 <= a;
+      dot3_in2 <= a;
+      dot3_in3 <= b;
+      dot3_in4 <= b;
+      dot3_in5 <= c;
+      dot3_in6 <= c;
+    when 12 => -- NORM3
+      dot3_in1 <= a;
+      dot3_in2 <= a;
+      dot3_in3 <= b;
+      dot3_in4 <= b;
+      dot3_in5 <= c;
+      dot3_in6 <= c;
+    when others =>
+      dot3_in1 <= nan;
+      dot3_in2 <= nan;
+      dot3_in3 <= nan;
+      dot3_in4 <= nan;
+      dot3_in5 <= nan;
+      dot3_in6 <= nan;
+    end case;
+  end process dot3_in;
+  
+  select_output : process(op, dot3_out, sqrt_out, div_out) --removed isqrt_out from sensitivity list since it gives warning -R
+  begin
+    case op is
+      when 1|2|3|4|6|7 =>
+        result <= dot3_out;
+      when 8|10|11 =>
+        result <= sqrt_out;
+      when 5|9|12 =>
+        result <= div_out;
+      when others => -- DIV
+        result <= nan;
+    end case;
+  end process select_output;
   
   register_inputs: process
   begin
     wait until clk'event and clk = '1';
-    if s_busy = '0' and start = '1' then
       op <= to_integer(usg(opcode));
       a <= fpu_in1;
       b <= fpu_in2;
       c <= fpu_in3;
-    end if;
+      d <= fpu_in4;
+      e <= fpu_in5;
+      f <= fpu_in6;
+      fpu_out <= result;
     end process register_inputs;
 end architecture arch;
