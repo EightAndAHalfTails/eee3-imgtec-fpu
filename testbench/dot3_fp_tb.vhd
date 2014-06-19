@@ -103,7 +103,7 @@ BEGIN
 				--calculate chained result
 				result_chained := ((p*q)+(r*s))+(t*u);
 				
-				--calculate result_tb using real package is number is finite
+				--calculate result_tb using real package if number is infinite
 				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) and isfinite(t) and isfinite(u) 
 					and	not(isnan(p) or isnan(q) or isnan(r) or isnan(s) or isnan(t) or isnan(u))THEN
 					result_tb := to_float(((to_real(p)*to_real(q))+(to_real(r)*to_real(s)))+(to_real(t)*to_real(u)));
