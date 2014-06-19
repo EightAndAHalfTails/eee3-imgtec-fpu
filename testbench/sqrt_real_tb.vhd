@@ -60,6 +60,7 @@ BEGIN
 		VARIABLE sqrt_l, sqrt_r	: FLOAT32;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
+		VARIABLE incorrect_denormal_result : INTEGER;
 	
 	BEGIN
 		reset <= '1';
@@ -68,6 +69,7 @@ BEGIN
 		
 		n := 1;
 		incorrect_result := 0;
+		incorrect_denormal_result := 0;
 		
 		WHILE NOT endfile(f) LOOP
 			WAIT UNTIL clk'EVENT and clk = '1';
@@ -109,6 +111,12 @@ BEGIN
 					   REPORT "Square root of " & to_string(x) & " gives " &to_string(to_float(result)) & 
 							" which is incorrect. Correct answer is NaN" SEVERITY warning;
 					END IF;
+				ELSIF isdenormal(x) THEN
+					IF not((to_float(result) <= sqrt_r) AND (to_float(result) >= sqrt_l)) THEN
+					incorrect_denormal_result := incorrect_denormal_result+1;
+					REPORT "Square root of " & to_string(x) & " gives " &to_string(to_float(result)) & 
+							" which is incorrect. Correct answer is  " & to_string(sqrt_x)SEVERITY warning;
+					END IF;				
 				ELSIF not((to_float(result) <= sqrt_r) AND (to_float(result) >= sqrt_l)) THEN
 					incorrect_result := incorrect_result+1;
 					REPORT "Square root of " & to_string(x) & " gives " &to_string(to_float(result)) & 
@@ -120,10 +128,12 @@ BEGIN
 			n := n+1;
 		END LOOP;
 	
-	IF incorrect_result = 0 THEN
+	IF incorrect_result = 0 and incorrect_denormal_result = 0 THEN
 		REPORT "***************** TEST PASSED *****************";
 	ELSE
 		REPORT "***************** TEST FAILED, number of incorrect results = " & INTEGER'IMAGE(incorrect_result);
+		REPORT "***************** TEST FAILED, number of incorrect denormal results = " & INTEGER'IMAGE(incorrect_denormal_result);
+
 	END IF;
 	
 	REPORT "Test finished normally." SEVERITY failure;

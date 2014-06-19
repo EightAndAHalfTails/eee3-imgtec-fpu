@@ -32,6 +32,7 @@ PACKAGE tb_lib IS
 	FUNCTION b2l(b : BIT) return std_logic;
 	FUNCTION v2i( x : STD_LOGIC_VECTOR) RETURN INTEGER;
 	FUNCTION i2v( x : INTEGER) RETURN STD_LOGIC_VECTOR;
+	FUNCTION isdenormal(x:FLOAT32) RETURN BOOLEAN;
 	FUNCTION to_opcode( x : STRING(1 TO 4)) RETURN STD_LOGIC_VECTOR;
 	
 	PROCEDURE twoSum(
@@ -96,6 +97,12 @@ PACKAGE BODY tb_lib IS
 	FUNCTION iszero(x:FLOAT32) RETURN BOOLEAN IS
 	BEGIN
 		RETURN (x=zerofp or x = neg_zerofp);
+	END;
+	
+	--check if denormal
+	FUNCTION isdenormal(x:FLOAT32) RETURN BOOLEAN IS
+	BEGIN
+		RETURN ((to_slv(x(7 DOWNTO 0)) = slv'("00000000")) and (to_slv(x(-1 DOWNTO -23)) /= slv'("00000000000000000000000")));
 	END;
 	
 	--cmd to opcode

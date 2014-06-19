@@ -107,6 +107,7 @@ BEGIN
 						result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
 					END IF;
 				ELSE
+					REPORT "Using chained result";
 					result_tb := result_chained;
 				END IF;
 	
@@ -139,7 +140,7 @@ BEGIN
 						err_t := (err2+ err3) + err1;
 						res_t := res_t + err_t;
 					ELSE
-						REPORT "Using real package";
+						REPORT "Using chained/real package";
 						res_t := result_tb;
 						err_t := PNAN_F;
 					END IF;

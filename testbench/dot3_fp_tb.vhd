@@ -107,14 +107,15 @@ BEGIN
 				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) and isfinite(t) and isfinite(u) 
 					and	not(isnan(p) or isnan(q) or isnan(r) or isnan(s) or isnan(t) or isnan(u))THEN
 					result_tb := to_float(((to_real(p)*to_real(q))+(to_real(r)*to_real(s)))+(to_real(t)*to_real(u)));
+					--------------------------------------------------------------
+					-- check if overflow
+					IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
+						result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
+					END IF;
 				ELSE
 					result_tb := result_chained;
 				END IF;
-				--------------------------------------------------------------
-				-- check if overflow
-				IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
-					result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
-				END IF;
+				
 				
 				-------------------------------------------------------------
 				--calculate best rounded result res_t and total error
