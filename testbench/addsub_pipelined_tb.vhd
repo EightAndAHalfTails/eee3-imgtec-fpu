@@ -118,6 +118,7 @@ BEGIN
 					WAIT UNTIL clk'EVENT AND clk = '1';
 					
 					IF n > (pipelineSize-1) THEN
+					--REPORT "checking line " & INTEGER'IMAGE(n-pipelineSize+1);
 						IF isnan(result_tb(arrCounter)) THEN
 							IF not(isnan(to_float(result))) THEN
 								incorrect_result(i) := incorrect_result(i)+1;
@@ -150,6 +151,36 @@ BEGIN
 				
 				n := n+1;
 			END LOOP;
+			----------------------------------------------------------------------------
+			--check remaining array
+			FOR j in 0 TO pipelineSize-2 LOOP
+				WAIT UNTIL clk'EVENT AND clk = '1';
+				--REPORT "checking line " & INTEGER'IMAGE(n-pipelineSize+1);
+				IF i = 0 THEN
+					result_tb(arrCounter) := x(arrCounter)+y(arrCounter);
+					op_symbol := "+";
+				ELSE
+					result_tb(arrCounter) := x(arrCounter)-y(arrCounter);
+					op_symbol := "-";
+				END IF;
+				arrCounter := arrCounter + 1;
+				arrCounter := arrCounter mod pipelineSize;
+				
+				WAIT UNTIL clk'EVENT AND clk = '1';
+				IF isnan(result_tb(arrCounter)) THEN
+					IF not(isnan(to_float(result))) THEN
+						incorrect_result(i) := incorrect_result(i)+1;
+						REPORT to_string(x(arrCounter)) & op_symbol & to_string(y(arrCounter)) & " is " & to_string(to_float(result)) &
+							". Correct answer should be NaN" SEVERITY warning;
+					END IF;
+				ELSIF result /= to_slv(result_tb(arrCounter)) THEN
+						incorrect_result(i) := incorrect_result(i)+1;
+						REPORT to_string(x(arrCounter)) & op_symbol & to_string(y(arrCounter)) & " is " & to_string(to_float(result)) &
+							". Correct answer should be " & to_string(result_tb(arrCounter)) SEVERITY warning;
+				END IF;
+				n := n+1;
+			END LOOP;
+			
 			file_close(f);
 			file_open(f, "twoInput_datapak.txt", read_mode);
 			operation <= '1';
