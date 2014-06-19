@@ -216,6 +216,8 @@ begin
     end if;    
     sticky_b2<=s_bit;
   end process adder;
+
+
 -------------------------------------------------------------------------------
   --sign_logic:
   --sign depends on the number with larger maginitude
@@ -370,28 +372,29 @@ begin
       result.sign	<=	'0';     --0*inf,NaN input, +inf-inf
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'1');
-  elsif isZero(c) and post_mult_significand =0 then
-      result.sign<=c.sign and post_mult_sign;
-      result.exponent<=c.exponent;
-      result.significand<=c.significand;
-  elsif expo_diff<-25 or post_mult_significand =0 then --if product is zero
-      result<=c;
-  else  
-    if rounded_result_e_s>=255 or isInf(a) or isInf(b) or isInf(c) then     --overflows
+  elsif isInf(a) or isInf(b) or isInf(c) then  
       result.exponent	<=(others=>'1');
       result.significand<=(others=>'0');
       IF isInf(c) THEN
       result.sign<=c.sign;
       ELSIF isInf(a) or isInf(b) THEN
       result.sign<=post_mult_sign;
-      ELSE
-      result.sign<=temp_sign;
       END IF;
+  elsif (isZero(a) or isZero(b)) and isZero(c) then
+	 result.sign<=c.sign and post_mult_sign;
+         result.exponent<=(others=>'0');
+         result.significand<=(others=>'0');
+  elsif (isZero(a) or isZero(b)) or (expo_diff<-25 and not isZero(c)) then
+	 result<=c;
+  else  
+    if rounded_result_e_s>=255 then     --overflows
+      result.exponent	<=(others=>'1');
+      result.significand<=(others=>'0');
     else
       result.significand	<=	slv(rounded_result_man_s(22 downto 0));
       result.exponent	   <=	slv(rounded_result_e_s(7 downto 0));
-      result.sign	<=	temp_sign;
     end if;
+      result.sign<=temp_sign;
   end if;
   END PROCESS rounder;
 
