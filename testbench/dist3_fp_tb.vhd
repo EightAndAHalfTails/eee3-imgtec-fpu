@@ -1,10 +1,10 @@
 ------------------------------------------------------------------
---Testbench for floating point 2D Euclidean Distance
---reads twoInput_datapak.txt for input data
+--Testbench for floating point 3D Euclidean Distance
+--reads threeInput_datapak.txt for input data
 --use ieee.math_real package to calculate reference result
 
 
---vhdl test entity: dist2
+--vhdl test entity: dist3
 --author: Weng Lio
 --version: 19/06/2014
 ------------------------------------------------------------------
@@ -18,14 +18,14 @@ USE std.textio.ALL;
 USE work.tb_lib.all;
 USE work.all;
 
-ENTITY dist2_tb IS
+ENTITY dist3_tb IS
 	GENERIC(	ulp : INTEGER := 4 ;
-				op	: STRING(1 TO 4) := "1010"	);
-END dist2_tb;
+				op	: STRING(1 TO 4) := "1011"	);
+END dist3_tb;
 
-ARCHITECTURE tb OF dist2_tb IS
+ARCHITECTURE tb OF dist3_tb IS
 	SIGNAL clk, reset: STD_LOGIC; 
-	SIGNAL A, B, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=sqrt(a*a + b*b)
+	SIGNAL A, B, C, result: STD_LOGIC_VECTOR(31 DOWNTO 0);		--result=sqrt(a*a + b*b)
 BEGIN
   
 	-- clock generation process
@@ -38,26 +38,27 @@ BEGIN
 	END PROCESS clkgen;
 
 	-- test entity
-	dist2: ENTITY work.dist2
+	dist3: ENTITY work.dist3
 	PORT MAP(
-		dist2_in1		=>A,
-		dist2_in2		=>B,
-		dist2_out		=>result
+		dist3_in1		=>A,
+		dist3_in2		=>B,
+		dist3_in3		=>C,
+		dist3_out		=>result
 	);
 
 	------------------------------------------------------------
-	-- main process reads lines from "twoInput_datapak.txt"
-	-- each line consists of 2 fp numbers to be squared and then square-rooted
+	-- main process reads lines from "threeInput_datapak.txt"
+	-- each line consists of r fp numbers to be squared and then square-rooted
 	------------------------------------------------------------
 	main: PROCESS
-		FILE f				: TEXT OPEN read_mode IS "twoInput_datapak.txt";
+		FILE f				: TEXT OPEN read_mode IS "threeInput_datapak.txt";
 		VARIABLE buf		: LINE;
 		VARIABLE cmd		: STRING(1 TO 4);
 		VARIABLE header		: STRING(1 TO 3);
 		VARIABLE ibmvectors	: BOOLEAN;
-		VARIABLE x, y	    : FLOAT32;
-		VARIABLE res1, res2, res_t	: FLOAT32;
-		VARIABLE err1, err2, err3, err_t	: FLOAT32;
+		VARIABLE x, y, z	    : FLOAT32;
+		VARIABLE res1, res2, res3, res4, res_t	: FLOAT32;
+		VARIABLE err1, err2, err3, err4, err5, err_t	: FLOAT32;
 		VARIABLE res_r, res_l	: FLOAT32;
 		VARIABLE result_chained	: FLOAT32;
 		VARIABLE result_tb 		: FLOAT32;
@@ -111,17 +112,19 @@ BEGIN
 
 					read(buf, x);
 					read(buf, y);
+					read(buf, z);
 
 					A<=to_slv(x);
 					B<=to_slv(y);
+					C<=to_slv(z);
 					
 				-----------------------------------------------------------
 				--calculate chained result
-				result_chained := ieee.float_pkg.sqrt(((x*x)+(y*y)));
+				result_chained := ieee.float_pkg.sqrt(((x*x)+(y*y)+(z*z)));
 				
 				--calculate result_tb using real package if number is infinite
-				IF isfinite(x) and isfinite(y) and not(isnan(x) or isnan(y))THEN
-					result_tb := to_float(ieee.math_real.sqrt((to_real(x)*to_real(x))+(to_real(y)*to_real(y))));
+				IF isfinite(x) and isfinite(y) and isfinite(z)and not(isnan(x) or isnan(y) or isnan(z))THEN
+					result_tb := to_float(ieee.math_real.sqrt((to_real(x)*to_real(x))+(to_real(y)*to_real(y))+(to_real(z)*to_real(z))));
 					-- check if overflow
 					IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
 						result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
@@ -133,7 +136,7 @@ BEGIN
 	
 				-------------------------------------------------------------
 				--calculate best rounded result res_t and total error
-				IF isnan(x) or isnan(y) THEN
+				IF isnan(x) or isnan(y) or isnan(z) THEN
 					res_t := result_tb;
 				ELSE
 					---------------------------------------------------------
@@ -159,21 +162,40 @@ BEGIN
 					REPORT "res2 is " & to_string(res2);
 					REPORT "err2 is " & to_string(err2);
 					---------------------------------------------------------
+					--calculate z^2
+					IF isfinite(z*z) and not(iszero(z*z)) THEN
+						--REPORT "Performing Dekker 3";
+						dekkerMult(z,z,res3,err3);
+					ELSE
+						res3 := PNAN_F;
+						err3 := PNAN_F;
+					END IF;
+					REPORT "res3 is " & to_string(res3);
+					REPORT "err3 is " & to_string(err3);
+					---------------------------------------------------------
 					--adding x^2 and y^2
-					IF isfinite(res1+res2) and not(iszero(res1+res2)) and not(isnan(res1)) and not(isnan(res2)) and not(isnan(err1)) and not(isnan(err2)) THEN
+					IF isfinite(res1+res2) and not(iszero(res1+res2)) and not(isnan(res1)) and not(isnan(res2)) THEN
 						--REPORT "Performing twoSum";
-						twoSum(res1, res2, res_t, err3);
-						err_t := (err2+ err3) + err1;
-						res_t := res_t + err_t;
+						twoSum(res1, res2, res4, err4);
 					ELSE
 						res_t := PNAN_F;
 						err_t := PNAN_F;
 					END IF;
 					REPORT "res_t is " & to_string(res_t);
 					REPORT "err_t is " & to_string(err_t);
+					IF isfinite(res4+res3) and not(iszero(res4+res3)) and not(isnan(res4)) and not(isnan(res3)) and not(isnan(err1)) 
+						and not(isnan(err2)) and not(isnan(err3)) and not(isnan(err4)) THEN
+						twoSum(res4, res3, res_t, err5);
+						err_t := (err4+err2)+err1;
+						err_t := (err5+err3)+err_t;						
+						res_t := res_t + err_t;
+					ELSE
+						res_t := PNAN_F;
+						err_t := PNAN_F;
+					END IF;
 					---------------------------------------------------------
 					--square root
-					IF (to_slv(x*x)=NZERO_slv) and (to_slv(y*y) = NZERO_slv) THEN 
+					IF (to_slv(x*x)=NZERO_slv) and (to_slv(y*y) = NZERO_slv) and (to_slv(z*z) = NZERO_slv) THEN 
 						res_t := NZERO_F;		--sqrt(-0) = (-0)
 					ELSIF isnan(res_t) or res_t < PZERO_F THEN
 						REPORT "using chained/real pkg";
@@ -207,7 +229,7 @@ BEGIN
 							incorrect_lines(incorrect_result) := n;
 						END IF;
 						incorrect_result := incorrect_result+1;
-						REPORT "Euclidean dist of " & to_string(x) & " and " & to_string(y) & " is " & 
+						REPORT "Euclidean dist of " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & " is " & 
 							to_string(to_float(result)) & ". Correct answer should be NaN" SEVERITY warning;
 					END IF;
 				---------------------------------------------------------------
@@ -220,7 +242,7 @@ BEGIN
 								incorrect_lines(incorrect_result) := n;
 						END IF;
 						incorrect_result := incorrect_result+1;
-						REPORT "Euclidean dist of " & to_string(x) & " and " & to_string(y) & " is " & 
+						REPORT "Euclidean dist of " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & " is " & 
 							to_string(to_float(result)) & ". Correct answer should be " & to_string(res_t) SEVERITY warning;
 					END IF;
 				ELSIF not(to_float(result)<=res_r and to_float(result) >= res_l) THEN
@@ -230,7 +252,7 @@ BEGIN
 							incorrect_lines(incorrect_result) := n;
 					END IF;
 					incorrect_result := incorrect_result+1;
-					REPORT "Euclidean dist of " & to_string(x) & " and " & to_string(y) & " is " & 
+					REPORT "Euclidean dist of " & to_string(x) & ", " & to_string(y) & " and " & to_string(z) & " is " & 
 							to_string(to_float(result)) & ". Correct answer should be " & to_string(res_t) SEVERITY warning;
 				END IF;
 		
@@ -258,7 +280,7 @@ BEGIN
 		END IF;
 	END IF;
 	
-	REPORT "2D Euclidean distance test finished normally." SEVERITY failure;
+	REPORT "3D Euclidean distance test finished normally." SEVERITY failure;
 
 	END PROCESS main;
 	

@@ -157,7 +157,7 @@ BEGIN
 						err4 := PNAN_F;
 					END IF;
 					IF isfinite(res4+res3) and not(iszero(res4+res3)) and not(isnan(res4)) and not(isnan(res3)) and not(isnan(err1)) 
-						and not(isnan(err2)) and not(isnan(err3)) and not(isnan(err4)) and not(isnan(err5)) THEN
+						and not(isnan(err2)) and not(isnan(err3)) and not(isnan(err4)) THEN
 						twoSum(res4, res3, res_t, err5);
 						err_t := (err4+err2)+err1;
 						err_t := (err5+err3)+err_t;						

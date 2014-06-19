@@ -34,7 +34,7 @@ begin  -- chained
     );
   s1:entity sqrt port map (
     sqrt_in1=>result,
-    sqrt_out=>dist2_out
+    sqrt_out=>dist3_out
     );
   
 end chained;

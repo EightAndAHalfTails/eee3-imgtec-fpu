@@ -22,6 +22,7 @@ USE std.textio.ALL;
 USE work.tb_lib.all;
 
 ENTITY isqrt_tb IS
+	GENERIC( ulp : INTEGER := 4);
 END isqrt_tb;
 
 ARCHITECTURE tb OF isqrt_tb IS
@@ -60,7 +61,7 @@ BEGIN
 		VARIABLE x	 		: FLOAT32; 
 		VARIABLE x_real		: REAL;
 		VARIABLE isqrt_x 	: FLOAT32;
-		VARIABLE isqrt_l, isqrt_r	: slv(31 DOWNTO 0);
+		VARIABLE isqrt_l, isqrt_r	: FLOAT32;
 		VARIABLE exponent_l, exponent_r	: unsigned(8 DOWNTO 0);
 		VARIABLE mantissa_l, mantissa_r	: unsigned(24 DOWNTO 0); --25 bits for overflow, left and right bound error interval
 		VARIABLE temp   	:unsigned(22 DOWNTO 0); --temp mantissa of isqrt_x
@@ -104,87 +105,13 @@ BEGIN
 				----------------------------------------------------------------------
 				-- check sqrt_x for zeros, infinities or NaNs
 				-- else find left and right boundaries of sqrt_x (4 ulps)
-				IF (not(isfinite(isqrt_x))) or iszero(isqrt_x) or isnan(isqrt_x) THEN
-					REPORT "isqrt_x is not normal number";
-					isqrt_l := to_slv(isqrt_x);
-					isqrt_r := to_slv(isqrt_x);
-				ELSE
-					exponent_r := '0'& unsigned(isqrt_x(7 DOWNTO 0));
-					exponent_l := '0'& unsigned(isqrt_x(7 DOWNTO 0));				
-					temp:=unsigned(to_slv(isqrt_x(-1 DOWNTO -23)));
-					
-					-- if isqrt_x is positive, then isqrt_r is greater than isqrt_x and isqrt_l is smaller than isqrt_x
-					IF isqrt_x(8) = '0' THEN  
-						mantissa_r := unsigned("01" & temp) + to_unsigned(4, 25);
-						mantissa_l := unsigned("01" & temp) - to_unsigned(4, 25);
-						
-						-- find isqrt_r
-						-- if mantissa overflow, increment exp
-						-- check if exponent overflow
-						IF mantissa_r(24) = '1' THEN
-							exponent_r := exponent_r + to_unsigned(1, 9);
-							
-							IF exponent_r(8) = '1' THEN
-								isqrt_r := PINFINITY_slv;
-							ELSE
-								isqrt_r := slv('0'&exponent_r(7 DOWNTO 0) & mantissa_r(23 DOWNTO 1));
-							END IF;
-						ELSE
-							isqrt_r := slv('0'&exponent_r(7 DOWNTO 0) &  mantissa_r(22 DOWNTO 0));
-						END IF;
-						
-						-- find isqrt_l
-						-- if mantissa underflow, decrement exponent
-						-- if isqrt_x is denormal and mantissa underflow, isqrt_l will be set to positive zero
-						IF mantissa_l(23) = '0' THEN
-							IF exponent_l = "00000000" THEN
-								isqrt_l := PZERO_slv;
-							ELSE
-								exponent_l := exponent_l - to_unsigned(1,9);
-								isqrt_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(21 DOWNTO 0) & '0');
-							END IF;
-						ELSE
-							isqrt_l := slv('0' & exponent_l(7 DOWNTO 0) & mantissa_l(22 DOWNTO 0));
-						END IF;	
-						
-					ELSE 
-					-- if isqrt_x is negative, then isqrt_r is less negative than isqrt_x and isqrt_l is more negative than isqrt_x
-						mantissa_r := unsigned("01" & temp) - to_unsigned(4, 25);
-						mantissa_l := unsigned("01" & temp) + to_unsigned(4, 25);
-						
-						-- find isqrt_r
-						IF mantissa_r(23) = '0' THEN
-							IF exponent_r = "00000000" THEN
-								isqrt_r := NZERO_slv;
-							ELSE
-								exponent_r := exponent_r - to_unsigned(1,9);
-								isqrt_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(21 DOWNTO 0) & '0');
-							END IF;
-						ELSE 
-							isqrt_r := slv('1' & exponent_r(7 DOWNTO 0) & mantissa_r(22 DOWNTO 0));
-						END IF;
-						
-						-- find isqrt_l
-						IF mantissa_l(24) = '1' THEN
-							exponent_l := exponent_l + to_unsigned(1, 9);
-							
-							IF exponent_l(8) = '1' THEN
-								isqrt_l := NINFINITY_slv;
-							ELSE
-								isqrt_l := slv('1'&exponent_l(7 DOWNTO 0) & mantissa_l(23 DOWNTO 1));
-							END IF;
-						ELSE
-							isqrt_l := slv('1'&exponent_l(7 DOWNTO 0) &  mantissa_l(22 DOWNTO 0));
-						END IF;
-						
-					END IF;
-				END IF;
+				getRightLeftBound(isqrt_x, ulp, isqrt_r, isqrt_l);
 				
 				WAIT UNTIL done = '1';
 				--WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------
 				--check result
-
+				REPORT "Result is " & to_string(result);
 				REPORT "isqrt_l = " & to_string(isqrt_l);
 				REPORT "isqrt_r = " & to_string(isqrt_r);
 				IF isnan(isqrt_x) THEN
@@ -194,7 +121,7 @@ BEGIN
 							" which is incorrect. Correct answer is NAN" SEVERITY warning;
 					END IF;
 				ELSE
-					IF not ((to_float(result) <= to_float(isqrt_r)) and (to_float(result) >= to_float(isqrt_l))) THEN
+					IF not ((to_float(result) <= isqrt_r) and (to_float(result) >= isqrt_l)) THEN
 						incorrect_result := incorrect_result+1;
 						REPORT "Inverse square root of " & to_string(x) & "gives " &to_string(to_float(result)) & 
 								" which is incorrect. Correct answer is  " & to_string(isqrt_x)SEVERITY warning;
