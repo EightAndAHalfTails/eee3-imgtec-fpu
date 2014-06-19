@@ -163,6 +163,11 @@ BEGIN
 								REPORT "result_tb is infinity";
 							END IF;							
 						END IF;
+						
+						IF to_slv(x*y) = NZERO_slv and to_slv(z) = NZERO_slv THEN
+							tb_result_float := NZERO_F;
+						END IF;
+						
 						-- compare result obtained from float_pkg and math.real
 						IF tb_result_mac /= tb_result_float and not(isnan(tb_result_mac)) and not(isnan(tb_result_float)) THEN
 							inaccurate_lines := inaccurate_lines + 1;
@@ -174,6 +179,7 @@ BEGIN
 					--------------------------------------------------------------
 					-- check result from design
 					WAIT UNTIL clk'EVENT AND clk = '1';
+					REPORT "Result is " & to_string(to_float(result));
 					IF isnan(tb_result_float) THEN
 						IF not(isnan(to_float(result))) THEN
 							IF incorrect_result < 10 THEN
@@ -183,7 +189,7 @@ BEGIN
 							REPORT to_string(x) & "*" & to_string(y) & " + " & to_string(z) & "is " & 
 								to_string(to_float(result)) & ". Correct answer should be NaN" SEVERITY warning;
 						END IF;
-					ELSIF to_float(result) /= tb_result_float THEN
+					ELSIF result /= to_slv(tb_result_float) THEN
 						IF incorrect_result < 10 THEN
 							incorrect_lines(incorrect_result) := n;
 						END IF;

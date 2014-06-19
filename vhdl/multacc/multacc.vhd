@@ -349,7 +349,7 @@ begin
   --rounder
   --The process round the result to be to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff,a,b,eff_sub,input_NaN,post_mult_sign)
+  rounder:PROCESS(post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff,a,b,eff_sub,input_NaN,post_mult_sign)
 
     VARIABLE rounded_result_e_s		:usg(8 downto 0);
     VARIABLE rounded_result_man_s	:usg(23 downto 0);
