@@ -151,7 +151,7 @@ begin
          aligned_c(i)<='0';         	--zeros at other locations
        end if;
      end loop; 
-   elsif shift_unit>=48 then                 
+   elsif shift_unit>=48 then        
      	aligned_c<=(others=>'0');
    else
 	aligned_c(72 downto 48)<=(others=>sig_c(24));
@@ -224,6 +224,33 @@ begin
     end if;    
     sticky_b2<=s_bit;
   end process adder;
+--------------------------------------------------------------------------------
+LZA:process(opA_i,opB_i,operation_i)	--suzuki96 leading zero anticipator
+  variable A_0,A_1:  std_logic_vector(47 downto 0);
+  variable B_0,A_1:  std_logic_vector(47 downto 0);
+  variable f:	 std_logic_vector(47 downto 1);
+  variable count:integer range 0 to 48;
+BEGIN
+    count:=0;
+  	 A_0:=opA_i;
+	if operation_i='1' then
+  	 B_0:=(opB_i)-1;
+	else
+  	 B_0:=opB_i;
+	end if;
+	A_1:=0&A_0(47 downto 1);
+	B_1:=0&B_0(47 downto 1);
+
+	f:=(NOT (A_0 XOR B_0)) AND (A_0 or B_0);
+	
+	for i in f'HIGH downto f'LOW+1 loop
+	if f(i)='1' then exit;
+	else count:=count+1;
+	end if;
+	end loop;
+	
+ 	leadingzeros<=count;
+end process LZA;
 -------------------------------------------------------------------------------
   --sign_logic:
   --sign depends on the number with larger maginitude
@@ -390,8 +417,14 @@ begin
 	 result.sign<=c.sign and post_mult_sign;
          result.exponent<=(others=>'0');
          result.significand<=(others=>'0');
-  elsif (isZero(a) or isZero(b)) or (expo_diff<-25 and not isZero(c)) then
-	 result<=c;
+  elsif (isZero(a) or isZero(b)) or expo_diff<-25 then
+	result.exponent<=c.exponent;
+	result.significand<=c.significand;
+	if isZero(c) then
+		result.sign<=temp_sign;
+	else
+		result.sign<=c.sign;
+	end if;
   else  
     if rounded_result_e_s>=255 then     --overflows
       result.exponent	<=(others=>'1');

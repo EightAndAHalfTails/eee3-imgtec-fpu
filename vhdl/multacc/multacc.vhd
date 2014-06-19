@@ -384,8 +384,14 @@ begin
 	 result.sign<=c.sign and post_mult_sign;
          result.exponent<=(others=>'0');
          result.significand<=(others=>'0');
-  elsif (isZero(a) or isZero(b)) or (expo_diff<-25 and not isZero(c)) then
-	 result<=c;
+  elsif (isZero(a) or isZero(b)) or expo_diff<-25 then
+	result.exponent<=c.exponent;
+	result.significand<=c.significand;
+	if isZero(c) then
+		result.sign<=temp_sign;
+	else
+		result.sign<=c.sign;
+	end if;
   else  
     if rounded_result_e_s>=255 then     --overflows
       result.exponent	<=(others=>'1');
