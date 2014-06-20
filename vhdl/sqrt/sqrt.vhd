@@ -35,7 +35,7 @@ architecture babylon of sqrt is
   
   signal input, output : float32_t;
   signal s_sig_in : unsigned(24 downto 0);
-  signal s_half_exp : unsigned(7 downto 0);
+  signal s_half_exp : integer range -63 to 64;
   signal s_final_approx : slv(24 downto 0);
   signal s_initial_guess : slv(24 downto 0);
   
@@ -55,26 +55,28 @@ begin
   -- it even first by halving the significand and
   -- incrementing the exponent.
   ------------------------------------------------
-  -- if the unbiased exponent is even, we simply
-  -- shift it down and add 64.
-  -- if the unbiased exponent is odd, we decrease
+  -- if the exponent is odd, we increase
   -- the exponent by one and shift the significand
-  -- down one, before shifting the exponent. (this
-  -- corresponds to truncating the exponent)
+  -- down one, before halving the exponent.
   get_sig_exp: process(input)
+    variable exp : integer range -127 to 128;
+    variable halfexp : integer range -63 to 64;
   begin
-    s_half_exp <= unsigned(input.exponent(7 downto 1)) + to_unsigned(64, 8);
-    if input.exponent = exponent_t(to_unsigned(0, input.exponent'length)) then
+    exp := to_integer(unsigned(input.exponent)) - 127;
+    if exp = -127 then
       -- denormal --> 0.{bits}0 x 2^-126
       s_sig_in <= unsigned('0' & input.significand & '0');
-    elsif input.exponent(0) = '0' then -- exponent even -> exponent-127 odd -> sig needs shifting
+    elsif exp mod 2 = 0 then
       -- 1.{bits}0
-      s_sig_in(24 downto 23) <= "01";
-      s_sig_in(22 downto 0) <= unsigned(input.significand);
+      s_sig_in <= unsigned('1' & input.significand & '0');
     else
       -- 0.1{bits}
-      s_sig_in <= unsigned('1' & input.significand & '0');
+      exp := exp + 1;
+      s_sig_in(24 downto 23) <= "01";
+      s_sig_in(22 downto 0) <= unsigned(input.significand);
     end if;
+    
+    s_half_exp <= exp/2;
   end process get_sig_exp;
   
   gen_iter: for i in 0 to iterations-1 generate
@@ -104,7 +106,7 @@ begin
   end generate gen_iter;
   
   encode_output: process(input, s_final_approx, s_half_exp)
-    variable shift_amount : integer;
+    variable shift_amount : integer range -1 to 24;
   begin
     if input = neg_zero then
       output <= neg_zero;
@@ -118,7 +120,7 @@ begin
       shift_amount := leading_one(s_final_approx) - 1;
       report "Shifting by " & integer'image(shift_amount) severity note;
       output.sign <= '0';
-      output.exponent <= slv(usg(s_half_exp) - to_unsigned(shift_amount, s_half_exp'length));
+      output.exponent <= slv(to_unsigned(s_half_exp - shift_amount + 127, output.exponent'length));
       output.significand <= slv(shift_left(usg(s_final_approx), shift_amount)(23 downto 1));
     end if;
   end process encode_output;
