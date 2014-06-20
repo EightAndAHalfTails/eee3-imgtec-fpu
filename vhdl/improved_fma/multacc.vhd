@@ -31,6 +31,9 @@ architecture fused of multacc is
   
   signal a,b,c,result : float32_t;
   
+  signal leadingzeros,leadingones:integer range 0 to 73;
+  signal sel	:	std_logic;
+  
   signal pre_norm_significand : sgn(48 downto 0);
   signal pre_norm_exponent : sgn(9 downto 0);
   signal post_norm_significand : usg(25 downto 0);
@@ -214,9 +217,11 @@ begin
     if post_add_lsresult=zeros or (post_add_lsresult=ones) then
       pre_norm_significand<=post_add_lsresult(0)&post_add_rsresult;                         --truncated to bottom bits
       pre_norm_exponent<=sgn(resize(post_mult_exp,10)-126);
+	sel<='1';
     else      
       pre_norm_significand<=post_add_lsresult(24 downto 0)&post_add_rsresult(47 downto 24); --truncated to top bits
       pre_norm_exponent<=sgn(resize(post_mult_exp,10)-102);
+	sel<='0';
       
       for i in 0 to 23 loop
         s_bit:=s_bit OR post_add_rsresult(i);
@@ -225,32 +230,59 @@ begin
     sticky_b2<=s_bit;
   end process adder;
 --------------------------------------------------------------------------------
-LZA:process(opA_i,opB_i,operation_i)	--suzuki96 leading zero anticipator
-  variable A_0,A_1:  std_logic_vector(47 downto 0);
-  variable B_0,A_1:  std_logic_vector(47 downto 0);
-  variable f:	 std_logic_vector(47 downto 1);
-  variable count:integer range 0 to 48;
+LZA:process(post_mult_significand,aligned_c)	-- suziki 96 leading zero anticipator
+variable a, b: std_logic_vector(72 downto 0);
+variable f_z:	std_logic_vector(72 downto 0);
+variable t,z,z1: std_logic_vector(72 downto 0);
+variable count:integer range 0 to 73;
+constant zeros: usg (24 downto 0):=(others=>'0');
 BEGIN
     count:=0;
-  	 A_0:=opA_i;
-	if operation_i='1' then
-  	 B_0:=(opB_i)-1;
-	else
-  	 B_0:=opB_i;
-	end if;
-	A_1:=0&A_0(47 downto 1);
-	B_1:=0&B_0(47 downto 1);
 
-	f:=(NOT (A_0 XOR B_0)) AND (A_0 or B_0);
+a:=slv(zeros&post_mult_significand);
+b:=slv(aligned_c);
+
+t:=a xor b;
+z:=(not a) and (not b);
+z1:=z(71 downto 0)&'0';
+
+f_z:=t xor (not z1);
 	
-	for i in f'HIGH downto f'LOW+1 loop
-	if f(i)='1' then exit;
-	else count:=count+1;
-	end if;
-	end loop;
-	
- 	leadingzeros<=count;
+for i in f_z'HIGH downto f_z'LOW loop
+ if f_z(i)='1' then exit;
+ else count:=count+1;
+ end if;
+end loop;
+leadingzeros<=count;
 end process LZA;
+
+LOA:process(post_mult_significand,aligned_c)	-- suzuki 96 (modified) leading one anticipator
+variable a, b: std_logic_vector(72 downto 0);
+variable f_o:	std_logic_vector(72 downto 0);
+variable t,g,g1: std_logic_vector(72 downto 0);
+variable count:integer range 0 to 73;
+constant zeros: usg (24 downto 0):=(others=>'0');
+BEGIN
+    count:=0;
+
+a:=slv(zeros&post_mult_significand);
+b:=slv(aligned_c);
+
+t:=a xor b;
+g:=a and b;
+g1:=g(71 downto 0)&'0';
+
+f_o:=t xor (not g1);
+
+for i in f_o'HIGH downto f_o'LOW loop
+ if f_o(i)='1' then exit;
+ else count:=count+1;
+ end if;
+end loop;
+leadingones<=count;
+end process LOA;
+
+
 -------------------------------------------------------------------------------
   --sign_logic:
   --sign depends on the number with larger maginitude
@@ -268,8 +300,8 @@ end process LZA;
 -------------------------------------------------------------------------------  
   --normalization and rounding
   -----------------------------------------------------------------------------
-  normalise:process(expo_diff,pre_norm_significand,c,pre_norm_exponent,sticky_b2)--,
-    variable leadingzeros,leadingones: integer range 0 to 49;
+  normalise:process(expo_diff,pre_norm_significand,c,pre_norm_exponent,sticky_b2,leadingzeros,leadingones,sel)--,
+    --variable leadingzeros,leadingones: integer range 0 to 49;
     variable sft_result_significand : usg(47 downto 0);
     variable sft_result_exponent: usg(8 downto 0);
     variable s_bit:std_logic;
@@ -277,8 +309,8 @@ end process LZA;
   begin
     --initialization
     s_bit:=sticky_b2;
-    leadingzeros := 0;
-    leadingones  := 0;
+    --leadingzeros := 0;
+    --leadingones  := 0;
     if expo_diff<-25 then            --special case:if shifted left by more
                                         --than 25
     sft_result_significand:=usg(pre_norm_significand(47 downto 0));
@@ -311,33 +343,38 @@ end process LZA;
     -----------------------------------------------------------------------------
     --leading one detector
     -----------------------------------------------------------------------------
-    if pre_norm_significand(48)='1' then 
-      for i in pre_norm_significand'high downto pre_norm_significand'low loop
-        if pre_norm_significand(i)='1' then
-          leadingones:=leadingones+1;
-          else
-            exit; 
-          end if;
-        end loop;  -- i
+--    if pre_norm_significand(48)='1' then 
+--      for i in pre_norm_significand'high downto pre_norm_significand'low loop
+--        if pre_norm_significand(i)='1' then
+--          leadingones:=leadingones+1;
+--          else
+--            exit; 
+--          end if;
+--        end loop;  -- i
     -----------------------------------------------------------------------------
     --leading zero detector
     ---------------------------------------------------------------------------
-    else
-      for i in pre_norm_significand'high downto pre_norm_significand'low loop
-        if pre_norm_significand(i)='0' then
-          leadingzeros:=leadingzeros+1;
-        else
-          exit; 
-        end if;
-      end loop;  -- i
-    end if;
+--    else
+ --     for i in pre_norm_significand'high downto pre_norm_significand'low loop
+ --       if pre_norm_significand(i)='0' then
+ --         leadingzeros:=leadingzeros+1;
+--        else
+--          exit; 
+--        end if;
+--      end loop;  -- i
+--    end if;
     
-    if  pre_norm_exponent>0 and pre_norm_exponent<leadingzeros+leadingones then
+	if sel='1' then
+		sft_unit:=leadingzeros+leadingones-25;
+	else 
+		sft_unit:=leadingzeros+leadingones;
+	end if;
+    if  pre_norm_exponent>0 and pre_norm_exponent<sft_unit then
       sft_unit:=to_integer(pre_norm_exponent-1);
        sft_result_exponent:=(others=>'0');
     else
-      sft_unit:=leadingzeros+leadingones-1;
-       sft_result_exponent:=usg(pre_norm_exponent(8 downto 0))-leadingzeros-leadingones+1;
+      sft_unit:=sft_unit-1;
+       sft_result_exponent:=usg(pre_norm_exponent(8 downto 0))-sft_unit+1;
     end if;
  
     for i in 0 to 47 loop
@@ -382,7 +419,7 @@ end process LZA;
   --rounder
   --The process round the result to be to be 23 bit mantissa
   --------------------------------------------------------------------------------------
-  rounder:PROCESS(post_mult_significand,post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff,a,b,eff_sub,input_NaN,post_mult_sign)
+  rounder:PROCESS(post_norm_significand,post_norm_exponent,temp_sign,c,expo_diff,a,b,eff_sub,input_NaN,post_mult_sign)
 
     VARIABLE rounded_result_e_s		:usg(8 downto 0);
     VARIABLE rounded_result_man_s	:usg(23 downto 0);
