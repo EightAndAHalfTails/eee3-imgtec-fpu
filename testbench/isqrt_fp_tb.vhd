@@ -96,17 +96,19 @@ BEGIN
 				ELSE
 					CASE x IS
 						WHEN NINFINITY_F => isqrt_x := PNAN_F;
-						WHEN PZERO_F =>	isqrt_x := to_float(PINFINITY_slv);
-						WHEN NZERO_F => isqrt_x := to_float(NINFINITY_slv);
-						WHEN OTHERS =>	x_real := to_real(x);
-										isqrt_x := to_float(1.0/sqrt(x_real));
+						WHEN PZERO_F =>	isqrt_x := PINFINITY_F;
+						WHEN NZERO_F => isqrt_x := NINFINITY_F;
+						WHEN OTHERS =>	--x_real := to_real(x);
+										--isqrt_x := to_float(1.0/sqrt(x_real));
+										isqrt_x := (PONE_F/sqrt(x));
 					END CASE;
 				END IF;
 				----------------------------------------------------------------------
 				-- check sqrt_x for zeros, infinities or NaNs
 				-- else find left and right boundaries of sqrt_x (4 ulps)
 				getRightLeftBound(isqrt_x, ulp, isqrt_r, isqrt_l);
-				
+				x_real := to_real(x);
+				REPORT "result from real pkg is "& to_string(to_float(1.0/sqrt(x_real)));
 				WAIT UNTIL done = '1';
 				--WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------

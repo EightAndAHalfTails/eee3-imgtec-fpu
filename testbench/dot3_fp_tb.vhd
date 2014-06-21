@@ -63,7 +63,8 @@ BEGIN
 		VARIABLE res1, res2, res3, res4, res_t	: FLOAT32;
 		VARIABLE err1, err2, err3, err4, err5, err_t	: FLOAT32;
 		VARIABLE result_tb 	: FLOAT32;
-		VARIABLE result_chained	: FLOAT32;
+		VARIABLE result_chained	: FLOAT32; --R(ab)+R(cd)+R(ef)   --R() means rounded result
+		VARIABLE result_chained2 : FLOAT32; -- R(ab+cd)+ef
 		VARIABLE res_r, res_l	: FLOAT32;
 		VARIABLE n          : INTEGER;		--line counter
 		VARIABLE incorrect_result : INTEGER;
@@ -103,6 +104,20 @@ BEGIN
 				--calculate chained result
 				result_chained := ((p*q)+(r*s))+(t*u);
 				
+				--calculate result_chained2 that mimics result from chaining dot2 and multacc
+				IF (not(isfinite(p)) or not(isfinite(q))) and isfinite(r) and isfinite(s) THEN
+					result_chained2 := (p*q);
+				ELSIF (not(isfinite(r)) or not(isfinite(s))) and isfinite(p) and isfinite(q) THEN
+					result_chained2 := r*s;
+				ELSIF (not(isfinite(p)) or not(isfinite(q))) and (not(isfinite(r)) or not(isfinite(s))) THEN
+					result_chained2 := (p*q)+(r*s);
+				ELSE
+					result_chained2 := to_float((to_real(p)*to_real(q))+(to_real(r)*to_real(s)));
+					IF slv(result_chained2(7 DOWNTO 0)) = "11111111" THEN
+						result_chained2 := to_float(slv(result_chained2(8 DOWNTO 0)) & "00000000000000000000000");
+					END IF;
+				END IF;
+				
 				--calculate result_tb using real package if number is infinite
 				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) and isfinite(t) and isfinite(u) 
 					and	not(isnan(p) or isnan(q) or isnan(r) or isnan(s) or isnan(t) or isnan(u))THEN
@@ -113,10 +128,10 @@ BEGIN
 						result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
 					END IF;
 				ELSE
+					REPORT "chained1";
 					result_tb := result_chained;
 				END IF;
-				
-				
+			
 				-------------------------------------------------------------
 				--calculate best rounded result res_t and total error
 				IF isnan(p) or isnan(q) or isnan(r) or isnan(s) or isnan(t) or isnan(u) THEN
@@ -176,18 +191,24 @@ BEGIN
 				END IF;
 				getRightLeftBound(res_t, ulp, res_r, res_l);
 				
+				IF result_chained2 = PINFINITY_F THEN
+					res_r := PINFINITY_F;
+				ELSIF result_chained2 = NINFINITY_F THEN
+					res_l := NINFINITY_F;
+				END IF;
 				
 				WAIT UNTIL clk'EVENT AND clk = '1';
 				----------------------------------------------------------------------
 				--check result
 				REPORT "result_chained = " & to_string(result_chained);
+				REPORT "result_chained2 = " & to_string(result_chained2);
 				REPORT "result real = " & to_string(result_tb);
 				REPORT "result from test entity = " & to_string(to_float(result));
 				REPORT "right bound = " & to_string(res_r);
 				REPORT "left bound = " & to_string(res_l);
 
 				IF not(isfinite(res_t)) THEN
-					IF to_float(result) /= res_t THEN
+					IF to_float(result) /= res_t and to_float(result) /= result_chained and to_float(result) /= result_chained2 THEN
 						IF incorrect_result < 10 THEN
 							incorrect_lines(incorrect_result) := n;
 						END IF;
@@ -196,7 +217,7 @@ BEGIN
 							& " gives " &to_string(to_float(result)) & " which is incorrect. Correct answer is " & to_string(res_t) SEVERITY warning;
 					END IF;
 				ELSIF isnan(res_t) THEN
-					IF not(isnan(to_float(result))) THEN
+					IF not(isnan(to_float(result))) and to_float(result) /= result_chained2 THEN
 						IF incorrect_result < 10 THEN
 							incorrect_lines(incorrect_result) := n;
 						END IF;
