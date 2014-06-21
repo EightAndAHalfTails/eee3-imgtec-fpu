@@ -90,7 +90,7 @@ begin  -- chained
     ----------------------------
     --swap
     ----------------------------
-    if ab_st_cd = '1' or post_mult_significand1=0 then              -- swap order if a*b<c*d
+    if post_mult_significand1=0 or (post_mult_significand2/=0 and ab_st_cd = '1')then              -- swap order if a*b<c*d
       opA:=post_mult_significand2;
       opB:=post_mult_significand1;
       pre_norm_exponent<=sgn(resize(post_mult_exp2,10)-125); 
@@ -139,6 +139,10 @@ begin  -- chained
   begin
     if (isZero(a) or isZero(b)) and (isZero(c) or isZero(d)) then
       result.sign<=post_mult_sign1 and post_mult_sign2;
+    elsif isInf(a) or isInf(b) then
+      result.sign<=post_mult_sign1;
+    elsif isInf(c) or isInf(d) then
+      result.sign<=post_mult_sign2;
     elsif neg_sig ='1' then
       result.sign<= not temp_sign;
     else
