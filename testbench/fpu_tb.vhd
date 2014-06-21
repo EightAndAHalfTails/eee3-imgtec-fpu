@@ -51,12 +51,15 @@ BEGIN
 	PORT MAP(
 		clk		=> clk,
 		reset 	=> reset,
-		start	=> start,
-		busy	=> busy,
-		done	=> done,
+		--start	=> start,
+		--busy	=> busy,
+		--done	=> done,
 		fpu_in1		=> in1,
 		fpu_in2		=> in2,
 		fpu_in3		=> in3,
+		fpu_in4		=> in4,
+		fpu_in5		=> in5,
+		fpu_in6		=> in6,
 		opcode		=> opcode,
 		fpu_out		=> result
 	);
@@ -166,11 +169,11 @@ BEGIN
 					WHEN "sqrt" => -- SQRT
 						read(buf, a);
 						in1 <= to_slv(a);
-						result_tb := sqrt(a);
+						result_tb := ieee.float_pkg.sqrt(a);
 					WHEN "isqr" => -- ISQRT
 						read(buf, a);
 						in1 <= to_slv(a);
-						result_tb := 1/sqrt(a);
+						result_tb := 1/ieee.float_pkg.sqrt(a);
 					WHEN "mag2" => -- MAG2
 						read(buf, a);
 						read(buf, b);
@@ -182,7 +185,7 @@ BEGIN
 						read(buf, b);
 						in1 <= to_slv(a);
 						in2 <= to_slv(b);
-						result_tb := sqrt(a*a+b*b);
+						result_tb := ieee.float_pkg.sqrt(a*a+b*b);
 					WHEN "norm" => -- NORM3
 						read(buf, a);
 						read(buf, b);
@@ -190,7 +193,7 @@ BEGIN
 						in1 <= to_slv(a);
 						in2 <= to_slv(b);
 						in3 <= to_slv(c);
-						result_tb := sqrt(a*a+b*b+c*c);
+						result_tb := ieee.float_pkg.sqrt(a*a+b*b+c*c);
 					WHEN OTHERS => -- unused
 						result_tb := PNAN_F;
 				END CASE;
@@ -198,7 +201,7 @@ BEGIN
 				start <= '1';
 
 				IF cmd /= "nop_" THEN
-					WAIT UNTIL clk'EVENT AND clk = '1' AND done = '1';
+					WAIT UNTIL clk'EVENT AND clk = '1';-- AND done = '1';
 					PRINT(fout, str(result));
 					IF isnan(result_tb) THEN
 						IF not(isnan(to_float(result))) THEN

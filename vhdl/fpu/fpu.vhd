@@ -52,7 +52,7 @@ begin
     sqrt_in1 => sqrt_in1,
     sqrt_out => sqrt_out
   );
-  sq_in: process(op, dot3_out)
+  sq_in: process(op, dot3_out, a)
   begin
     if op = 8 or op = 9 then
       sqrt_in1 <= a;
@@ -70,7 +70,7 @@ begin
     dot3_in6 => dot3_in6,
     dot3_out => dot3_out
   );
-  dot3_in: process(op)
+  dot3_in: process(op,a , b, c, d, e, f)
     constant zero : slv(31 downto 0) := float2slv(pos_zero);
   begin
     case op is
@@ -147,7 +147,7 @@ begin
     end case;
   end process dot3_in;
   
-  select_output : process(op, dot3_out, sqrt_out, div_out) --removed isqrt_out from sensitivity list since it gives warning -R
+  select_output : process(op, dot3_out, sqrt_out, div_out)
   begin
     case op is
       when 1|2|3|4|6|7 =>
