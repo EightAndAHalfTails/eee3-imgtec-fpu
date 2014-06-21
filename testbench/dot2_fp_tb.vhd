@@ -97,18 +97,20 @@ BEGIN
 				--calculate chained result
 				result_chained := (p*q)+(r*s);
 				
-				--calculate result_tb using real package is number is finite
-				IF isfinite(p) and isfinite(q) and isfinite(r) and isfinite(s) 
-					and	not(isnan(p) or isnan(q) or isnan(r) or isnan(s))THEN
+				--calculate result using float/real pkg in case dekker product and two sum algorithm do not work
+				IF isnan(p) or isnan(q) or isnan(r) or isnan(s) THEN
+					result_tb := PNAN_F;
+				ELSIF (not(isfinite(p)) or not(isfinite(q))) and isfinite(r) and isfinite(s) THEN
+					result_tb := (p*q);
+				ELSIF (not(isfinite(r)) or not(isfinite(s))) and isfinite(p) and isfinite(q) THEN
+					result_tb := r*s;
+				ELSIF (not(isfinite(p)) or not(isfinite(q))) and (not(isfinite(r)) or not(isfinite(s))) THEN
+					result_tb := result_chained;
+				ELSE
 					result_tb := to_float((to_real(p)*to_real(q))+(to_real(r)*to_real(s)));
-					--------------------------------------------------------------
-					-- check if overflow
 					IF slv(result_tb(7 DOWNTO 0)) = "11111111" THEN
 						result_tb := to_float(slv(result_tb(8 DOWNTO 0)) & "00000000000000000000000");
 					END IF;
-				ELSE
-					REPORT "Using chained result";
-					result_tb := result_chained;
 				END IF;
 	
 				-------------------------------------------------------------
