@@ -30,6 +30,6 @@ Operation | Formula
 `dot3`| `a*d + b*e + c*f`
 `sqrt`| `sqrt(a)`
 `isqrt`| `1/sqrt(a)`
-`dist2`| `sqrt(a*a + b*b)
-`dist3`| `sqrt(a*a + b*b + c*c)
-`norm`| `a/sqrt(a*a + b*b + c*c)
+`dist2`| `sqrt(a*a + b*b)`
+`dist3`| `sqrt(a*a + b*b + c*c)`
+`norm`| `a/sqrt(a*a + b*b + c*c)`
