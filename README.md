@@ -11,12 +11,12 @@ The task set by Imagination Technologies was to design and verify a Floating Poi
 Build Process
 -------------
 
-Unfortunately, no makefile or other automated build system exists at the moment, so if you want to simulate or compile the design, you will have to include the relevent files into your simulator or synthesiser of choice yourself, resolving dependencies manually.
+Unfortunately, no makefile or other automated build system exists at the moment, so if you want to simulate or compile the design, you will have to include the relevant files into your simulator or synthesiser of choice yourself, resolving dependencies manually.
 
 Specification
 -------------
 
-The FPU implements the following operations and is currently unpipelined with one cycle of latency (clock data in, clock result out):
+The FPU implements the following operations and is currently unpipelined with one cycle of latency (clock data in, clock result out). There is also partial support for denormals:
 
 Operation | Formula
 ----------|--------
@@ -33,3 +33,9 @@ Operation | Formula
 `dist2`| `sqrt(a*a + b*b)`
 `dist3`| `sqrt(a*a + b*b + c*c)`
 `norm`| `a/sqrt(a*a + b*b + c*c)`
+
+
+Licensing
+---------
+
+There are no restrictions on copying of this code; you can use these entities in your home or business projects as you wish.
