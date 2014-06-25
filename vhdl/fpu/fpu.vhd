@@ -21,8 +21,8 @@ architecture arch of fpu is
   type state_t is (idle, isq_wait, sqt_wait);
   signal state, nstate : state_t;
   
-  constant one : slv(31 downto 0) := x"00000001"; 
-  constant neg_one : slv(31 downto 0) := x"80000001";
+  constant one : slv(31 downto 0) := x"3f800000"; 
+  constant neg_one : slv(31 downto 0) := x"bf800000";
   constant nan : slv(31 downto 0) := float2slv(nan);
 begin
   
